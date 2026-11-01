@@ -14,6 +14,8 @@ export interface ChartRowInterface {
   start: Date;
   /** What each line has at this place, by the id of the line. */
   cells: Record<string, ChartCellInterface>;
+  /** What the chart draws: the solid and the dashed price of each line, by `<id>:solid` and `<id>:dashed`. */
+  values: Record<string, number | null>;
 }
 
 export function labelOf(start: Date, granularity: GranularityType, locale: string): string {
@@ -60,10 +62,15 @@ export function toRows(
       key: bucket.start.toISOString(),
       start: bucket.start,
       cells: {},
+      values: {},
     };
     for (const line of cells) {
       const cell = line.cells[index];
-      if (cell !== undefined) row.cells[line.id] = cell;
+      if (cell !== undefined) {
+        row.cells[line.id] = cell;
+        row.values[`${line.id}:solid`] = cell.solid;
+        row.values[`${line.id}:dashed`] = cell.dashed;
+      }
     }
 
     return row;

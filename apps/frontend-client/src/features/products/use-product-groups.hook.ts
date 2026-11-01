@@ -23,9 +23,17 @@ export const groupPageSize = 20;
 /** How long to wait for the first price of a product that has none yet, in milliseconds. */
 const firstPricePollMs = 3000;
 
-/** A group whose products have no price yet, or no picture yet. */
-function isAwaitingData(group: ProductGroupType): boolean {
+/** How many times the list is asked again for the picture of a product that was read: it is kept a little after the price. */
+const pictureWaitPolls = 40;
+
+/** A group whose products have no price yet. */
+function isAwaitingPrice(group: ProductGroupType): boolean {
   return group.productCount > 0 && group.current === null && group.thumbnailUrl === null;
+}
+
+/** A group whose products were read and have no picture yet: it may never come, so the wait is bounded. */
+function isAwaitingPicture(group: ProductGroupType): boolean {
+  return group.productCount > 0 && group.thumbnailUrl === null;
 }
 
 export function useProductGroups(page: number): UseQueryResult<ProductGroupPageType | undefined> {
@@ -37,8 +45,14 @@ export function useProductGroups(page: number): UseQueryResult<ProductGroupPageT
       ),
     placeholderData: (previous): ProductGroupPageType | undefined => previous,
     // A product that was just added has no price until a worker reads it, and no picture until it is kept.
-    refetchInterval: (query): number | false =>
-      query.state.data?.items.some(isAwaitingData) === true ? firstPricePollMs : false,
+    refetchInterval: (query): number | false => {
+      const items = query.state.data?.items ?? [];
+      const waits =
+        items.some(isAwaitingPrice) ||
+        (query.state.dataUpdateCount < pictureWaitPolls && items.some(isAwaitingPicture));
+
+      return waits ? firstPricePollMs : false;
+    },
   });
 }
 

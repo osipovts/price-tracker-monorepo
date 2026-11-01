@@ -46,6 +46,12 @@ test('puts the lines of several products into the same rows', () => {
     ['a', 'b'],
   ]);
   expect(rows[1]?.cells['b']?.solid).toBeNull();
+  expect(rows[0]?.values).toEqual({
+    'a:solid': 100,
+    'a:dashed': null,
+    'b:solid': 90,
+    'b:dashed': 90,
+  });
 });
 
 test('keeps the lines off the edges of the chart, and lets the axis choose without a price', () => {
@@ -67,7 +73,7 @@ test('labels the axis by the time of day for hours, and by the date for days', (
 });
 
 test('takes for a row of the chart what has cells and a key', () => {
-  expect(isRow({ key: 'a', start: new Date(), cells: {} })).toBe(true);
+  expect(isRow({ key: 'a', start: new Date(), cells: {}, values: {} })).toBe(true);
   expect(isRow({ key: 'a' })).toBe(false);
   expect(isRow(null)).toBe(false);
   expect(isRow('row')).toBe(false);

@@ -88,9 +88,7 @@ export function PriceChart({
           {lines.flatMap(({ id, color }): ReactElement[] => [
             <Line
               key={`${id}-dashed`}
-              dataKey={(row: unknown): number | null =>
-                isRow(row) ? (row.cells[id]?.dashed ?? null) : null
-              }
+              dataKey={`values.${id}:dashed`}
               stroke={`var(--mantine-color-${color}-6)`}
               strokeDasharray="6 4"
               dot={false}
@@ -101,9 +99,7 @@ export function PriceChart({
             />,
             <Line
               key={`${id}-solid`}
-              dataKey={(row: unknown): number | null =>
-                isRow(row) ? (row.cells[id]?.solid ?? null) : null
-              }
+              dataKey={`values.${id}:solid`}
               stroke={`var(--mantine-color-${color}-6)`}
               strokeWidth={2}
               dot={{ r: 3 }}
