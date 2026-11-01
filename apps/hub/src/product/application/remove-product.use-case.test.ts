@@ -6,11 +6,11 @@ import { OzonReferenceParser, ResolveProductReferenceUseCase } from 'product-ref
 import { InMemoryObjectStorageAdapter } from '../../shared/infrastructure/in-memory-object-storage.adapter.js';
 import { InMemoryRateLimiterAdapter } from '../../shared/infrastructure/in-memory-rate-limiter.adapter.js';
 import { InMemoryPriceObservationRepositoryAdapter } from '../infrastructure/in-memory-price-observation-repository.adapter.js';
+import { InMemoryProductGroupRepositoryAdapter } from '../infrastructure/in-memory-product-group-repository.adapter.js';
 import { InMemoryTrackedProductRepositoryAdapter } from '../infrastructure/in-memory-tracked-product-repository.adapter.js';
 import { AddProductUseCase } from './add-product.use-case.js';
 import { noPriceReads, unlimitedProducts } from './add-product-defaults.type.js';
 import { ListPriceHistoryUseCase } from './list-price-history.use-case.js';
-import { ListProductsUseCase } from './list-products.use-case.js';
 import { ProductNotFoundError } from './product-not-found.error.js';
 import { RemoveProductUseCase } from './remove-product.use-case.js';
 
@@ -22,7 +22,12 @@ const firstPage = { page: 1, pageSize: 10 };
 function setup(): {
   add: AddProductUseCase;
   remove: RemoveProductUseCase;
-  list: ListProductsUseCase;
+  list: {
+    execute: (
+      userId: string,
+      pagination: typeof firstPage,
+    ) => ReturnType<InMemoryTrackedProductRepositoryAdapter['listSubscribed']>;
+  };
   history: ListPriceHistoryUseCase;
   products: InMemoryTrackedProductRepositoryAdapter;
 } {
@@ -33,13 +38,14 @@ function setup(): {
     add: new AddProductUseCase(
       new ResolveProductReferenceUseCase([new OzonReferenceParser()]),
       products,
+      new InMemoryProductGroupRepositoryAdapter(),
       observations,
       noPriceReads,
       new InMemoryRateLimiterAdapter(),
       unlimitedProducts,
     ),
     remove: new RemoveProductUseCase(products, new InMemoryObjectStorageAdapter(false)),
-    list: new ListProductsUseCase(products, observations),
+    list: { execute: (userId, pagination) => products.listSubscribed(userId, pagination) },
     history: new ListPriceHistoryUseCase(products, observations),
     products,
   };

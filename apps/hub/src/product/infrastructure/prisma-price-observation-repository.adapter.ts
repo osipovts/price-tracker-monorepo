@@ -72,6 +72,18 @@ export class PrismaPriceObservationRepositoryAdapter implements PriceObservation
     return rows.map(toObservation);
   }
 
+  async listSince(
+    trackedProductIds: readonly string[],
+    since: Date,
+  ): Promise<PriceObservationInterface[]> {
+    const rows = await this.prisma.priceObservation.findMany({
+      where: { trackedProductId: { in: [...trackedProductIds] }, observedAt: { gte: since } },
+      orderBy: { observedAt: 'asc' },
+    });
+
+    return rows.map(toObservation);
+  }
+
   async listByProduct(
     trackedProductId: string,
     pagination: PaginationInterface,

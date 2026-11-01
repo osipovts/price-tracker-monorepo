@@ -16,6 +16,9 @@ import type { MarketplaceCitiesPort } from './marketplace-cities.port.js';
 import type { PriceObservationRepositoryPort } from './price-observation-repository.port.js';
 import { ProductAddingInProgressError } from './product-adding-in-progress.error.js';
 import { ProductGoneError } from './product-gone.error.js';
+import { ProductGroupFullError } from './product-group-full.error.js';
+import { ProductGroupNotFoundError } from './product-group-not-found.error.js';
+import type { ProductGroupRepositoryPort } from './product-group-repository.port.js';
 import type { ProductLimitsInterface } from './product-quota.type.js';
 import { ProductQuotaExceededError } from './product-quota-exceeded.error.js';
 import type { RequestPriceObservationUseCase } from './request-price-observation.use-case.js';
@@ -28,6 +31,8 @@ import { UnsupportedProductUrlError } from './unsupported-product-url.error.js';
 
 export interface AddedProductInterface {
   product: TrackedProductEntity;
+  /** The group of the user the product is in: the one asked for, a new one when none was, or the one it was in already. */
+  groupId: string;
   /** Whether the user tracks the product from now on, not whether it is new. */
   created: boolean;
   /** The job that reads the first price of a product that has none; null when there is nothing to read or no way to. */
@@ -46,6 +51,7 @@ export class AddProductUseCase {
   constructor(
     private readonly resolveReference: ResolveProductReferenceUseCase,
     private readonly products: TrackedProductRepositoryPort,
+    private readonly groups: ProductGroupRepositoryPort,
     private readonly observations: PriceObservationRepositoryPort,
     private readonly requestObservation: Pick<RequestPriceObservationUseCase, 'execute'>,
     private readonly limiter: RateLimiterPort,
@@ -72,8 +78,9 @@ export class AddProductUseCase {
     userId: string,
     url: string,
     cityId: string | null = null,
+    groupId: string | null = null,
   ): Promise<AddedProductInterface> {
-    const key = `${url}\n${cityId ?? ''}`;
+    const key = `${url}\n${cityId ?? ''}\n${groupId ?? ''}`;
     const running = this.running.get(userId);
     if (running !== undefined) {
       return running.key === key
@@ -81,7 +88,7 @@ export class AddProductUseCase {
         : Promise.reject(new ProductAddingInProgressError());
     }
 
-    const result = this.add(userId, url, cityId).finally((): void => {
+    const result = this.add(userId, url, cityId, groupId).finally((): void => {
       this.running.delete(userId);
     });
     this.running.set(userId, { key, result });
@@ -93,9 +100,11 @@ export class AddProductUseCase {
     userId: string,
     url: string,
     askedCityId: string | null,
+    askedGroupId: string | null,
   ): Promise<AddedProductInterface> {
     // Before the link is expanded: that takes a browser of the worker.
     await enforceRateLimits(this.limiter, [[`product-add:user:${userId}`, this.limits.add]]);
+    if (askedGroupId !== null) await this.requireRoomInGroup(userId, askedGroupId);
 
     const productUrl = await this.expandLink.execute(url);
 
@@ -121,7 +130,14 @@ export class AddProductUseCase {
     if (tracking.total >= this.limits.maxProducts) {
       // A full quota refuses a new product, not one the user tracks already.
       const own = await this.products.findSubscribedByReference(userId, tracked);
-      if (own !== null) return { product: own, created: false, jobId: null };
+      if (own !== null) {
+        return {
+          product: own,
+          created: false,
+          jobId: null,
+          groupId: await this.place(userId, own.snapshot.id, askedGroupId),
+        };
+      }
 
       throw new ProductQuotaExceededError(this.limits.maxProducts);
     }
@@ -136,12 +152,41 @@ export class AddProductUseCase {
       added = await this.track(userId, tracked);
     }
 
+    const placedGroupId = await this.place(userId, added.product.snapshot.id, askedGroupId);
+
     // Only a user who joins reads: adding a product again must not queue a job again.
     const jobId = added.created
       ? await this.readFirstPrice(userId, added.product.snapshot.id)
       : null;
 
-    return { ...added, jobId };
+    return { ...added, jobId, groupId: placedGroupId };
+  }
+
+  /** The group is the user's and has room for one more product. */
+  private async requireRoomInGroup(userId: string, groupId: string): Promise<void> {
+    if ((await this.groups.findOwned(userId, groupId)) === null) {
+      throw new ProductGroupNotFoundError(groupId);
+    }
+
+    const held = (await this.groups.listProductIds([groupId])).length;
+    if (held >= this.limits.maxProductsPerGroup) {
+      throw new ProductGroupFullError(this.limits.maxProductsPerGroup);
+    }
+  }
+
+  /** The product goes into the group asked for, else into a new one; a product that is in a group of the user stays in it. */
+  private async place(
+    userId: string,
+    productId: string,
+    askedGroupId: string | null,
+  ): Promise<string> {
+    const placed = await this.groups.findGroupIdOfProduct(userId, productId);
+    if (placed !== null) return placed;
+
+    const groupId = askedGroupId ?? (await this.groups.create(userId, null)).snapshot.id;
+    await this.groups.place(userId, groupId, productId);
+
+    return groupId;
   }
 
   /** A marketplace with cities has the city asked for if it knows it, else its default one; one without has none. */
