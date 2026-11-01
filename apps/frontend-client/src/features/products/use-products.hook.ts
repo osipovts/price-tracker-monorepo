@@ -1,6 +1,7 @@
 import {
   useMutation,
   type UseMutationResult,
+  useQueries,
   useQuery,
   useQueryClient,
   type UseQueryResult,
@@ -20,10 +21,6 @@ import {
   type PriceHistoryInterface,
 } from './price-history.type.js';
 
-export type ProductPageType =
-  operations['ProductsController_list']['responses'][200]['content']['application/json'];
-export type ProductListItemType = ProductPageType['items'][number];
-
 type PriceHistoryPageType =
   operations['ProductsController_prices']['responses'][200]['content']['application/json'];
 export type ObservationType = PriceHistoryPageType['items'][number];
@@ -33,38 +30,6 @@ export type ProductHistoryType = PriceHistoryInterface<
   ObservationType
 >;
 
-export const productPageSize = 20;
-
-/** How long to wait for the first price of a product that has none yet, in milliseconds. */
-const firstPricePollMs = 3000;
-
-/** How long after a read the list waits for the picture of a product that has none. */
-const pictureWaitMs = 2 * 60_000;
-
-/** A product that has no price yet, or has just been read and has no picture yet. */
-function isAwaitingData(item: ProductListItemType): boolean {
-  if (item.latest === null) return true;
-
-  return (
-    item.thumbnailUrl === null &&
-    (item.lastCheckedAt === null || Date.now() - Date.parse(item.lastCheckedAt) < pictureWaitMs)
-  );
-}
-
-export function useProducts(page: number): UseQueryResult<ProductPageType | undefined> {
-  return useQuery({
-    queryKey: ['products', page],
-    queryFn: async (): Promise<ProductPageType | undefined> =>
-      ensure(
-        await api.GET('/products', { params: { query: { page, pageSize: productPageSize } } }),
-      ),
-    placeholderData: (previous): ProductPageType | undefined => previous,
-    // A product that was just added has no price until a worker reads it, and no picture until it is kept.
-    refetchInterval: (query): number | false =>
-      query.state.data?.items.some(isAwaitingData) === true ? firstPricePollMs : false,
-  });
-}
-
 export function useAddProduct(): UseMutationResult<void, Error, PendingAddInterface> {
   const client = useQueryClient();
 
@@ -73,11 +38,15 @@ export function useAddProduct(): UseMutationResult<void, Error, PendingAddInterf
       rememberPendingAdd(add);
       ensure(
         await api.POST('/products', {
-          body: add.cityId === null ? { url: add.url } : { url: add.url, cityId: add.cityId },
+          body: {
+            url: add.url,
+            ...(add.cityId === null ? {} : { cityId: add.cityId }),
+            ...(add.groupId === null ? {} : { groupId: add.groupId }),
+          },
         }),
       );
     },
-    onSuccess: (): Promise<void> => client.invalidateQueries({ queryKey: ['products'] }),
+    onSuccess: (): Promise<void> => client.invalidateQueries({ queryKey: ['product-groups'] }),
     // Here, not in the call: the page that made it may be gone by then.
     onSettled: forgetPendingAdd,
   });
@@ -92,7 +61,7 @@ export function useDeleteProduct(): UseMutationResult<void, Error, string> {
     },
     onSuccess: async (_data, id): Promise<void> => {
       client.removeQueries({ queryKey: ['price-history', id] });
-      await client.invalidateQueries({ queryKey: ['products'] });
+      await client.invalidateQueries({ queryKey: ['product-groups'] });
     },
   });
 }
@@ -115,6 +84,30 @@ export function usePriceHistory(id: string): UseQueryResult<ProductHistoryType |
         client.getQueryData<ProductHistoryType>(key),
       ),
     refetchInterval: 60_000,
+  });
+}
+
+/** The history of each of the products, in the order given; undefined for one not loaded yet. */
+export function usePriceHistories(
+  ids: readonly string[],
+): Array<UseQueryResult<ProductHistoryType | undefined>> {
+  const client = useQueryClient();
+
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ['price-history', id],
+      queryFn: (): Promise<ProductHistoryType | undefined> =>
+        loadPriceHistory(
+          async (page) =>
+            ensure(
+              await api.GET('/products/{id}/prices', {
+                params: { path: { id }, query: { page, pageSize: historyPageSize } },
+              }),
+            ),
+          client.getQueryData<ProductHistoryType>(['price-history', id]),
+        ),
+      refetchInterval: 60_000,
+    })),
   });
 }
 

@@ -1,6 +1,6 @@
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StrictMode } from 'react';
 import { MemoryRouter } from 'react-router';
@@ -9,51 +9,45 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { rememberPendingAdd } from './pending-add.type.js';
 import { ProductsPage } from './products.page.js';
 
-const product = {
-  marketplace: 'ozon',
-  url: 'https://www.ozon.ru/product/1/',
-  lastStatus: null,
-  lastCheckedAt: null,
-  nextCheckAt: null,
+function price(
+  marketplace: string,
+  amountMinor: number,
+  observedAt: string,
+): { marketplace: string; amountMinor: number; observedAt: string } {
+  return { marketplace, amountMinor, observedAt };
+}
+const group = {
   thumbnailUrl: null,
-};
-const observation = {
-  id: '99999999-9999-4999-8999-999999999999',
-  observedAt: '2026-10-31T10:00:00.000Z',
-  title: 'Notebook',
-  availability: 'in_stock',
-  prices: [{ amountMinor: 10_000_00, currency: 'RUB' }],
-  exitIp: null,
+  createdAt: '2026-10-31T10:00:00.000Z',
+  productCount: 1,
+  current: null,
+  min: null,
+  max: null,
+  highlighted: false,
 };
 
-beforeEach((): void => {
-  sessionStorage.clear();
+function stubGroups(items: Array<Record<string, unknown>>): void {
   vi.stubGlobal(
     'fetch',
     vi.fn((): Promise<Response> =>
       Promise.resolve(
-        Response.json({
-          items: [
-            {
-              ...product,
-              id: '11111111-1111-4111-8111-111111111111',
-              externalId: '1',
-              latest: null,
-            },
-            {
-              ...product,
-              id: '22222222-2222-4222-8222-222222222222',
-              externalId: '2',
-              latest: observation,
-            },
-          ],
-          page: 1,
-          pageSize: 20,
-          total: 2,
-        }),
+        Response.json({ items, page: 1, pageSize: 20, total: items.length, statsPeriod: '24h' }),
       ),
     ),
   );
+}
+
+beforeEach((): void => {
+  sessionStorage.clear();
+  stubGroups([
+    { ...group, id: '11111111-1111-4111-8111-111111111111', title: null },
+    {
+      ...group,
+      id: '22222222-2222-4222-8222-222222222222',
+      title: 'Notebook',
+      current: price('ozon', 10_000_00, '2026-10-31T10:00:00.000Z'),
+    },
+  ]);
 });
 
 test('marks the card that waits for its first price, for the glint over it, and no other', async (): Promise<void> => {
@@ -82,7 +76,9 @@ test('tells that adding a product can take minutes once it has taken over 5 seco
       'fetch',
       vi.fn((request: Request | string | URL): Promise<Response> =>
         typeof request === 'string' || request instanceof URL || request.method === 'GET'
-          ? Promise.resolve(Response.json({ items: [], page: 1, pageSize: 20, total: 0 }))
+          ? Promise.resolve(
+              Response.json({ items: [], page: 1, pageSize: 20, total: 0, statsPeriod: '24h' }),
+            )
           : new Promise<Response>(() => undefined),
       ),
     );
@@ -118,14 +114,14 @@ test('sends again the link whose add was cut short by a reload', async (): Promi
     'fetch',
     vi.fn(async (request: Request | string | URL): Promise<Response> => {
       if (typeof request === 'string' || request instanceof URL || request.method === 'GET')
-        return Response.json({ items: [], page: 1, pageSize: 20, total: 0 });
+        return Response.json({ items: [], page: 1, pageSize: 20, total: 0, statsPeriod: '24h' });
 
       sent.push(JSON.stringify(await request.json()));
 
       return new Promise<Response>(() => undefined);
     }),
   );
-  rememberPendingAdd({ url: 'https://ozon.ru/t/AbC', cityId: null });
+  rememberPendingAdd({ url: 'https://ozon.ru/t/AbC', cityId: null, groupId: null });
 
   render(
     <MantineProvider>
@@ -154,7 +150,7 @@ test('asks for the city of a link of a marketplace that has cities, searches it 
     'fetch',
     vi.fn(async (request: Request | string | URL): Promise<Response> => {
       if (typeof request === 'string' || request instanceof URL)
-        return Response.json({ items: [], page: 1, pageSize: 20, total: 0 });
+        return Response.json({ items: [], page: 1, pageSize: 20, total: 0, statsPeriod: '24h' });
       if (request.method === 'GET') {
         const { pathname, searchParams } = new URL(request.url);
         if (pathname === '/marketplaces/dns/cities') {
@@ -165,7 +161,7 @@ test('asks for the city of a link of a marketplace that has cities, searches it 
           });
         }
 
-        return Response.json({ items: [], page: 1, pageSize: 20, total: 0 });
+        return Response.json({ items: [], page: 1, pageSize: 20, total: 0, statsPeriod: '24h' });
       }
 
       sent.push(JSON.stringify(await request.json()));
@@ -202,38 +198,20 @@ test('asks for the city of a link of a marketplace that has cities, searches it 
   expect(searched).toContain('Ирк');
 });
 
-test('shows the city of a product on its card', async (): Promise<void> => {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn((): Promise<Response> =>
-      Promise.resolve(
-        Response.json({
-          items: [
-            {
-              ...product,
-              marketplace: 'dns',
-              id: '33333333-3333-4333-8333-333333333333',
-              externalId: '0463bb2411a1d582',
-              cityId: 'irkutsk-id',
-              cityName: 'Иркутск',
-              latest: observation,
-            },
-            {
-              ...product,
-              id: '44444444-4444-4444-8444-444444444444',
-              externalId: '2',
-              cityId: null,
-              cityName: null,
-              latest: observation,
-            },
-          ],
-          page: 1,
-          pageSize: 20,
-          total: 2,
-        }),
-      ),
-    ),
-  );
+test('shows the best price with its marketplace, highlighted when it is not above the lowest, with the lowest and the highest', async (): Promise<void> => {
+  const today = new Date().toISOString();
+  stubGroups([
+    {
+      ...group,
+      id: '33333333-3333-4333-8333-333333333333',
+      title: 'Phone',
+      productCount: 2,
+      current: price('dns', 9_000_00, today),
+      min: price('ozon', 9_500_00, '2026-10-05T07:08:00.000Z'),
+      max: price('ozon', 12_000_00, '2026-10-06T07:08:00.000Z'),
+      highlighted: true,
+    },
+  ]);
   render(
     <MantineProvider>
       <MemoryRouter>
@@ -246,8 +224,53 @@ test('shows the city of a product on its card', async (): Promise<void> => {
     </MantineProvider>,
   );
 
-  expect(await screen.findByText('City: Иркутск')).toBeInTheDocument();
-  expect(screen.getAllByText(/^City: /)).toHaveLength(1);
+  expect(await screen.findByText('Phone')).toBeInTheDocument();
+  expect(screen.getByText('Products: 2')).toBeInTheDocument();
+  const now = screen.getByTestId('price-Now');
+  expect(within(now).getByText('dns')).toBeInTheDocument();
+  expect(
+    within(now)
+      .getByText(/9[\s\u00a0]000/)
+      .closest('[data-highlighted="true"]'),
+  ).not.toBeNull();
+  expect(within(now).getByText(/^today, /)).toBeInTheDocument();
+  expect(within(screen.getByTestId('price-Lowest')).getByText('ozon')).toBeInTheDocument();
+  expect(screen.getByTestId('price-Lowest')).toHaveTextContent(/\d\d\.\d\d\.2026/);
+  expect(within(screen.getByTestId('price-Highest')).queryByText(/9[\s\u00a0]000/)).toBeNull();
+  expect(document.querySelectorAll('[data-highlighted="true"]')).toHaveLength(1);
+});
+
+test('remembers the period of the lowest and the highest price by telling the hub', async (): Promise<void> => {
+  const sent: string[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (request: Request | string | URL): Promise<Response> => {
+      if (typeof request !== 'string' && !(request instanceof URL) && request.method === 'PUT') {
+        sent.push(`${new URL(request.url).pathname} ${JSON.stringify(await request.json())}`);
+
+        return new Response(null, { status: 204 });
+      }
+
+      return Response.json({ items: [], page: 1, pageSize: 20, total: 0, statsPeriod: '24h' });
+    }),
+  );
+  render(
+    <MantineProvider env="test">
+      <MemoryRouter>
+        <QueryClientProvider
+          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        >
+          <ProductsPage />
+        </QueryClientProvider>
+      </MemoryRouter>
+    </MantineProvider>,
+  );
+
+  await userEvent.click(await screen.findByText('7 days'));
+
+  await waitFor((): void => {
+    expect(sent).toEqual(['/product-groups/stats-period {"statsPeriod":"7d"}']);
+  });
 });
 
 test('says the hub could not be reached when the request does not get there', async (): Promise<void> => {
@@ -278,14 +301,14 @@ test('sends the link whose add was cut short once, even when the page is mounted
     'fetch',
     vi.fn(async (request: Request | string | URL): Promise<Response> => {
       if (typeof request === 'string' || request instanceof URL || request.method === 'GET')
-        return Response.json({ items: [], page: 1, pageSize: 20, total: 0 });
+        return Response.json({ items: [], page: 1, pageSize: 20, total: 0, statsPeriod: '24h' });
 
       sent.push(JSON.stringify(await request.json()));
 
       return new Promise<Response>(() => undefined);
     }),
   );
-  rememberPendingAdd({ url: 'https://ozon.ru/t/AbC', cityId: null });
+  rememberPendingAdd({ url: 'https://ozon.ru/t/AbC', cityId: null, groupId: null });
 
   render(
     <StrictMode>

@@ -9,16 +9,18 @@ beforeEach((): void => {
 test('gives back the link that is being added, with its city, until it is forgotten', (): void => {
   expect(readPendingAdd()).toBeNull();
 
-  rememberPendingAdd({ url: 'https://ozon.ru/t/AbC', cityId: null });
-  expect(readPendingAdd()).toEqual({ url: 'https://ozon.ru/t/AbC', cityId: null });
+  rememberPendingAdd({ url: 'https://ozon.ru/t/AbC', cityId: null, groupId: null });
+  expect(readPendingAdd()).toEqual({ url: 'https://ozon.ru/t/AbC', cityId: null, groupId: null });
 
   rememberPendingAdd({
     url: 'https://www.dns-shop.ru/product/0463bb2411a1d582/',
     cityId: 'irkutsk',
+    groupId: 'g1',
   });
   expect(readPendingAdd()).toEqual({
     url: 'https://www.dns-shop.ru/product/0463bb2411a1d582/',
     cityId: 'irkutsk',
+    groupId: 'g1',
   });
 
   forgetPendingAdd();
@@ -26,7 +28,7 @@ test('gives back the link that is being added, with its city, until it is forgot
 });
 
 test('ignores a record that is too old or malformed', (): void => {
-  rememberPendingAdd({ url: 'https://ozon.ru/t/AbC', cityId: null });
+  rememberPendingAdd({ url: 'https://ozon.ru/t/AbC', cityId: null, groupId: null });
   expect(readPendingAdd(Date.now() + 10 * 60_000)).toBeNull();
 
   sessionStorage.setItem('products.pendingAdd', 'not json');
@@ -39,5 +41,5 @@ test('reads a record made before the city was kept as a link without a city', ()
     JSON.stringify({ url: 'https://ozon.ru/t/AbC', startedAt: Date.now() }),
   );
 
-  expect(readPendingAdd()).toEqual({ url: 'https://ozon.ru/t/AbC', cityId: null });
+  expect(readPendingAdd()).toEqual({ url: 'https://ozon.ru/t/AbC', cityId: null, groupId: null });
 });
