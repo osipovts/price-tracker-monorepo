@@ -34,18 +34,26 @@ function PriceLine({
       ) : (
         <>
           <MarketplaceBadge marketplace={price.marketplace} />
-          {highlighted ? (
-            <Badge color="green" variant="light" size={large ? 'xl' : 'lg'} data-highlighted="true">
-              {formatPrice(price.amountMinor)}
-            </Badge>
-          ) : (
-            <Text fw={large ? 700 : 500} size={large ? 'xl' : 'md'}>
-              {formatPrice(price.amountMinor)}
+          {/* The price and its moment wrap together: on a phone they go under the badge as one line. */}
+          <Group gap="xs" wrap="wrap" align="center">
+            {highlighted ? (
+              <Badge
+                color="green"
+                variant="light"
+                size={large ? 'xl' : 'lg'}
+                data-highlighted="true"
+              >
+                {formatPrice(price.amountMinor)}
+              </Badge>
+            ) : (
+              <Text fw={large ? 700 : 500} size={large ? 'xl' : 'md'}>
+                {formatPrice(price.amountMinor)}
+              </Text>
+            )}
+            <Text size="xs" c="dimmed">
+              {formatPriceMoment(price.observedAt, locale)}
             </Text>
-          )}
-          <Text size="xs" c="dimmed">
-            {formatPriceMoment(price.observedAt, locale)}
-          </Text>
+          </Group>
         </>
       )}
     </Group>
