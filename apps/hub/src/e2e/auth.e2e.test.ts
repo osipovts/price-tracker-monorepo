@@ -232,9 +232,9 @@ void test('an administrator of the list gets the operator routes once the email 
     averageLatencyMs: null,
     lastCheckedAt: null,
   });
-  // Only the read of the handbook of cities is queued: the hub asks for it when it starts and has none.
+  // Nothing is queued: the hub asks for the handbook of cities when it starts, but has no proxy to read it through.
   assert.deepEqual(dashboard.jobs.lastDay, {
-    queued: 1,
+    queued: 0,
     running: 0,
     retrying: 0,
     completed: 0,

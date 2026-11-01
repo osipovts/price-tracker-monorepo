@@ -86,7 +86,7 @@ void test('a visitor signs up, and is logged in', async (): Promise<void> => {
   await page.waitForURL('**/app/login');
 
   await page.getByRole('heading', { name: 'Нищебродская' }).waitFor();
-  await page.getByText('price tracker', { exact: true }).waitFor();
+  await page.getByText('price tracker: ozon, wb, dns, etc.', { exact: true }).waitFor();
 
   await page.getByRole('tab', { name: 'Sign up' }).click();
   await page.getByLabel('Email').fill(email);
@@ -394,7 +394,7 @@ void test('the language follows the browser, and the login page has no switch of
   const context = await browser.newContext({ locale: 'ru-RU' });
   const russian = await context.newPage();
   await russian.goto(`${hub.baseUrl}/app/login`);
-  await russian.getByText('трекер цен', { exact: true }).waitFor();
+  await russian.getByText('трекер цен: ozon, wb, dns, и др.', { exact: true }).waitFor();
   assert.equal(await russian.locator('html').getAttribute('lang'), 'ru');
 
   // The language is picked on the page of the settings, not here: no switch on the login page, nor on the legal texts.
@@ -408,7 +408,7 @@ void test('the language follows the browser, and the login page has no switch of
   const german = await browser.newContext({ locale: 'de-DE' });
   const other = await german.newPage();
   await other.goto(`${hub.baseUrl}/app/login`);
-  await other.getByText('price tracker', { exact: true }).waitFor();
+  await other.getByText('price tracker: ozon, wb, dns, etc.', { exact: true }).waitFor();
   await german.close();
 });
 
