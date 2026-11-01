@@ -35,6 +35,8 @@ export interface AppConfigInterface {
   authCookieSecure: boolean;
   /** How many products a user may track. */
   productsPerUserMax: number;
+  /** How many products one group may hold. */
+  productGroupItemsMax: number;
   /** How many products a user may add per window, whatever the products. */
   productAddMaxAttempts: number;
   productAddWindowMs: number;
