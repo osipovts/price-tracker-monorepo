@@ -6,6 +6,8 @@ export interface PendingAddInterface {
   url: string;
   /** The city asked for, by the id of the marketplace; null when none was. */
   cityId: string | null;
+  /** The group the product is added to; null when it goes into a new group. */
+  groupId: string | null;
 }
 
 /** The link that is being added, kept in the tab so that a reload can ask for it again: the hub joins the add in progress. */
@@ -35,11 +37,19 @@ export function readPendingAdd(now: number = Date.now()): PendingAddInterface | 
 
     const { url, startedAt } = value;
     const cityId = 'cityId' in value && typeof value.cityId === 'string' ? value.cityId : null;
+    const groupId = 'groupId' in value && typeof value.groupId === 'string' ? value.groupId : null;
 
     return typeof url === 'string' && typeof startedAt === 'number' && now - startedAt < maxAgeMs
-      ? { url, cityId }
+      ? { url, cityId, groupId }
       : null;
   } catch {
     return null;
   }
+}
+
+/** Whether a reload cut short an add to the group, or to a new group when null: its form is opened again. */
+export function hasPendingAdd(groupId: string | null): boolean {
+  const pending = readPendingAdd();
+
+  return pending !== null && pending.groupId === groupId;
 }

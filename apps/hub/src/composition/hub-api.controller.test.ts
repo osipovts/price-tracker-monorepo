@@ -36,13 +36,22 @@ import { InMemoryJobRepositoryAdapter } from '../job/infrastructure/in-memory-jo
 import { JobsController } from '../job/presentation/jobs.controller.js';
 import { AddProductUseCase } from '../product/application/add-product.use-case.js';
 import { ChoosePriceRoutesUseCase } from '../product/application/choose-price-routes.use-case.js';
+import { CreateProductGroupUseCase } from '../product/application/create-product-group.use-case.js';
+import { DescribeProductGroupsUseCase } from '../product/application/describe-product-groups.use-case.js';
+import { GetProductGroupUseCase } from '../product/application/get-product-group.use-case.js';
 import { GetProductThumbnailUrlUseCase } from '../product/application/get-product-thumbnail-url.use-case.js';
 import { ListPriceHistoryUseCase } from '../product/application/list-price-history.use-case.js';
-import { ListProductsUseCase } from '../product/application/list-products.use-case.js';
+import { ListProductGroupsUseCase } from '../product/application/list-product-groups.use-case.js';
 import { RemoveProductUseCase } from '../product/application/remove-product.use-case.js';
+import { RemoveProductGroupUseCase } from '../product/application/remove-product-group.use-case.js';
+import { RenameProductGroupUseCase } from '../product/application/rename-product-group.use-case.js';
 import { RequestPriceObservationUseCase } from '../product/application/request-price-observation.use-case.js';
+import { SetStatsPeriodUseCase } from '../product/application/set-stats-period.use-case.js';
 import { InMemoryPriceObservationRepositoryAdapter } from '../product/infrastructure/in-memory-price-observation-repository.adapter.js';
+import { InMemoryProductGroupPreferenceRepositoryAdapter } from '../product/infrastructure/in-memory-product-group-preference-repository.adapter.js';
+import { InMemoryProductGroupRepositoryAdapter } from '../product/infrastructure/in-memory-product-group-repository.adapter.js';
 import { InMemoryTrackedProductRepositoryAdapter } from '../product/infrastructure/in-memory-tracked-product-repository.adapter.js';
+import { ProductGroupsController } from '../product/presentation/product-groups.controller.js';
 import { ProductsController } from '../product/presentation/products.controller.js';
 import { AddManualProxyUseCase } from '../proxy/application/add-manual-proxy.use-case.js';
 import { DeleteAllProxiesUseCase } from '../proxy/application/delete-all-proxies.use-case.js';
@@ -65,6 +74,8 @@ import { HttpLoggingInterceptor } from '../shared/presentation/http-logging.inte
 const proxies = new InMemoryProxyRepositoryAdapter();
 const products = new InMemoryTrackedProductRepositoryAdapter();
 const observations = new InMemoryPriceObservationRepositoryAdapter();
+const groups = new InMemoryProductGroupRepositoryAdapter();
+const groupPreferences = new InMemoryProductGroupPreferenceRepositoryAdapter();
 const jobs = new InMemoryJobRepositoryAdapter();
 
 const queued: unknown[] = [];
@@ -122,6 +133,7 @@ const config: AppConfigInterface = {
   emailVerificationTtlMs: 86_400_000,
   authVerificationResendMaxAttempts: 1000,
   productsPerUserMax: 100,
+  productGroupItemsMax: 5,
   productAddMaxAttempts: 1000,
   productAddWindowMs: 60_000,
   authSessionPurgeIntervalMs: 60_000,
@@ -158,6 +170,7 @@ before(async (): Promise<void> => {
       ProxiesController,
       ProxySourcesController,
       ProductsController,
+      ProductGroupsController,
       JobsController,
       CitiesController,
       HandbooksController,
@@ -190,10 +203,11 @@ before(async (): Promise<void> => {
         useValue: new AddProductUseCase(
           new ResolveProductReferenceUseCase([new OzonReferenceParser(), new DnsReferenceParser()]),
           products,
+          groups,
           observations,
           requestObservation,
           new InMemoryRateLimiterAdapter(),
-          { maxProducts: 100, add: { limit: 1000, windowMs: 60_000 } },
+          { maxProducts: 100, maxProductsPerGroup: 5, add: { limit: 1000, windowMs: 60_000 } },
           undefined,
           undefined,
           {
@@ -212,10 +226,39 @@ before(async (): Promise<void> => {
           2,
         ),
       },
-      { provide: ListProductsUseCase, useValue: new ListProductsUseCase(products, observations) },
+      {
+        provide: DescribeProductGroupsUseCase,
+        useValue: new DescribeProductGroupsUseCase(groups, products, observations),
+      },
+      {
+        provide: ListProductGroupsUseCase,
+        useValue: new ListProductGroupsUseCase(
+          groups,
+          groupPreferences,
+          new DescribeProductGroupsUseCase(groups, products, observations),
+        ),
+      },
+      {
+        provide: GetProductGroupUseCase,
+        useValue: new GetProductGroupUseCase(
+          groups,
+          groupPreferences,
+          new DescribeProductGroupsUseCase(groups, products, observations),
+        ),
+      },
+      { provide: CreateProductGroupUseCase, useValue: new CreateProductGroupUseCase(groups) },
+      { provide: RenameProductGroupUseCase, useValue: new RenameProductGroupUseCase(groups) },
+      { provide: SetStatsPeriodUseCase, useValue: new SetStatsPeriodUseCase(groupPreferences) },
       {
         provide: RemoveProductUseCase,
         useValue: new RemoveProductUseCase(products, new InMemoryObjectStorageAdapter(false)),
+      },
+      {
+        provide: RemoveProductGroupUseCase,
+        useValue: new RemoveProductGroupUseCase(
+          groups,
+          new RemoveProductUseCase(products, new InMemoryObjectStorageAdapter(false)),
+        ),
       },
       {
         provide: GetProductThumbnailUrlUseCase,
@@ -401,29 +444,69 @@ void test('tracks a product once whatever the link and lists it with its newest 
     nextCheckAt: null,
     thumbnailUrl: null,
     jobId: null,
+    groupId: first.body['groupId'],
   });
 
   const created = await call('/products', post({ url: 'https://ozon.ru/product/1/' }));
   assert.equal(created.status, 201);
 
-  const list = await call('/products?pageSize=10');
+  const list = await call('/product-groups?pageSize=10');
   assert.equal(list.status, 200);
   assert.equal(list.body['total'], 2);
+  assert.equal(list.body['statsPeriod'], '24h');
 
   const items: unknown = list.body['items'];
   assert.ok(Array.isArray(items));
-  // The newest product comes first; nothing has been read yet.
+  // The newest group comes first; nothing has been read yet, so there are no prices.
   assert.deepEqual(
     items.map((item: unknown): unknown =>
-      typeof item === 'object' && item !== null && 'url' in item && 'latest' in item
-        ? [item.url, item.latest]
+      typeof item === 'object' && item !== null && 'id' in item && 'current' in item
+        ? [
+            item.id === created.body['groupId'],
+            item.current,
+            'productCount' in item && item.productCount,
+          ]
         : item,
     ),
     [
-      ['https://www.ozon.ru/product/1/', null],
-      [productUrl, null],
+      [true, null, 1],
+      [false, null, 1],
     ],
   );
+});
+
+void test('groups hold products together, are renamed and deleted, and the period of the prices is remembered', async (): Promise<void> => {
+  const made = await call('/product-groups', post({ title: 'Phone' }));
+  assert.equal(made.status, 201);
+  const groupId = String(made.body['id']);
+
+  const added = await call(
+    '/products',
+    post({ url: 'https://www.ozon.ru/product/7000/', groupId }),
+  );
+  assert.equal(added.body['groupId'], groupId);
+
+  await call(`/product-groups/${groupId}`, { ...post({ title: 'Phone 2' }), method: 'PATCH' });
+  const detail = await call(`/product-groups/${groupId}`);
+  assert.equal(detail.body['title'], 'Phone 2');
+  assert.equal(detail.body['productCount'], 1);
+
+  assert.equal(
+    (await call('/product-groups/stats-period', { ...post({ statsPeriod: '7d' }), method: 'PUT' }))
+      .status,
+    204,
+  );
+  assert.equal((await call(`/product-groups/${groupId}`)).body['statsPeriod'], '7d');
+  assert.equal(
+    (await call('/product-groups/stats-period', { ...post({ statsPeriod: '1y' }), method: 'PUT' }))
+      .status,
+    400,
+  );
+
+  const stranger = { headers: { cookie: otherCookie } };
+  assert.equal((await call(`/product-groups/${groupId}`, stranger)).status, 404);
+  assert.equal((await call(`/product-groups/${groupId}`, { method: 'DELETE' })).status, 204);
+  assert.equal((await call(`/product-groups/${groupId}`)).status, 404);
 });
 
 void test('queues the read of the first price when a product is added, and serves an empty history meanwhile', async (): Promise<void> => {
@@ -480,6 +563,9 @@ void test('documents the endpoints and their zod schemas in Swagger', (): void =
     '/jobs',
     '/jobs/{id}',
     '/marketplaces/{marketplace}/cities',
+    '/product-groups',
+    '/product-groups/stats-period',
+    '/product-groups/{id}',
     '/products',
     '/products/{id}',
     '/products/{id}/prices',
@@ -513,10 +599,12 @@ void test('documents the endpoints and their zod schemas in Swagger', (): void =
     '201',
     '400',
     '403',
+    '404',
     '429',
   ]);
   assert.ok(add?.requestBody);
-  assert.ok(document.paths['/products']?.get?.responses['200']);
+  assert.ok(document.paths['/product-groups']?.get?.responses['200']);
+  assert.equal(document.paths['/products']?.get, undefined);
   assert.equal(document.paths['/products/{id}/prices']?.post, undefined);
 });
 
@@ -555,7 +643,7 @@ void test('the job reports its progress', async (): Promise<void> => {
 });
 
 const userRoutes: Array<[string, string]> = [
-  ['GET', '/products'],
+  ['GET', '/product-groups'],
   ['POST', '/products'],
   ['GET', '/marketplaces/dns/cities'],
   ['GET', '/products/3f0c9a52-7a53-4a64-9d0d-2f2f6c1f0a11/prices'],
@@ -609,7 +697,7 @@ void test('a product is tracked per user: the others do not see it, and join it 
   const { id } = await addProduct();
   const other = { headers: { cookie: otherCookie } };
 
-  assert.equal((await call('/products', other)).body['total'], 0);
+  assert.equal((await call('/product-groups', other)).body['total'], 0);
   assert.equal((await call(`/products/${id}/prices`, other)).status, 404);
   assert.equal((await call(`/products/${id}/prices`, { method: 'POST', ...other })).status, 404);
 
@@ -622,7 +710,7 @@ void test('a product is tracked per user: the others do not see it, and join it 
   });
   assert.equal(joined.status, 201);
   assert.equal(joined.body['id'], id);
-  assert.equal((await call('/products', other)).body['total'], 1);
+  assert.equal((await call('/product-groups', other)).body['total'], 1);
   assert.equal((await call(`/products/${id}/prices`, other)).status, 200);
 });
 

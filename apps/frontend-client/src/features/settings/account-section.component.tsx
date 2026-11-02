@@ -77,7 +77,7 @@ export function AccountSection(): ReactElement {
         {me.data !== undefined && me.data !== null && (
           <Group gap="xs">
             <Text fw={500}>{me.data.email}</Text>
-            <Badge color={me.data.emailVerified ? 'green' : 'blue'}>
+            <Badge color={me.data.emailVerified ? 'success' : 'blue'}>
               {me.data.emailVerified ? t('settings.emailVerified') : t('settings.emailNotVerified')}
             </Badge>
           </Group>

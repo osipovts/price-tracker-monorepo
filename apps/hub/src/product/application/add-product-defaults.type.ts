@@ -7,6 +7,7 @@ import type { StoreProductThumbnailUseCase } from './store-product-thumbnail.use
 /** For the tests that are not about the quotas: nothing is refused. */
 export const unlimitedProducts: ProductLimitsInterface = {
   maxProducts: Number.MAX_SAFE_INTEGER,
+  maxProductsPerGroup: Number.MAX_SAFE_INTEGER,
   add: { limit: Number.MAX_SAFE_INTEGER, windowMs: 60_000 },
 };
 

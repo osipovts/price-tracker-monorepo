@@ -37,6 +37,7 @@ const config: AppConfigInterface = {
   emailVerificationTtlMs: 86_400_000,
   authVerificationResendMaxAttempts: 1000,
   productsPerUserMax: 100,
+  productGroupItemsMax: 5,
   productAddMaxAttempts: 1000,
   productAddWindowMs: 60_000,
   authSessionPurgeIntervalMs: 60_000,

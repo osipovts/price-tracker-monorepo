@@ -91,6 +91,7 @@ const configSchema = z.object({
     .default(24 * 60 * 60_000),
   authVerificationResendMaxAttempts: z.coerce.number().int().min(1).default(3),
   productsPerUserMax: z.coerce.number().int().min(1).default(100),
+  productGroupItemsMax: z.coerce.number().int().min(1).default(5),
   productAddMaxAttempts: z.coerce.number().int().min(1).default(30),
   productAddWindowMs: z.coerce
     .number()
@@ -190,6 +191,7 @@ export class AppConfigParser {
         emailVerificationTtlMs: env['EMAIL_VERIFICATION_TTL_MS'],
         authVerificationResendMaxAttempts: env['AUTH_VERIFICATION_RESEND_MAX_ATTEMPTS'],
         productsPerUserMax: env['PRODUCTS_PER_USER_MAX'],
+        productGroupItemsMax: env['PRODUCT_GROUP_ITEMS_MAX'],
         productAddMaxAttempts: env['PRODUCT_ADD_MAX_ATTEMPTS'],
         productAddWindowMs: env['PRODUCT_ADD_WINDOW_MS'],
         authSessionPurgeIntervalMs: env['AUTH_SESSION_PURGE_INTERVAL_MS'],

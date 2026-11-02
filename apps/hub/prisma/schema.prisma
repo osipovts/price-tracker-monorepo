@@ -118,17 +118,19 @@ model JobRecord {
 }
 
 model User {
-  id                   String                @id @db.Uuid
+  id                     String                  @id @db.Uuid
   /// Trimmed and lowercase.
-  email                String                @unique
+  email                  String                  @unique
   /// Null until the user proves the address is theirs.
-  emailVerifiedAt      DateTime?
-  createdAt            DateTime              @default(now())
-  credential           Credential?
-  identities           LinkedIdentity[]
-  authSessions         AuthSession[]
-  productSubscriptions ProductSubscription[]
-  emailVerifications   EmailVerification[]
+  emailVerifiedAt        DateTime?
+  createdAt              DateTime                @default(now())
+  credential             Credential?
+  identities             LinkedIdentity[]
+  authSessions           AuthSession[]
+  productSubscriptions   ProductSubscription[]
+  emailVerifications     EmailVerification[]
+  productGroups          ProductGroup[]
+  productGroupPreference ProductGroupPreference?
 
   @@map("users")
 }
@@ -179,11 +181,12 @@ model AuthSession {
 
 /// A user tracks a product: the products and their price history are shared, the tracking is not.
 model ProductSubscription {
-  userId           String         @db.Uuid
-  trackedProductId String         @db.Uuid
-  createdAt        DateTime       @default(now())
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trackedProduct   TrackedProduct @relation(fields: [trackedProductId], references: [id], onDelete: Cascade)
+  userId           String            @db.Uuid
+  trackedProductId String            @db.Uuid
+  createdAt        DateTime          @default(now())
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trackedProduct   TrackedProduct    @relation(fields: [trackedProductId], references: [id], onDelete: Cascade)
+  groupItem        ProductGroupItem?
 
   @@id([userId, trackedProductId])
   @@index([trackedProductId])
@@ -204,4 +207,43 @@ model EmailVerification {
 
   @@index([userId])
   @@map("email_verifications")
+}
+
+/// A user tracks the same item on several marketplaces: the group holds those products together. Without a title
+/// it is called after its first product.
+model ProductGroup {
+  id        String             @id @default(uuid()) @db.Uuid
+  userId    String             @db.Uuid
+  title     String?
+  createdAt DateTime           @default(now())
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     ProductGroupItem[]
+
+  /// The list of a user: the newest group first.
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("product_groups")
+}
+
+/// A product a user tracks belongs to one group of theirs; it leaves the group when the user stops tracking it.
+model ProductGroupItem {
+  userId           String              @db.Uuid
+  trackedProductId String              @db.Uuid
+  groupId          String              @db.Uuid
+  createdAt        DateTime            @default(now())
+  group            ProductGroup        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  subscription     ProductSubscription @relation(fields: [userId, trackedProductId], references: [userId, trackedProductId], onDelete: Cascade)
+
+  @@id([userId, trackedProductId])
+  @@index([groupId, createdAt])
+  @@map("product_group_items")
+}
+
+/// What a user chose to see of the groups, kept so that it follows them between devices.
+model ProductGroupPreference {
+  userId      String @id @db.Uuid
+  /// The period of the lowest and the highest price on the cards: 24h, 7d or 30d.
+  statsPeriod String @default("24h")
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("product_group_preferences")
 }

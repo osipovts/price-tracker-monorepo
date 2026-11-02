@@ -5,6 +5,7 @@ import { OzonReferenceParser, ResolveProductReferenceUseCase } from 'product-ref
 
 import { InMemoryRateLimiterAdapter } from '../../shared/infrastructure/in-memory-rate-limiter.adapter.js';
 import { InMemoryPriceObservationRepositoryAdapter } from '../infrastructure/in-memory-price-observation-repository.adapter.js';
+import { InMemoryProductGroupRepositoryAdapter } from '../infrastructure/in-memory-product-group-repository.adapter.js';
 import { InMemoryTrackedProductRepositoryAdapter } from '../infrastructure/in-memory-tracked-product-repository.adapter.js';
 import { AddProductUseCase } from './add-product.use-case.js';
 import { noPriceReads, unlimitedProducts } from './add-product-defaults.type.js';
@@ -31,6 +32,7 @@ void test('tracks the product again when it was removed under the user, instead 
   const add = new AddProductUseCase(
     new ResolveProductReferenceUseCase([new OzonReferenceParser()]),
     products,
+    new InMemoryProductGroupRepositoryAdapter(),
     new InMemoryPriceObservationRepositoryAdapter(),
     noPriceReads,
     new InMemoryRateLimiterAdapter(),
@@ -52,6 +54,7 @@ void test('gives up when the product is gone again', async (): Promise<void> => 
   const add = new AddProductUseCase(
     new ResolveProductReferenceUseCase([new OzonReferenceParser()]),
     products,
+    new InMemoryProductGroupRepositoryAdapter(),
     new InMemoryPriceObservationRepositoryAdapter(),
     noPriceReads,
     new InMemoryRateLimiterAdapter(),

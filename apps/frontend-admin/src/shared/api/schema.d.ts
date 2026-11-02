@@ -31,12 +31,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List tracked products with their newest price, the newest first */
-        get: operations["ProductsController_list"];
+        get?: never;
         put?: never;
         /**
-         * Track a product by its URL
-         * @description Any link to the product page works: it is canonicalized. The users share a product and its price history, each one tracks it for themselves. A product that has no price yet gets the read of its first price queued, which `jobId` names: follow it with `GET /jobs/{jobId}`. A user tracks a limited number of products and adds them at a limited rate.
+         * Track a product by its URL, in a group
+         * @description Any link to the product page works: it is canonicalized. The users share a product and its price history, each one tracks it for themselves. A product that has no price yet gets the read of its first price queued, which `jobId` names: follow it with `GET /jobs/{jobId}`. The product goes into the group `groupId` names, else into a new group; a product the user tracks stays in its group. A user tracks a limited number of products, a group holds a limited number, and products are added at a limited rate.
          */
         post: operations["ProductsController_add"];
         delete?: never;
@@ -80,6 +79,72 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/product-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the product groups of the user, the newest first
+         * @description A group holds the same item tracked on several marketplaces. The cards show the best price now and the lowest and the highest one of `statsPeriod`.
+         */
+        get: operations["ProductGroupsController_list"];
+        put?: never;
+        /**
+         * Make an empty group
+         * @description A group made by adding a product (`POST /products`) is made there.
+         */
+        post: operations["ProductGroupsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/product-groups/stats-period": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose the period of the lowest and the highest price on the cards
+         * @description Kept for the user, so that it is the same on every device.
+         */
+        put: operations["ProductGroupsController_chooseStatsPeriod"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/product-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A product group with its products, each with its newest price */
+        get: operations["ProductGroupsController_get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a product group and stop tracking its products
+         * @description The products are shared: each is deleted with its price history only when nobody tracks it any more.
+         */
+        delete: operations["ProductGroupsController_remove"];
+        options?: never;
+        head?: never;
+        /** Rename a product group */
+        patch: operations["ProductGroupsController_rename"];
         trace?: never;
     };
     "/jobs": {
@@ -430,7 +495,7 @@ export interface paths {
         };
         /**
          * Confirm the email: the link mailed to it
-         * @description Open the link of the mail. It works until it expires, and opening it again is harmless.
+         * @description Open the link of the mail in the browser the user is signed in with. It works until it expires, and opening it again is harmless. Nobody else can confirm the email, even with the mailbox: whoever signed up set the password.
          */
         get: operations["EmailVerificationController_verify"];
         put?: never;
@@ -594,63 +659,6 @@ export interface operations {
             };
         };
     };
-    ProductsController_list: {
-        parameters: {
-            query?: {
-                page?: number;
-                pageSize?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        items: {
-                            /** Format: uuid */
-                            id: string;
-                            marketplace: string;
-                            externalId: string;
-                            url: string;
-                            cityId: string | null;
-                            cityName: string | null;
-                            lastStatus: string | null;
-                            /** Format: date-time */
-                            lastCheckedAt: string | null;
-                            /** Format: date-time */
-                            nextCheckAt: string | null;
-                            /** Format: uri */
-                            thumbnailUrl: string | null;
-                            latest: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: date-time */
-                                observedAt: string;
-                                title: string;
-                                /** @enum {string} */
-                                availability: "in_stock" | "out_of_stock" | "unknown";
-                                prices: {
-                                    amountMinor: number;
-                                    /** @enum {string} */
-                                    currency: "RUB";
-                                }[];
-                                exitIp: string | null;
-                            } | null;
-                        }[];
-                        page: number;
-                        pageSize: number;
-                        total: number;
-                    };
-                };
-            };
-        };
-    };
     ProductsController_add: {
         parameters: {
             query?: never;
@@ -664,6 +672,8 @@ export interface operations {
                     /** Format: uri */
                     url: string;
                     cityId?: string;
+                    /** Format: uuid */
+                    groupId?: string;
                 };
             };
         };
@@ -691,6 +701,8 @@ export interface operations {
                         thumbnailUrl: string | null;
                         /** Format: uuid */
                         jobId: string | null;
+                        /** Format: uuid */
+                        groupId: string;
                     };
                 };
             };
@@ -717,6 +729,8 @@ export interface operations {
                         thumbnailUrl: string | null;
                         /** Format: uuid */
                         jobId: string | null;
+                        /** Format: uuid */
+                        groupId: string;
                     };
                 };
             };
@@ -727,8 +741,15 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The user tracks the most products the hub allows */
+            /** @description The user tracks the most products the hub allows, or the group holds the most it may */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The group is not the user's */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -827,6 +848,302 @@ export interface operations {
                 content?: never;
             };
             /** @description The product is not tracked */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductGroupsController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            title: string | null;
+                            /** Format: uri */
+                            thumbnailUrl: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            productCount: number;
+                            lastCheck: {
+                                marketplace: string;
+                                /** Format: date-time */
+                                checkedAt: string;
+                            } | null;
+                            current: {
+                                marketplace: string;
+                                amountMinor: number;
+                                /** Format: date-time */
+                                observedAt: string;
+                            } | null;
+                            min: {
+                                marketplace: string;
+                                amountMinor: number;
+                                /** Format: date-time */
+                                observedAt: string;
+                            } | null;
+                            max: {
+                                marketplace: string;
+                                amountMinor: number;
+                                /** Format: date-time */
+                                observedAt: string;
+                            } | null;
+                            highlighted: boolean;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                        /** @enum {string} */
+                        statsPeriod: "24h" | "7d" | "30d";
+                    };
+                };
+            };
+        };
+    };
+    ProductGroupsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        title: string | null;
+                        /** Format: uri */
+                        thumbnailUrl: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        productCount: number;
+                        lastCheck: {
+                            marketplace: string;
+                            /** Format: date-time */
+                            checkedAt: string;
+                        } | null;
+                        current: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        min: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        max: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        highlighted: boolean;
+                    };
+                };
+            };
+        };
+    };
+    ProductGroupsController_chooseStatsPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    statsPeriod: "24h" | "7d" | "30d";
+                };
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductGroupsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        title: string | null;
+                        /** Format: uri */
+                        thumbnailUrl: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        productCount: number;
+                        lastCheck: {
+                            marketplace: string;
+                            /** Format: date-time */
+                            checkedAt: string;
+                        } | null;
+                        current: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        min: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        max: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        highlighted: boolean;
+                        /** @enum {string} */
+                        statsPeriod: "24h" | "7d" | "30d";
+                        products: {
+                            /** Format: uuid */
+                            id: string;
+                            marketplace: string;
+                            externalId: string;
+                            url: string;
+                            cityId: string | null;
+                            cityName: string | null;
+                            lastStatus: string | null;
+                            /** Format: date-time */
+                            lastCheckedAt: string | null;
+                            /** Format: date-time */
+                            nextCheckAt: string | null;
+                            /** Format: uri */
+                            thumbnailUrl: string | null;
+                            latest: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: date-time */
+                                observedAt: string;
+                                title: string;
+                                /** @enum {string} */
+                                availability: "in_stock" | "out_of_stock" | "unknown";
+                                prices: {
+                                    amountMinor: number;
+                                    /** @enum {string} */
+                                    currency: "RUB";
+                                }[];
+                                exitIp: string | null;
+                            } | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description The group is not the user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductGroupsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The group is not the user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductGroupsController_rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                };
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The group is not the user's */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1559,8 +1876,15 @@ export interface operations {
                     };
                 };
             };
-            /** @description The link is wrong or has expired */
+            /** @description The link is wrong, has expired, or was mailed for another user */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No live session: where the app has a login page, a redirect to it with `?verify=<token>` */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

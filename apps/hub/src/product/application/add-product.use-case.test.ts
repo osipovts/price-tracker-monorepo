@@ -12,12 +12,14 @@ import { NoProxiesAvailableError } from '../../shared/application/no-proxies-ava
 import { TooManyRequestsError } from '../../shared/application/too-many-requests.error.js';
 import { InMemoryRateLimiterAdapter } from '../../shared/infrastructure/in-memory-rate-limiter.adapter.js';
 import { InMemoryPriceObservationRepositoryAdapter } from '../infrastructure/in-memory-price-observation-repository.adapter.js';
+import { InMemoryProductGroupRepositoryAdapter } from '../infrastructure/in-memory-product-group-repository.adapter.js';
 import { InMemoryTrackedProductRepositoryAdapter } from '../infrastructure/in-memory-tracked-product-repository.adapter.js';
 import { AddProductUseCase } from './add-product.use-case.js';
 import { ListPriceHistoryUseCase } from './list-price-history.use-case.js';
-import { ListProductsUseCase } from './list-products.use-case.js';
 import type { MarketplaceCitiesPort } from './marketplace-cities.port.js';
 import { ProductAddingInProgressError } from './product-adding-in-progress.error.js';
+import { ProductGroupFullError } from './product-group-full.error.js';
+import { ProductGroupNotFoundError } from './product-group-not-found.error.js';
 import { ProductNotFoundError } from './product-not-found.error.js';
 import type { ProductLimitsInterface } from './product-quota.type.js';
 import { ProductQuotaExceededError } from './product-quota-exceeded.error.js';
@@ -27,7 +29,11 @@ import { UnsupportedProductUrlError } from './unsupported-product-url.error.js';
 
 const jane = '6b1f4d1e-52f2-4d51-8a0e-0d6a9d3a7c22';
 const sam = '9a2d0f3c-0a44-4b6a-b8c2-7e7e2f3b1d33';
-const roomy: ProductLimitsInterface = { maxProducts: 100, add: { limit: 100, windowMs: 60_000 } };
+const roomy: ProductLimitsInterface = {
+  maxProducts: 100,
+  maxProductsPerGroup: 5,
+  add: { limit: 100, windowMs: 60_000 },
+};
 
 interface PriceReadInterface {
   userId: string;
@@ -58,9 +64,11 @@ function setup(
   add: AddProductUseCase;
   products: InMemoryTrackedProductRepositoryAdapter;
   observations: InMemoryPriceObservationRepositoryAdapter;
+  groups: InMemoryProductGroupRepositoryAdapter;
   reads: PriceReadInterface[];
 } {
   const observations = new InMemoryPriceObservationRepositoryAdapter();
+  const groups = new InMemoryProductGroupRepositoryAdapter();
   const reads: PriceReadInterface[] = [];
   const reading: Pick<RequestPriceObservationUseCase, 'execute'> = request ?? {
     execute: (userId, productId): Promise<{ jobId: string }> => {
@@ -74,6 +82,7 @@ function setup(
     add: new AddProductUseCase(
       new ResolveProductReferenceUseCase([new OzonReferenceParser(), new DnsReferenceParser()]),
       products,
+      groups,
       observations,
       reading,
       new InMemoryRateLimiterAdapter(),
@@ -84,6 +93,7 @@ function setup(
     ),
     products,
     observations,
+    groups,
     reads,
   };
 }
@@ -172,7 +182,11 @@ void test('tracks the product all the same when its price cannot be read now', a
 
 void test('lets a user track so many products, and takes no more, nor creates a product for nothing', async (): Promise<void> => {
   const counting = new CountingProducts();
-  const { add } = setup({ maxProducts: 2, add: { limit: 100, windowMs: 60_000 } }, null, counting);
+  const { add } = setup(
+    { maxProducts: 2, maxProductsPerGroup: 5, add: { limit: 100, windowMs: 60_000 } },
+    null,
+    counting,
+  );
   await add.execute(jane, 'https://www.ozon.ru/product/1/');
   await add.execute(jane, 'https://www.ozon.ru/product/2/');
 
@@ -188,7 +202,11 @@ void test('lets a user track so many products, and takes no more, nor creates a 
 });
 
 void test('does not refuse a product the user tracks already when their quota is full', async (): Promise<void> => {
-  const { add, reads } = setup({ maxProducts: 1, add: { limit: 100, windowMs: 60_000 } });
+  const { add, reads } = setup({
+    maxProducts: 1,
+    maxProductsPerGroup: 5,
+    add: { limit: 100, windowMs: 60_000 },
+  });
   const first = await add.execute(jane, 'https://www.ozon.ru/product/1/');
 
   const again = await add.execute(jane, 'https://ozon.ru/product/1/');
@@ -229,54 +247,17 @@ void test('queues the first read again when the one asked for long ago brought n
 });
 
 void test('lets a user add so fast, and stops one who adds faster, whatever the products', async (): Promise<void> => {
-  const { add } = setup({ maxProducts: 100, add: { limit: 2, windowMs: 60_000 } });
+  const { add } = setup({
+    maxProducts: 100,
+    maxProductsPerGroup: 5,
+    add: { limit: 2, windowMs: 60_000 },
+  });
 
   await add.execute(jane, 'https://www.ozon.ru/product/1/');
   await add.execute(jane, 'https://www.ozon.ru/product/1/');
   await assert.rejects(add.execute(jane, 'https://www.ozon.ru/product/2/'), TooManyRequestsError);
 
   await add.execute(sam, 'https://www.ozon.ru/product/2/');
-});
-
-void test('lists the products of the user, the newest first, with their newest observation', async (): Promise<void> => {
-  const { add, products, observations } = setup();
-
-  const older = (await add.execute(jane, 'https://www.ozon.ru/product/1/')).product;
-  const newer = (await add.execute(jane, 'https://www.ozon.ru/product/2/')).product;
-  await add.execute(sam, 'https://www.ozon.ru/product/3/');
-  for (const [day, amountMinor] of [
-    [22, 100],
-    [24, 300],
-    [23, 200],
-  ] as const) {
-    await observations.saveIfAbsent({
-      id: `3f0c9a52-7a53-4a64-9d0d-2f2f6c1f0a${String(day)}`,
-      trackedProductId: older.snapshot.id,
-      jobId: `3f0c9a52-7a53-4a64-9d0d-2f2f6c1f0a${String(day)}`,
-      title: 'Notebook',
-      observedAt: new Date(Date.UTC(2026, 9, day)),
-      availability: 'in_stock',
-      prices: [{ amountMinor, currency: 'RUB' }],
-      exitIp: null,
-    });
-  }
-
-  const page = await new ListProductsUseCase(products, observations).execute(jane, {
-    page: 1,
-    pageSize: 10,
-  });
-
-  assert.equal(page.total, 2);
-  assert.deepEqual(
-    page.items.map((item): [string, number | undefined] => [
-      item.product.snapshot.id,
-      item.latest?.prices[0]?.amountMinor,
-    ]),
-    [
-      [newer.snapshot.id, undefined],
-      [older.snapshot.id, 300],
-    ],
-  );
 });
 
 void test('the history of a product is for those who track it: to the others it does not exist', async (): Promise<void> => {
@@ -309,6 +290,7 @@ function slowAdd(limits: ProductLimitsInterface = roomy): {
     add: new AddProductUseCase(
       new ResolveProductReferenceUseCase([new OzonReferenceParser()]),
       new InMemoryTrackedProductRepositoryAdapter(),
+      new InMemoryProductGroupRepositoryAdapter(),
       new InMemoryPriceObservationRepositoryAdapter(),
       { execute: (): Promise<{ jobId: string }> => Promise.reject(new NoProxiesAvailableError()) },
       new InMemoryRateLimiterAdapter(),
@@ -331,6 +313,7 @@ function slowAdd(limits: ProductLimitsInterface = roomy): {
 void test('joins the same link sent again while it is being added, and counts it once', async (): Promise<void> => {
   const { add, expansions, finish } = slowAdd({
     maxProducts: 100,
+    maxProductsPerGroup: 5,
     add: { limit: 1, windowMs: 60_000 },
   });
 
@@ -409,4 +392,68 @@ void test('a marketplace without cities has no city whatever is asked for', asyn
 
   assert.equal(added.product.snapshot.cityId, null);
   assert.equal(added.product.snapshot.cityName, null);
+});
+
+void test('a product added alone goes into a new group of the user', async (): Promise<void> => {
+  const { add, groups } = setup();
+
+  const first = await add.execute(jane, 'https://www.ozon.ru/product/1/');
+  const second = await add.execute(jane, 'https://www.ozon.ru/product/2/');
+
+  assert.notEqual(first.groupId, second.groupId);
+  assert.equal(
+    (await groups.findOwned(jane, first.groupId))?.snapshot.title,
+    null,
+    'the group is called after its product until the user names it',
+  );
+  assert.equal(await groups.findGroupIdOfProduct(jane, first.product.snapshot.id), first.groupId);
+});
+
+void test('products added to a group stay together in the order they were added', async (): Promise<void> => {
+  const { add, groups } = setup();
+  const group = await groups.create(jane, 'Phone');
+
+  const ozon = await add.execute(jane, 'https://www.ozon.ru/product/1/', null, group.snapshot.id);
+  const dns = await add.execute(
+    jane,
+    `https://www.dns-shop.ru/product/a1b2c3d4e5f6a7b8/phone/`,
+    null,
+    group.snapshot.id,
+  );
+
+  assert.deepEqual([ozon.groupId, dns.groupId], [group.snapshot.id, group.snapshot.id]);
+  assert.deepEqual(
+    (await groups.listProductIds([group.snapshot.id])).map(({ productId }): string => productId),
+    [ozon.product.snapshot.id, dns.product.snapshot.id],
+  );
+});
+
+void test("refuses a group that is not the user's, or is full, before anything is added", async (): Promise<void> => {
+  const { add, groups, products } = setup({
+    maxProducts: 100,
+    maxProductsPerGroup: 1,
+    add: { limit: 100, windowMs: 60_000 },
+  });
+  const group = await groups.create(jane, null);
+  await add.execute(jane, 'https://www.ozon.ru/product/1/', null, group.snapshot.id);
+
+  await assert.rejects(
+    add.execute(jane, 'https://www.ozon.ru/product/2/', null, group.snapshot.id),
+    ProductGroupFullError,
+  );
+  await assert.rejects(
+    add.execute(sam, 'https://www.ozon.ru/product/2/', null, group.snapshot.id),
+    ProductGroupNotFoundError,
+  );
+  assert.equal((await products.stats()).products, 1);
+});
+
+void test('a product the user tracks already stays in its group', async (): Promise<void> => {
+  const { add, groups } = setup();
+  const other = await groups.create(jane, null);
+  const first = await add.execute(jane, 'https://www.ozon.ru/product/1/');
+
+  const again = await add.execute(jane, 'https://www.ozon.ru/product/1/', null, other.snapshot.id);
+
+  assert.equal(again.groupId, first.groupId);
 });

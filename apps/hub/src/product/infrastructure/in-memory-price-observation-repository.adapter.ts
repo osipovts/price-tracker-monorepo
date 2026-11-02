@@ -32,6 +32,21 @@ export class InMemoryPriceObservationRepositoryAdapter implements PriceObservati
     );
   }
 
+  listSince(
+    trackedProductIds: readonly string[],
+    since: Date,
+  ): Promise<PriceObservationInterface[]> {
+    return Promise.resolve(
+      this.observations
+        .filter(
+          (observation): boolean =>
+            trackedProductIds.includes(observation.trackedProductId) &&
+            observation.observedAt >= since,
+        )
+        .toSorted((a, b): number => a.observedAt.getTime() - b.observedAt.getTime()),
+    );
+  }
+
   listByProduct(
     trackedProductId: string,
     pagination: PaginationInterface,

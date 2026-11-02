@@ -11,6 +11,11 @@ export interface PriceObservationRepositoryPort {
   saveIfAbsent(observation: PriceObservationInterface): Promise<void>;
   /** The newest observation of each of the products that has one. */
   findLatestByProducts(trackedProductIds: readonly string[]): Promise<PriceObservationInterface[]>;
+  /** The observations of the products made at the time or later, the oldest first. */
+  listSince(
+    trackedProductIds: readonly string[],
+    since: Date,
+  ): Promise<PriceObservationInterface[]>;
   /** Newest first. */
   listByProduct(
     trackedProductId: string,

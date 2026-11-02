@@ -3,6 +3,7 @@ import {
   type CSSVariablesResolver,
   type MantineColorsTuple,
   type MantineThemeOverride,
+  virtualColor,
 } from '@mantine/core';
 
 /** The font of the name of the app. */
@@ -51,11 +52,22 @@ const ayu: MantineColorsTuple = [
 ];
 
 export const ayuTheme: MantineThemeOverride = createTheme({
-  colors: { gray, dark, ayu },
+  colors: {
+    gray,
+    dark,
+    ayu,
+    // The same colours in both schemes, but virtual: the text on them is chosen for each scheme by its own
+    // shade, where a plain colour gets the one of the light scheme in both.
+    accent: virtualColor({ name: 'accent', light: 'ayu', dark: 'ayu' }),
+    success: virtualColor({ name: 'success', light: 'green', dark: 'green' }),
+  },
   fontFamily: 'Roboto, sans-serif',
-  primaryColor: 'ayu',
+  primaryColor: 'accent',
   primaryShade: { light: 6, dark: 5 },
   autoContrast: true,
+  // Above the blue and the green of the light scheme (0.31 and 0.39), below those of the dark one (0.47 and up):
+  // white text on the filled buttons and badges of the light scheme, dark text on those of the dark one.
+  luminanceThreshold: 0.42,
 });
 
 /** The page and its text in the two schemes of Ayu. */

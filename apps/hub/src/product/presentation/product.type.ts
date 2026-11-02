@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-import { pageResponseSchema } from '../../shared/presentation/pagination-query.type.js';
 import { priceObservationSchema } from './price-observation.type.js';
 
 export const productIdParamSchema = z.uuid();
@@ -10,6 +9,8 @@ export const productCreateBodySchema = z.object({
   url: z.url(),
   /** The city whose price is read, by the id of the marketplace, for one whose prices depend on it; the default city when omitted, ignored where there are no cities. */
   cityId: z.string().min(1).max(100).optional(),
+  /** The group of the user to add the product to; a new group is made for it when omitted. */
+  groupId: z.uuid().optional(),
 });
 
 export type ProductCreateBodyType = z.infer<typeof productCreateBodySchema>;
@@ -39,6 +40,8 @@ export type ProductType = z.infer<typeof productSchema>;
 export const productAddedSchema = productSchema.extend({
   /** The job that reads the first price: follow it with `GET /jobs/{jobId}`. Null if there is nothing to read, or no way to now. */
   jobId: z.uuid().nullable(),
+  /** The group of the user the product is in. */
+  groupId: z.uuid(),
 });
 
 export type ProductAddedType = z.infer<typeof productAddedSchema>;
@@ -49,7 +52,3 @@ export const productListItemSchema = productSchema.extend({
 });
 
 export type ProductListItemType = z.infer<typeof productListItemSchema>;
-
-export const productListResponseSchema = pageResponseSchema(productListItemSchema);
-
-export type ProductListResponseType = z.infer<typeof productListResponseSchema>;

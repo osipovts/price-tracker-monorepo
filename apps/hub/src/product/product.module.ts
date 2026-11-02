@@ -24,16 +24,27 @@ import { RATE_LIMITER, type RateLimiterPort } from '../shared/application/rate-l
 import { PRISMA, PrismaModule } from '../shared/infrastructure/prisma.module.js';
 import { AddProductUseCase } from './application/add-product.use-case.js';
 import { ChoosePriceRoutesUseCase } from './application/choose-price-routes.use-case.js';
+import { CreateProductGroupUseCase } from './application/create-product-group.use-case.js';
+import { DescribeProductGroupsUseCase } from './application/describe-product-groups.use-case.js';
 import { ExpandProductLinkUseCase } from './application/expand-product-link.use-case.js';
+import { GetProductGroupUseCase } from './application/get-product-group.use-case.js';
 import { GetProductStatsUseCase } from './application/get-product-stats.use-case.js';
 import { GetProductThumbnailUrlUseCase } from './application/get-product-thumbnail-url.use-case.js';
 import { IMAGE_DOWNLOADER, type ImageDownloaderPort } from './application/image-downloader.port.js';
 import { ListPriceHistoryUseCase } from './application/list-price-history.use-case.js';
-import { ListProductsUseCase } from './application/list-products.use-case.js';
+import { ListProductGroupsUseCase } from './application/list-product-groups.use-case.js';
 import {
   PRICE_OBSERVATION_REPOSITORY,
   type PriceObservationRepositoryPort,
 } from './application/price-observation-repository.port.js';
+import {
+  PRODUCT_GROUP_PREFERENCE_REPOSITORY,
+  type ProductGroupPreferenceRepositoryPort,
+} from './application/product-group-preference-repository.port.js';
+import {
+  PRODUCT_GROUP_REPOSITORY,
+  type ProductGroupRepositoryPort,
+} from './application/product-group-repository.port.js';
 import {
   PRODUCT_LINK_EXPANDER,
   type ProductLinkExpanderPort,
@@ -41,8 +52,11 @@ import {
 import { RecordPriceResultUseCase } from './application/record-price-result.use-case.js';
 import { RefreshPricesUseCase } from './application/refresh-prices.use-case.js';
 import { RemoveProductUseCase } from './application/remove-product.use-case.js';
+import { RemoveProductGroupUseCase } from './application/remove-product-group.use-case.js';
 import { RemoveUserProductsUseCase } from './application/remove-user-products.use-case.js';
+import { RenameProductGroupUseCase } from './application/rename-product-group.use-case.js';
 import { RequestPriceObservationUseCase } from './application/request-price-observation.use-case.js';
+import { SetStatsPeriodUseCase } from './application/set-stats-period.use-case.js';
 import { SpreadPriceJobsUseCase } from './application/spread-price-jobs.use-case.js';
 import { StoreProductThumbnailUseCase } from './application/store-product-thumbnail.use-case.js';
 import {
@@ -53,18 +67,33 @@ import { BullmqProductLinkExpanderAdapter } from './infrastructure/bullmq-produc
 import { HttpImageDownloaderAdapter } from './infrastructure/http-image-downloader.adapter.js';
 import { PeriodicPriceRefreshAdapter } from './infrastructure/periodic-price-refresh.adapter.js';
 import { PrismaPriceObservationRepositoryAdapter } from './infrastructure/prisma-price-observation-repository.adapter.js';
+import { PrismaProductGroupPreferenceRepositoryAdapter } from './infrastructure/prisma-product-group-preference-repository.adapter.js';
+import { PrismaProductGroupRepositoryAdapter } from './infrastructure/prisma-product-group-repository.adapter.js';
 import { PrismaTrackedProductRepositoryAdapter } from './infrastructure/prisma-tracked-product-repository.adapter.js';
 import { PriceResultsConsumer } from './presentation/price-results.consumer.js';
+import { ProductGroupsController } from './presentation/product-groups.controller.js';
 import { ProductsController } from './presentation/products.controller.js';
 
 @Module({
   imports: [PrismaModule, JobModule, ProxyModule, HandbookModule],
-  controllers: [ProductsController],
+  controllers: [ProductsController, ProductGroupsController],
   providers: [
     {
       provide: TRACKED_PRODUCT_REPOSITORY,
       useFactory: (prisma: PrismaClient): TrackedProductRepositoryPort =>
         new PrismaTrackedProductRepositoryAdapter(prisma),
+      inject: [PRISMA],
+    },
+    {
+      provide: PRODUCT_GROUP_REPOSITORY,
+      useFactory: (prisma: PrismaClient): ProductGroupRepositoryPort =>
+        new PrismaProductGroupRepositoryAdapter(prisma),
+      inject: [PRISMA],
+    },
+    {
+      provide: PRODUCT_GROUP_PREFERENCE_REPOSITORY,
+      useFactory: (prisma: PrismaClient): ProductGroupPreferenceRepositoryPort =>
+        new PrismaProductGroupPreferenceRepositoryAdapter(prisma),
       inject: [PRISMA],
     },
     {
@@ -83,6 +112,7 @@ import { ProductsController } from './presentation/products.controller.js';
       useFactory: (
         resolve: ResolveProductReferenceUseCase,
         products: TrackedProductRepositoryPort,
+        groups: ProductGroupRepositoryPort,
         observations: PriceObservationRepositoryPort,
         requestObservation: RequestPriceObservationUseCase,
         limiter: RateLimiterPort,
@@ -94,11 +124,13 @@ import { ProductsController } from './presentation/products.controller.js';
         new AddProductUseCase(
           resolve,
           products,
+          groups,
           observations,
           requestObservation,
           limiter,
           {
             maxProducts: config.productsPerUserMax,
+            maxProductsPerGroup: config.productGroupItemsMax,
             add: { limit: config.productAddMaxAttempts, windowMs: config.productAddWindowMs },
           },
           logger.child('products'),
@@ -111,6 +143,7 @@ import { ProductsController } from './presentation/products.controller.js';
       inject: [
         ResolveProductReferenceUseCase,
         TRACKED_PRODUCT_REPOSITORY,
+        PRODUCT_GROUP_REPOSITORY,
         PRICE_OBSERVATION_REPOSITORY,
         RequestPriceObservationUseCase,
         RATE_LIMITER,
@@ -189,12 +222,66 @@ import { ProductsController } from './presentation/products.controller.js';
       inject: [OBJECT_STORAGE],
     },
     {
-      provide: ListProductsUseCase,
+      provide: DescribeProductGroupsUseCase,
       useFactory: (
+        groups: ProductGroupRepositoryPort,
         products: TrackedProductRepositoryPort,
         observations: PriceObservationRepositoryPort,
-      ): ListProductsUseCase => new ListProductsUseCase(products, observations),
-      inject: [TRACKED_PRODUCT_REPOSITORY, PRICE_OBSERVATION_REPOSITORY],
+      ): DescribeProductGroupsUseCase =>
+        new DescribeProductGroupsUseCase(groups, products, observations),
+      inject: [PRODUCT_GROUP_REPOSITORY, TRACKED_PRODUCT_REPOSITORY, PRICE_OBSERVATION_REPOSITORY],
+    },
+    {
+      provide: ListProductGroupsUseCase,
+      useFactory: (
+        groups: ProductGroupRepositoryPort,
+        preferences: ProductGroupPreferenceRepositoryPort,
+        describe: DescribeProductGroupsUseCase,
+      ): ListProductGroupsUseCase => new ListProductGroupsUseCase(groups, preferences, describe),
+      inject: [
+        PRODUCT_GROUP_REPOSITORY,
+        PRODUCT_GROUP_PREFERENCE_REPOSITORY,
+        DescribeProductGroupsUseCase,
+      ],
+    },
+    {
+      provide: GetProductGroupUseCase,
+      useFactory: (
+        groups: ProductGroupRepositoryPort,
+        preferences: ProductGroupPreferenceRepositoryPort,
+        describe: DescribeProductGroupsUseCase,
+      ): GetProductGroupUseCase => new GetProductGroupUseCase(groups, preferences, describe),
+      inject: [
+        PRODUCT_GROUP_REPOSITORY,
+        PRODUCT_GROUP_PREFERENCE_REPOSITORY,
+        DescribeProductGroupsUseCase,
+      ],
+    },
+    {
+      provide: CreateProductGroupUseCase,
+      useFactory: (groups: ProductGroupRepositoryPort): CreateProductGroupUseCase =>
+        new CreateProductGroupUseCase(groups),
+      inject: [PRODUCT_GROUP_REPOSITORY],
+    },
+    {
+      provide: RenameProductGroupUseCase,
+      useFactory: (groups: ProductGroupRepositoryPort): RenameProductGroupUseCase =>
+        new RenameProductGroupUseCase(groups),
+      inject: [PRODUCT_GROUP_REPOSITORY],
+    },
+    {
+      provide: RemoveProductGroupUseCase,
+      useFactory: (
+        groups: ProductGroupRepositoryPort,
+        remove: RemoveProductUseCase,
+      ): RemoveProductGroupUseCase => new RemoveProductGroupUseCase(groups, remove),
+      inject: [PRODUCT_GROUP_REPOSITORY, RemoveProductUseCase],
+    },
+    {
+      provide: SetStatsPeriodUseCase,
+      useFactory: (preferences: ProductGroupPreferenceRepositoryPort): SetStatsPeriodUseCase =>
+        new SetStatsPeriodUseCase(preferences),
+      inject: [PRODUCT_GROUP_PREFERENCE_REPOSITORY],
     },
     {
       provide: ChoosePriceRoutesUseCase,

@@ -140,6 +140,8 @@ void test('hands the picture of the product over once the price is recorded, and
       },
       findLatestByProducts: (ids): ReturnType<typeof observations.findLatestByProducts> =>
         observations.findLatestByProducts(ids),
+      listSince: (ids, since): ReturnType<typeof observations.listSince> =>
+        observations.listSince(ids, since),
       listByProduct: (id, pagination): ReturnType<typeof observations.listByProduct> =>
         observations.listByProduct(id, pagination),
     },

@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { after, before, test } from 'node:test';
 
 import { type Browser, chromium, devices, type Page } from 'playwright';
+import { DnsReferenceParser } from 'product-reference';
 
 import { HttpImageDownloaderAdapter } from '../product/infrastructure/http-image-downloader.adapter.js';
 import { DockerStackAdapter } from './support/docker-stack.adapter.js';
@@ -25,6 +26,9 @@ const stack = new DockerStackAdapter();
 const email = 'jane@example.com';
 const password = 'correct-horse';
 const productUrl = 'https://www.ozon.ru/product/4775581891/';
+const dnsLink = 'https://www.dns-shop.ru/product/0463bb2411a1d582/156-noutbuk/';
+/** The address the hub keeps the DNS product under, which the worker is told the price of. */
+const dnsUrl = new DnsReferenceParser().parse(new URL(dnsLink))?.url ?? dnsLink;
 let hub: RunningHubInterface;
 let worker: FakePriceWorkerAdapter;
 const marketplace = new ImageServerAdapter();
@@ -45,6 +49,7 @@ before(
 
     worker = new FakePriceWorkerAdapter(infrastructure.redisUrl);
     worker.setPrice(productUrl, 129_900);
+    worker.setPrice(dnsUrl, 119_900);
     // The page of the product names a picture, which the marketplace serves.
     marketplace.serve('/thumb.png', 'image/png', onePixelPng);
     worker.setImage(productUrl, `${await marketplace.start()}/thumb.png`);
@@ -86,7 +91,7 @@ void test('a visitor signs up, and is logged in', async (): Promise<void> => {
   await page.waitForURL('**/app/login');
 
   await page.getByRole('heading', { name: 'Нищебродская' }).waitFor();
-  await page.getByText('price tracker', { exact: true }).waitFor();
+  await page.getByText('price tracker: ozon, wb, dns, etc.', { exact: true }).waitFor();
 
   await page.getByRole('tab', { name: 'Sign up' }).click();
   await page.getByLabel('Email').fill(email);
@@ -96,21 +101,32 @@ void test('a visitor signs up, and is logged in', async (): Promise<void> => {
   await page.getByRole('heading', { name: 'Products' }).waitFor();
   await page.getByRole('button', { name: 'Account', exact: true }).waitFor();
 
-  // Under the field of the link: what can be tracked. One page of products has no paginator.
-  await page.getByText('Supported marketplaces: ozon.ru, dns-shop.ru').waitFor();
+  // Nothing is tracked: the list offers the first product, whose form is in a window.
+  await page.getByText('Nothing is tracked yet.').waitFor();
   assert.equal(await page.locator('.mantine-Pagination-root').count(), 0);
+  await page.getByRole('button', { name: 'Add the first product' }).click();
+  const form = page.getByRole('dialog', { name: 'Track a product' });
+  await form.getByText('Supported marketplaces: ozon.ru, dns-shop.ru').waitFor();
 });
 
 void test('a product is added by its link, and shows its first price when a worker has read it', async (): Promise<void> => {
-  await page.getByLabel('Link to a product').fill(productUrl);
-  await page.getByRole('button', { name: 'Track' }).click();
+  const form = page.getByRole('dialog', { name: 'Track a product' });
+  await form.getByLabel('Link to a product').fill(productUrl);
+  await form.getByRole('button', { name: 'Track' }).click();
+  await form.waitFor({ state: 'hidden', timeout: 20_000 });
 
-  // The list follows the job by itself: no reload.
-  await page.getByText(/1\s299,00/).waitFor({ timeout: 20_000 });
+  // The list follows the job by itself: no reload. A whole price has no kopecks.
+  await page.getByText(/^1\s299\s₽$/).waitFor({ timeout: 20_000 });
   assert.equal(worker.jobs.length, 1);
 
-  // The next read of the card is a time of day, with the preposition: "Next check: at 02:55 PM".
-  await page.getByText(/Next check: at \d{1,2}:\d{2}/).waitFor();
+  // The price is the best of the group, with the marketplace it is on and, in its hint, when it was read.
+  await page.getByText('ozon', { exact: true }).waitFor();
+  await page.getByText(/^Checked today, [^.]+, ozon$/).waitFor();
+  assert.match(
+    (await page.getByText(/^1\s299\s₽$/).getAttribute('title')) ?? '',
+    /^Price received today, /,
+  );
+  assert.equal(await database.productGroup.count(), 1);
 
   // The picture is kept by the hub in S3 and handed out by an address that is signed.
   // The first write to the storage can take a while: the picture comes after the price.
@@ -132,29 +148,29 @@ void test('a product is added by its link, and shows its first price when a work
   assert.deepEqual(marketplace.requests, ['/thumb.png']);
 });
 
-void test('a long title takes two lines of its card at most, and is whole in its hint', async (): Promise<void> => {
+void test('a long title takes one line of its row, and is whole in its hint', async (): Promise<void> => {
   const longTitle = `ASUS ${'ROG Strix gaming laptop with a very long name '.repeat(12)}`.trim();
   const original = (await database.priceObservation.findFirstOrThrow()).title;
   await database.priceObservation.updateMany({ data: { title: longTitle } });
   await page.reload();
 
-  const link = page.getByRole('link', { name: /ASUS ROG/ });
-  await link.waitFor();
-  assert.equal(await link.getAttribute('title'), longTitle);
-
-  const box = await link.boundingBox();
+  const title = page.getByTitle(longTitle);
+  await title.waitFor();
+  const box = await title.boundingBox();
   assert.ok(box);
-  // Two lines of a font of 16 pixels, and a title that is cut.
-  assert.ok(box.height < 60, `the title is ${String(box.height)} pixels high`);
-  assert.ok(await link.evaluate((node): boolean => node.scrollHeight > node.clientHeight));
+  // One line of a font of 16 pixels, and a title that is cut.
+  assert.ok(box.height < 30, `the title is ${String(box.height)} pixels high`);
+  assert.ok(await title.evaluate((node): boolean => node.scrollWidth > node.clientWidth));
+  await page.getByRole('link', { name: /ASUS ROG/ }).waitFor();
 
-  // The next tests read the page of the product, where a title this long would push the charts down.
+  // The next tests read the page of the group, where a title this long would push the chart down.
   await database.priceObservation.updateMany({ data: { title: original } });
 });
 
-void test('the page of the product has the price, two charts side by side, and the history', async (): Promise<void> => {
+void test('the page of the group has the best price, where to buy, one chart, and the checks under a button', async (): Promise<void> => {
   // Older prices with gaps between them, as the schedule would have left in a day.
   const product = await database.trackedProduct.findFirstOrThrow();
+  const group = await database.productGroup.findFirstOrThrow();
   const hoursAgo = (hours: number): Date => new Date(Date.now() - hours * 3_600_000);
   await database.priceObservation.createMany({
     data: [6, 4].map((hours) => ({
@@ -167,57 +183,83 @@ void test('the page of the product has the price, two charts side by side, and t
     })),
   });
 
-  await page.getByRole('link', { name: /.+/ }).filter({ hasText: /\S/ }).first().waitFor();
-  await page.goto(`${hub.baseUrl}/app/products/${product.id}`);
-  await page.getByRole('heading', { level: 3, name: /1\s299,00/ }).waitFor();
-  // Only the time of day: the price is read within the hour.
-  await page.getByText(/Next price check: about \d{1,2}:\d{2}/).waitFor();
+  await page.goto(`${hub.baseUrl}/app/groups/${group.id}`);
+  await page
+    .getByText(/^1\s299\s₽$/)
+    .first()
+    .waitFor();
+  // The row of the offer is a link to the marketplace, with its last check and the time of the next one.
+  assert.equal(await page.getByTitle('Open on ozon').getAttribute('href'), productUrl);
+  await page.getByText(/^Checked today, [^.]+\. Next check \d{1,2}:\d{2}/).waitFor();
 
+  // One chart, by day first; by hour the hours with no price read are drawn dashed.
   const charts = page.locator('.recharts-wrapper');
-  await charts.nth(1).waitFor();
-  assert.equal(await charts.count(), 2);
+  await charts.first().waitFor();
+  assert.equal(await charts.count(), 1);
+  await page.getByText('48 h', { exact: true }).click();
+  await page.waitForFunction(
+    (): boolean => document.querySelectorAll('.recharts-line-curve[stroke-dasharray]').length > 0,
+  );
 
-  // Side by side: the same row, and each takes half of it.
-  const [first, second] = await Promise.all([
-    charts.nth(0).boundingBox(),
-    charts.nth(1).boundingBox(),
-  ]);
-  assert.ok(first && second);
-  assert.ok(Math.abs(first.y - second.y) < 2);
-  assert.ok(Math.abs(first.width - second.width) < 40);
-  assert.ok(second.x > first.x + first.width / 2);
-
-  // The hours with no price are drawn dashed.
-  assert.ok((await page.locator('.recharts-line-curve[stroke-dasharray]').count()) >= 1);
-
-  // The history lists all three prices.
+  // The checks are under a button, all three of them.
+  assert.equal(await page.locator('tbody tr').first().isVisible(), false);
+  await page.getByRole('button', { name: 'All the checks (3)' }).click();
+  await page.locator('tbody tr').first().waitFor();
   assert.equal(await page.locator('tbody tr').count(), 3);
 });
 
-void test('the hint of a point tells the average, the minimum, the maximum and the last price, or the last known one', async (): Promise<void> => {
-  const chart = page.locator('.recharts-wrapper').nth(0);
+void test('the hint of a point tells the price read at it, or the last known one', async (): Promise<void> => {
+  const chart = page.locator('.recharts-wrapper').first();
+  await chart.scrollIntoViewIfNeeded();
   const box = await chart.boundingBox();
   assert.ok(box);
-  const tooltip = page.locator('.recharts-tooltip-wrapper');
+  const tooltip = page.locator('.recharts-tooltip-wrapper').first();
   const hover = async (fromRight: number): Promise<void> => {
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.move(box.x + box.width - fromRight, box.y + box.height / 2, { steps: 10 });
   };
 
-  // The right edge of the chart is the current hour, where the price of the worker is.
+  // The right edge of the chart is the end of the current hour, where the price of the worker is.
   await hover(18);
-  await tooltip.getByText(/Average:/).waitFor();
-  await tooltip.getByText(/Min:/).waitFor();
-  await tooltip.getByText(/Max:/).waitFor();
-  await tooltip.getByText(/Last:/).waitFor();
+  await tooltip.getByText(/^ozon: 1\s299\s₽$/).waitFor();
 
   // The hour before it had no price: the hint says what was known last.
-  await hover(27);
-  await tooltip.getByText(/Last known:/).waitFor();
+  await hover(30);
+  await tooltip.getByText(/ozon: Last known/).waitFor();
 });
 
-void test('on a phone the list is cards and nothing is wider than the screen', async (): Promise<void> => {
-  const product = await database.trackedProduct.findFirstOrThrow();
+void test('a product of another marketplace joins the group: the best price is the cheaper one, and the chart gets a second line', async (): Promise<void> => {
+  const group = await database.productGroup.findFirstOrThrow();
+  await page.goto(`${hub.baseUrl}/app/groups/${group.id}`);
+
+  await page.getByRole('button', { name: 'Add' }).click();
+  const form = page.getByRole('dialog', { name: 'Add to the group' });
+  await form.getByLabel('Link to a product').fill(dnsLink);
+  await form.getByRole('button', { name: 'Track' }).click();
+  await form.waitFor({ state: 'hidden', timeout: 20_000 });
+
+  // The cheaper offer comes first, and its price is the best of the group. DNS names the city of its price.
+  await page
+    .getByText(/^1\s199\s₽$/)
+    .first()
+    .waitFor({ timeout: 20_000 });
+  const offers = await page
+    .getByTitle(/^Open on /)
+    .evaluateAll((links): Array<string | null> => links.map((link) => link.getAttribute('title')));
+  assert.deepEqual(offers, ['Open on dns', 'Open on ozon']);
+  assert.ok((await page.getByText(/^1\s199\s₽$/).count()) >= 2);
+  assert.equal(await database.productGroup.count(), 1);
+  assert.equal((await database.productGroupItem.findMany()).length, 2);
+
+  // The legend names both lines.
+  await page.locator('.recharts-wrapper').first().waitFor();
+  for (const name of ['ozon', 'dns']) {
+    assert.equal(await page.locator('.recharts-legend-wrapper').first().getByText(name).count(), 1);
+  }
+});
+
+void test('on a phone the list is rows and nothing is wider than the screen', async (): Promise<void> => {
+  const group = await database.productGroup.findFirstOrThrow();
   const phone = await browser.newContext({
     ...devices['iPhone 12'],
     storageState: await page.context().storageState(),
@@ -227,71 +269,54 @@ void test('on a phone the list is cards and nothing is wider than the screen', a
     screen.evaluate((): boolean => document.documentElement.scrollWidth > window.innerWidth);
 
   await screen.goto(`${hub.baseUrl}/app/`);
-  await screen
-    .getByRole('link', { name: /Product|ASUS/ })
-    .first()
-    .waitFor();
+  const row = screen.getByRole('link', { name: /ASUS|Product/ }).first();
+  await row.waitFor();
   assert.equal(await screen.locator('table').count(), 0);
 
-  // The lines of a card are one under another, and the button is at the right of the last of them.
-  const card = screen.locator('main .mantine-Card-root').filter({ hasText: 'Checked:' }).first();
-  const lines = [card.getByRole('link'), card.getByText('Checked:'), card.getByText('Next check:')];
-  let bottom = -1;
-  for (const line of lines) {
-    const box = await line.boundingBox();
-    assert.ok(box);
-    assert.ok(box.y >= bottom - 1, 'a line is under the one before it');
-    bottom = box.y + box.height;
-  }
-  const [next, remove] = await Promise.all([
-    card.getByText('Next check:').boundingBox(),
-    card.getByRole('button', { name: 'Delete' }).boundingBox(),
+  // The best price is at the right of the title, on its line.
+  const [title, price] = await Promise.all([
+    row.locator('p').first().boundingBox(),
+    row.getByText(/^1\s199\s₽$/).boundingBox(),
   ]);
-  assert.ok(next && remove);
-  assert.ok(remove.x > next.x + next.width - 1, 'the button is at the right of the text');
-  assert.ok(
-    remove.y < next.y + next.height && remove.y + remove.height > next.y,
-    'the button is on the line of the text',
-  );
+  assert.ok(title && price);
+  assert.ok(price.x > title.x + title.width - 1, 'the price is at the right of the title');
+  assert.ok(price.y < title.y + title.height, 'the price is on the line of the title');
   assert.equal(await widerThanScreen(), false);
 
-  await screen.goto(`${hub.baseUrl}/app/products/${product.id}`);
-  await screen.locator('.recharts-wrapper').nth(1).waitFor();
+  await screen.goto(`${hub.baseUrl}/app/groups/${group.id}`);
+  await screen.locator('.recharts-wrapper').first().waitFor();
   assert.equal(await widerThanScreen(), false);
-
-  // The two charts are one under the other, each as wide as the content.
-  const [first, second] = await Promise.all([
-    screen.locator('.recharts-wrapper').nth(0).boundingBox(),
-    screen.locator('.recharts-wrapper').nth(1).boundingBox(),
-  ]);
-  assert.ok(first && second);
-  assert.ok(second.y > first.y + first.height - 2);
   await phone.close();
 });
 
-void test('a product is deleted from its card in the list after a confirmation, and goes for good with its last tracker', async (): Promise<void> => {
-  assert.equal(await database.trackedProduct.count(), 1);
+void test('a group is deleted from its page after a confirmation, and its products go for good with their last tracker', async (): Promise<void> => {
+  assert.equal(await database.trackedProduct.count(), 2);
 
-  // The page of the product has no cross: a product is removed from the list.
-  const product = await database.trackedProduct.findFirstOrThrow();
-  await page.goto(`${hub.baseUrl}/app/products/${product.id}`);
-  await page.getByRole('heading', { level: 3 }).first().waitFor();
-  assert.equal(await page.getByRole('button', { name: 'Delete' }).count(), 0);
+  // The page of the group has a cross for each of its products, and the group itself in its menu.
+  const group = await database.productGroup.findFirstOrThrow();
+  await page.goto(`${hub.baseUrl}/app/groups/${group.id}`);
+  await page.getByTitle('Open on dns').waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Stop tracking' }).count(), 2);
 
-  await page.goto(`${hub.baseUrl}/app/`);
-  await page.getByRole('button', { name: 'Delete' }).click();
+  const askToDelete = async (): Promise<void> => {
+    await page.getByRole('button', { name: 'Actions with the group' }).click();
+    await page.getByRole('menuitem', { name: 'Delete' }).click();
+  };
+  await askToDelete();
   // Asked first: nothing is gone before the confirmation.
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await dialog.waitFor({ state: 'hidden' });
-  assert.equal(await database.trackedProduct.count(), 1);
+  assert.equal(await database.trackedProduct.count(), 2);
 
-  await page.getByRole('button', { name: 'Delete' }).click();
+  await askToDelete();
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
 
   await page.getByText('Nothing is tracked yet.').waitFor();
   assert.equal(await database.trackedProduct.count(), 0);
+  assert.equal(await database.productGroup.count(), 0);
 });
+
 void test('the theme and the language are set on the page of the settings, and kept by the browser', async (): Promise<void> => {
   await openAccountMenu(page);
   await page.getByRole('menuitem', { name: 'Settings' }).click();
@@ -394,7 +419,7 @@ void test('the language follows the browser, and the login page has no switch of
   const context = await browser.newContext({ locale: 'ru-RU' });
   const russian = await context.newPage();
   await russian.goto(`${hub.baseUrl}/app/login`);
-  await russian.getByText('трекер цен', { exact: true }).waitFor();
+  await russian.getByText('трекер цен: ozon, wb, dns, и др.', { exact: true }).waitFor();
   assert.equal(await russian.locator('html').getAttribute('lang'), 'ru');
 
   // The language is picked on the page of the settings, not here: no switch on the login page, nor on the legal texts.
@@ -408,7 +433,7 @@ void test('the language follows the browser, and the login page has no switch of
   const german = await browser.newContext({ locale: 'de-DE' });
   const other = await german.newPage();
   await other.goto(`${hub.baseUrl}/app/login`);
-  await other.getByText('price tracker', { exact: true }).waitFor();
+  await other.getByText('price tracker: ozon, wb, dns, etc.', { exact: true }).waitFor();
   await german.close();
 });
 

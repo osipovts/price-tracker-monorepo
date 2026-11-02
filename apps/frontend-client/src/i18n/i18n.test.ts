@@ -45,5 +45,7 @@ test('keeps the language the person picked over the one of the browser', async (
 test('fills in the values of a phrase', () => {
   const i18n = createI18n('ru');
 
-  expect(i18n.t('chart.average', { price: '1 299,00 ₽' })).toBe('Средняя: 1 299,00 ₽');
+  expect(i18n.t('chart.lastKnown', { price: '1 299,00 ₽' })).toBe(
+    'Последняя известная: 1 299,00 ₽',
+  );
 });

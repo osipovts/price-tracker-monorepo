@@ -214,204 +214,8 @@
       }
     },
     "/products": {
-      "get": {
-        "operationId": "ProductsController_list",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "default": 1,
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            }
-          },
-          {
-            "name": "pageSize",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "default": 20,
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "items": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid",
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                          },
-                          "marketplace": {
-                            "type": "string"
-                          },
-                          "externalId": {
-                            "type": "string"
-                          },
-                          "url": {
-                            "type": "string"
-                          },
-                          "cityId": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "cityName": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "lastStatus": {
-                            "nullable": true,
-                            "type": "string"
-                          },
-                          "lastCheckedAt": {
-                            "nullable": true,
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                          },
-                          "nextCheckAt": {
-                            "nullable": true,
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                          },
-                          "thumbnailUrl": {
-                            "nullable": true,
-                            "type": "string",
-                            "format": "uri"
-                          },
-                          "latest": {
-                            "nullable": true,
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid",
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                              },
-                              "observedAt": {
-                                "type": "string",
-                                "format": "date-time",
-                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                              },
-                              "title": {
-                                "type": "string"
-                              },
-                              "availability": {
-                                "type": "string",
-                                "enum": [
-                                  "in_stock",
-                                  "out_of_stock",
-                                  "unknown"
-                                ]
-                              },
-                              "prices": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "amountMinor": {
-                                      "type": "integer",
-                                      "minimum": -9007199254740991,
-                                      "maximum": 9007199254740991
-                                    },
-                                    "currency": {
-                                      "type": "string",
-                                      "enum": [
-                                        "RUB"
-                                      ]
-                                    }
-                                  },
-                                  "required": [
-                                    "amountMinor",
-                                    "currency"
-                                  ],
-                                  "additionalProperties": false
-                                }
-                              },
-                              "exitIp": {
-                                "nullable": true,
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "observedAt",
-                              "title",
-                              "availability",
-                              "prices",
-                              "exitIp"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "marketplace",
-                          "externalId",
-                          "url",
-                          "cityId",
-                          "cityName",
-                          "lastStatus",
-                          "lastCheckedAt",
-                          "nextCheckAt",
-                          "thumbnailUrl",
-                          "latest"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "page": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
-                    },
-                    "pageSize": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
-                    },
-                    "total": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "page",
-                    "pageSize",
-                    "total"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          }
-        },
-        "summary": "List tracked products with their newest price, the newest first",
-        "tags": [
-          "products"
-        ]
-      },
       "post": {
-        "description": "Any link to the product page works: it is canonicalized. The users share a product and its price history, each one tracks it for themselves. A product that has no price yet gets the read of its first price queued, which `jobId` names: follow it with `GET /jobs/{jobId}`. A user tracks a limited number of products and adds them at a limited rate.",
+        "description": "Any link to the product page works: it is canonicalized. The users share a product and its price history, each one tracks it for themselves. A product that has no price yet gets the read of its first price queued, which `jobId` names: follow it with `GET /jobs/{jobId}`. The product goes into the group `groupId` names, else into a new group; a product the user tracks stays in its group. A user tracks a limited number of products, a group holds a limited number, and products are added at a limited rate.",
         "operationId": "ProductsController_add",
         "parameters": [],
         "requestBody": {
@@ -429,6 +233,11 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 100
+                  },
+                  "groupId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   }
                 },
                 "required": [
@@ -494,6 +303,11 @@
                       "type": "string",
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "groupId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                     }
                   },
                   "required": [
@@ -507,7 +321,8 @@
                     "lastCheckedAt",
                     "nextCheckAt",
                     "thumbnailUrl",
-                    "jobId"
+                    "jobId",
+                    "groupId"
                   ],
                   "additionalProperties": false
                 }
@@ -569,6 +384,11 @@
                       "type": "string",
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "groupId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                     }
                   },
                   "required": [
@@ -582,7 +402,8 @@
                     "lastCheckedAt",
                     "nextCheckAt",
                     "thumbnailUrl",
-                    "jobId"
+                    "jobId",
+                    "groupId"
                   ],
                   "additionalProperties": false
                 }
@@ -593,13 +414,16 @@
             "description": "Unsupported marketplace or product URL, or a city the marketplace does not have"
           },
           "403": {
-            "description": "The user tracks the most products the hub allows"
+            "description": "The user tracks the most products the hub allows, or the group holds the most it may"
+          },
+          "404": {
+            "description": "The group is not the user's"
           },
           "429": {
             "description": "The user adds products too fast"
           }
         },
-        "summary": "Track a product by its URL",
+        "summary": "Track a product by its URL, in a group",
         "tags": [
           "products"
         ]
@@ -842,6 +666,826 @@
         "summary": "Stop tracking a product",
         "tags": [
           "products"
+        ]
+      }
+    },
+    "/product-groups": {
+      "get": {
+        "description": "A group holds the same item tracked on several marketplaces. The cards show the best price now and the lowest and the highest one of `statsPeriod`.",
+        "operationId": "ProductGroupsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "title": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "thumbnailUrl": {
+                            "nullable": true,
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          "productCount": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "lastCheck": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "marketplace": {
+                                "type": "string"
+                              },
+                              "checkedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                              }
+                            },
+                            "required": [
+                              "marketplace",
+                              "checkedAt"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "current": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "marketplace": {
+                                "type": "string"
+                              },
+                              "amountMinor": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "observedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                              }
+                            },
+                            "required": [
+                              "marketplace",
+                              "amountMinor",
+                              "observedAt"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "min": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "marketplace": {
+                                "type": "string"
+                              },
+                              "amountMinor": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "observedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                              }
+                            },
+                            "required": [
+                              "marketplace",
+                              "amountMinor",
+                              "observedAt"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "max": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "marketplace": {
+                                "type": "string"
+                              },
+                              "amountMinor": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "observedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                              }
+                            },
+                            "required": [
+                              "marketplace",
+                              "amountMinor",
+                              "observedAt"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "highlighted": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "thumbnailUrl",
+                          "createdAt",
+                          "productCount",
+                          "lastCheck",
+                          "current",
+                          "min",
+                          "max",
+                          "highlighted"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "page": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "pageSize": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "statsPeriod": {
+                      "type": "string",
+                      "enum": [
+                        "24h",
+                        "7d",
+                        "30d"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "page",
+                    "pageSize",
+                    "total",
+                    "statsPeriod"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "List the product groups of the user, the newest first",
+        "tags": [
+          "product-groups"
+        ]
+      },
+      "post": {
+        "description": "A group made by adding a product (`POST /products`) is made there.",
+        "operationId": "ProductGroupsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "title": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "thumbnailUrl": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "productCount": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "lastCheck": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "marketplace": {
+                          "type": "string"
+                        },
+                        "checkedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "marketplace",
+                        "checkedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "current": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "marketplace": {
+                          "type": "string"
+                        },
+                        "amountMinor": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "observedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "marketplace",
+                        "amountMinor",
+                        "observedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "min": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "marketplace": {
+                          "type": "string"
+                        },
+                        "amountMinor": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "observedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "marketplace",
+                        "amountMinor",
+                        "observedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "max": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "marketplace": {
+                          "type": "string"
+                        },
+                        "amountMinor": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "observedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "marketplace",
+                        "amountMinor",
+                        "observedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "highlighted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "thumbnailUrl",
+                    "createdAt",
+                    "productCount",
+                    "lastCheck",
+                    "current",
+                    "min",
+                    "max",
+                    "highlighted"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "summary": "Make an empty group",
+        "tags": [
+          "product-groups"
+        ]
+      }
+    },
+    "/product-groups/stats-period": {
+      "put": {
+        "description": "Kept for the user, so that it is the same on every device.",
+        "operationId": "ProductGroupsController_chooseStatsPeriod",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "statsPeriod": {
+                    "type": "string",
+                    "enum": [
+                      "24h",
+                      "7d",
+                      "30d"
+                    ]
+                  }
+                },
+                "required": [
+                  "statsPeriod"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Choose the period of the lowest and the highest price on the cards",
+        "tags": [
+          "product-groups"
+        ]
+      }
+    },
+    "/product-groups/{id}": {
+      "get": {
+        "operationId": "ProductGroupsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "title": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "thumbnailUrl": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "productCount": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "lastCheck": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "marketplace": {
+                          "type": "string"
+                        },
+                        "checkedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "marketplace",
+                        "checkedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "current": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "marketplace": {
+                          "type": "string"
+                        },
+                        "amountMinor": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "observedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "marketplace",
+                        "amountMinor",
+                        "observedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "min": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "marketplace": {
+                          "type": "string"
+                        },
+                        "amountMinor": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "observedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "marketplace",
+                        "amountMinor",
+                        "observedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "max": {
+                      "nullable": true,
+                      "type": "object",
+                      "properties": {
+                        "marketplace": {
+                          "type": "string"
+                        },
+                        "amountMinor": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "observedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "marketplace",
+                        "amountMinor",
+                        "observedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "highlighted": {
+                      "type": "boolean"
+                    },
+                    "statsPeriod": {
+                      "type": "string",
+                      "enum": [
+                        "24h",
+                        "7d",
+                        "30d"
+                      ]
+                    },
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "marketplace": {
+                            "type": "string"
+                          },
+                          "externalId": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "cityId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "cityName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "lastStatus": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "lastCheckedAt": {
+                            "nullable": true,
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          "nextCheckAt": {
+                            "nullable": true,
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          "thumbnailUrl": {
+                            "nullable": true,
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "latest": {
+                            "nullable": true,
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "observedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "availability": {
+                                "type": "string",
+                                "enum": [
+                                  "in_stock",
+                                  "out_of_stock",
+                                  "unknown"
+                                ]
+                              },
+                              "prices": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "amountMinor": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "currency": {
+                                      "type": "string",
+                                      "enum": [
+                                        "RUB"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "amountMinor",
+                                    "currency"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "exitIp": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "observedAt",
+                              "title",
+                              "availability",
+                              "prices",
+                              "exitIp"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "marketplace",
+                          "externalId",
+                          "url",
+                          "cityId",
+                          "cityName",
+                          "lastStatus",
+                          "lastCheckedAt",
+                          "nextCheckAt",
+                          "thumbnailUrl",
+                          "latest"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "thumbnailUrl",
+                    "createdAt",
+                    "productCount",
+                    "lastCheck",
+                    "current",
+                    "min",
+                    "max",
+                    "highlighted",
+                    "statsPeriod",
+                    "products"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The group is not the user's"
+          }
+        },
+        "summary": "A product group with its products, each with its newest price",
+        "tags": [
+          "product-groups"
+        ]
+      },
+      "patch": {
+        "operationId": "ProductGroupsController_rename",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "title"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": "The group is not the user's"
+          }
+        },
+        "summary": "Rename a product group",
+        "tags": [
+          "product-groups"
+        ]
+      },
+      "delete": {
+        "description": "The products are shared: each is deleted with its price history only when nobody tracks it any more.",
+        "operationId": "ProductGroupsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": "The group is not the user's"
+          }
+        },
+        "summary": "Delete a product group and stop tracking its products",
+        "tags": [
+          "product-groups"
         ]
       }
     },
@@ -2373,7 +3017,7 @@
     },
     "/auth/verify-email": {
       "get": {
-        "description": "Open the link of the mail. It works until it expires, and opening it again is harmless.",
+        "description": "Open the link of the mail in the browser the user is signed in with. It works until it expires, and opening it again is harmless. Nobody else can confirm the email, even with the mailbox: whoever signed up set the password.",
         "operationId": "EmailVerificationController_verify",
         "parameters": [
           {
@@ -2411,7 +3055,10 @@
             }
           },
           "400": {
-            "description": "The link is wrong or has expired"
+            "description": "The link is wrong, has expired, or was mailed for another user"
+          },
+          "401": {
+            "description": "No live session: where the app has a login page, a redirect to it with `?verify=<token>`"
           }
         },
         "summary": "Confirm the email: the link mailed to it",
