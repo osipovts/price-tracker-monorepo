@@ -103,6 +103,8 @@ export const en = {
     waitingHint: 'It can take up to 10 minutes.',
     addSlow:
       'Adding a product can take a few minutes - this is normal. You can close the page, the adding will not be interrupted.',
+    trackedIn: 'This product is tracked already in the group <group>{{title}}</group>.',
+    inThisGroup: 'This product is in this group already.',
     noPrice: 'no price',
     empty: 'Nothing is tracked yet.',
     emptyHint:
