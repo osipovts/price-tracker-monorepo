@@ -74,5 +74,11 @@ export const ayuTheme: MantineThemeOverride = createTheme({
 export const ayuVariables: CSSVariablesResolver = () => ({
   variables: {},
   light: { '--mantine-color-body': '#fcfcfc', '--mantine-color-text': '#5c6166' },
-  dark: { '--mantine-color-body': '#0b0e14', '--mantine-color-text': '#bfbdb6' },
+  dark: {
+    '--mantine-color-body': '#0b0e14',
+    '--mantine-color-text': '#bfbdb6',
+    // The red of the dark scheme is pale under white text: the buttons that delete take a deeper one.
+    '--mantine-color-red-filled': 'var(--mantine-color-red-7)',
+    '--mantine-color-red-filled-hover': 'var(--mantine-color-red-8)',
+  },
 });
