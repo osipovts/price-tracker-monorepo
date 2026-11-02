@@ -1,4 +1,9 @@
-const rubles = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' });
+/** The kopecks are shown only when there are some: a whole price reads faster without ",00". */
+const rubles = new Intl.NumberFormat('ru-RU', {
+  style: 'currency',
+  currency: 'RUB',
+  trailingZeroDisplay: 'stripIfInteger',
+});
 
 /** Amounts of the hub are in kopecks. */
 export function formatPrice(amountMinor: number): string {

@@ -46,3 +46,10 @@ export function readPendingAdd(now: number = Date.now()): PendingAddInterface | 
     return null;
   }
 }
+
+/** Whether a reload cut short an add to the group, or to a new group when null: its form is opened again. */
+export function hasPendingAdd(groupId: string | null): boolean {
+  const pending = readPendingAdd();
+
+  return pending !== null && pending.groupId === groupId;
+}

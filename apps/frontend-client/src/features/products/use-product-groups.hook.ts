@@ -15,9 +15,6 @@ export type ProductGroupPageType =
 export type ProductGroupType = ProductGroupPageType['items'][number];
 export type ProductGroupDetailType =
   operations['ProductGroupsController_get']['responses'][200]['content']['application/json'];
-export type StatsPeriodType = ProductGroupPageType['statsPeriod'];
-
-export const statsPeriods: readonly StatsPeriodType[] = ['24h', '7d', '30d'];
 export const groupPageSize = 20;
 
 /** How long to wait for the first price of a product that has none yet, in milliseconds. */
@@ -79,12 +76,6 @@ function useGroupMutation<VariablesType>(
   });
 }
 
-export function useCreateGroup(): UseMutationResult<void, Error, string | null> {
-  return useGroupMutation(async (title: string | null): Promise<void> => {
-    ensure(await api.POST('/product-groups', { body: title === null ? {} : { title } }));
-  });
-}
-
 export function useRenameGroup(id: string): UseMutationResult<void, Error, string> {
   return useGroupMutation(async (title: string): Promise<void> => {
     ensure(await api.PATCH('/product-groups/{id}', { params: { path: { id } }, body: { title } }));
@@ -94,11 +85,5 @@ export function useRenameGroup(id: string): UseMutationResult<void, Error, strin
 export function useDeleteGroup(): UseMutationResult<void, Error, string> {
   return useGroupMutation(async (id: string): Promise<void> => {
     ensure(await api.DELETE('/product-groups/{id}', { params: { path: { id } } }));
-  });
-}
-
-export function useChooseStatsPeriod(): UseMutationResult<void, Error, StatsPeriodType> {
-  return useGroupMutation(async (statsPeriod: StatsPeriodType): Promise<void> => {
-    ensure(await api.PUT('/product-groups/stats-period', { body: { statsPeriod } }));
   });
 }

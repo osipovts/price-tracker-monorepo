@@ -1,4 +1,4 @@
-import { marketplaceColor } from './marketplace-badge.component.js';
+import { marketplaceColor } from './marketplace-name.component.js';
 
 export interface SeriesProductInterface {
   id: string;

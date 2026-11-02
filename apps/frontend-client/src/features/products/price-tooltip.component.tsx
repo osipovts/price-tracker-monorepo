@@ -8,7 +8,7 @@ import { formatPrice } from './price-format.type.js';
 import type { GranularityType } from './price-series.type.js';
 import type { SeriesStyleInterface } from './series-style.type.js';
 
-/** What each line of the chart has at the place under the pointer. */
+/** The price each line has at the point under the pointer: read in its bucket, or carried from before. */
 export function PriceTooltip({
   row,
   granularity,
@@ -20,11 +20,12 @@ export function PriceTooltip({
 }): ReactElement {
   const { t } = useTranslation();
   const locale = useLocale();
+  const title = titleOf(row.start, granularity, locale);
 
   return (
     <Card withBorder padding="xs" shadow="sm">
       <Text size="sm" fw={600}>
-        {titleOf(row.start, granularity, locale)}
+        {granularity === 'week' ? t('chart.weekTo', { date: title }) : title}
       </Text>
       {series.map(({ id, label, color }): ReactElement | null => {
         const bucket = row.cells[id]?.bucket;
@@ -43,19 +44,12 @@ export function PriceTooltip({
               }}
             />
             <Text size="sm">
-              {label}: {bucket.value === null && t('chart.noPriceYet')}
-              {bucket.value !== null &&
-                !bucket.observed &&
-                t('chart.lastKnown', { price: formatPrice(bucket.value) })}
-              {bucket.observed &&
-                bucket.average !== null &&
-                bucket.min !== null &&
-                bucket.max !== null &&
-                t('chart.observed', {
-                  average: formatPrice(bucket.average),
-                  min: formatPrice(bucket.min),
-                  max: formatPrice(bucket.max),
-                })}
+              {label}:{' '}
+              {bucket.value === null
+                ? t('chart.noPriceYet')
+                : bucket.observed
+                  ? formatPrice(bucket.value)
+                  : t('chart.lastKnown', { price: formatPrice(bucket.value) })}
             </Text>
           </Group>
         );

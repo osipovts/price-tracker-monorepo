@@ -883,6 +883,11 @@ export interface operations {
                             /** Format: date-time */
                             createdAt: string;
                             productCount: number;
+                            lastCheck: {
+                                marketplace: string;
+                                /** Format: date-time */
+                                checkedAt: string;
+                            } | null;
                             current: {
                                 marketplace: string;
                                 amountMinor: number;
@@ -942,6 +947,11 @@ export interface operations {
                         /** Format: date-time */
                         createdAt: string;
                         productCount: number;
+                        lastCheck: {
+                            marketplace: string;
+                            /** Format: date-time */
+                            checkedAt: string;
+                        } | null;
                         current: {
                             marketplace: string;
                             amountMinor: number;
@@ -1015,6 +1025,11 @@ export interface operations {
                         /** Format: date-time */
                         createdAt: string;
                         productCount: number;
+                        lastCheck: {
+                            marketplace: string;
+                            /** Format: date-time */
+                            checkedAt: string;
+                        } | null;
                         current: {
                             marketplace: string;
                             amountMinor: number;

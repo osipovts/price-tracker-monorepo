@@ -36,6 +36,7 @@ import { CreateProductGroupUseCase } from '../application/create-product-group.u
 import type { ProductGroupViewInterface } from '../application/describe-product-groups.use-case.js';
 import { GetProductGroupUseCase } from '../application/get-product-group.use-case.js';
 import { GetProductThumbnailUrlUseCase } from '../application/get-product-thumbnail-url.use-case.js';
+import { findLastGroupCheck } from '../application/group-checks.type.js';
 import type { GroupPriceInterface } from '../application/group-price-summary.type.js';
 import { ListProductGroupsUseCase } from '../application/list-product-groups.use-case.js';
 import { RemoveProductGroupUseCase } from '../application/remove-product-group.use-case.js';
@@ -88,6 +89,7 @@ export class ProductGroupsController {
 
   private async present(view: ProductGroupViewInterface): Promise<ProductGroupType> {
     const { group, prices } = view;
+    const lastCheck = findLastGroupCheck(view.products.map(({ product }) => product.snapshot));
 
     return {
       id: group.snapshot.id,
@@ -95,6 +97,10 @@ export class ProductGroupsController {
       thumbnailUrl: await this.thumbnailUrl.execute(view.thumbnailKey),
       createdAt: group.snapshot.createdAt.toISOString(),
       productCount: view.products.length,
+      lastCheck:
+        lastCheck === null
+          ? null
+          : { marketplace: lastCheck.marketplace, checkedAt: lastCheck.checkedAt.toISOString() },
       current: toPrice(prices.current),
       min: toPrice(prices.min),
       max: toPrice(prices.max),

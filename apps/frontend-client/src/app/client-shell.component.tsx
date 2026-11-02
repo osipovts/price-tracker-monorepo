@@ -47,9 +47,10 @@ export function ClientShell(): ReactElement {
 
   return (
     <AppShell padding="md">
-      <AppShell.Main pt={10}>
-        <Container size="lg">
-          <Group mb={{ base: 24, sm: 16 }} align="center" justify="space-between" wrap="nowrap">
+      {/* Above the header half the room that is under it: the room under it is the one above the footer. */}
+      <AppShell.Main pt={24}>
+        <Container size="md">
+          <Group mb={48} align="center" justify="space-between" wrap="nowrap">
             <Title order={4} ff={BRAND_FONT} fz={48} fw={400} lh={1}>
               <Anchor
                 component={Link}

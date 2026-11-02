@@ -1,10 +1,16 @@
-import type { GranularityType, PriceBucketInterface } from './price-series.type.js';
+import { type GranularityType, pointDate, type PriceBucketInterface } from './price-series.type.js';
+
+/**
+ * The price at a point on the lines of one kind, solid or dashed. The lines of a kind are two, and the runs
+ * take turns on them: a line joins the points it has next to each other, and two runs of a kind must not join.
+ */
+export type RunValuesType = [number | null, number | null];
 
 export interface ChartCellInterface {
-  /** Where the bucket has prices: drawn solid. */
-  solid: number | null;
-  /** Where it has none, and the points beside it: the last known price, drawn dashed. */
-  dashed: number | null;
+  /** On a run of segments that end where a price was read since the point before. */
+  solid: RunValuesType;
+  /** On a run of segments that end where none was: the point keeps the price of the one before it. */
+  dashed: RunValuesType;
   bucket: PriceBucketInterface;
 }
 
@@ -14,40 +20,84 @@ export interface ChartRowInterface {
   start: Date;
   /** What each line has at this place, by the id of the line. */
   cells: Record<string, ChartCellInterface>;
-  /** What the chart draws: the solid and the dashed price of each line, by `<id>:solid` and `<id>:dashed`. */
+  /**
+   * What the chart draws, by the id of the line: `<id>:solid:<0|1>` and `<id>:dashed:<0|1>` for the runs,
+   * `<id>:read` for the dot of a price read in the bucket, `<id>:value` for the point under the pointer.
+   */
   values: Record<string, number | null>;
 }
 
+export const runKinds = ['solid', 'dashed'] as const;
+export const runTurns = [0, 1] as const;
+
+type RunKindType = (typeof runKinds)[number];
+
 export function labelOf(start: Date, granularity: GranularityType, locale: string): string {
+  const point = pointDate(start, granularity);
+
   return granularity === 'hour'
-    ? start.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
-    : start.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
+    ? point.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+    : point.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
 }
 
 export function titleOf(start: Date, granularity: GranularityType, locale: string): string {
+  const point = pointDate(start, granularity);
+
   return granularity === 'hour'
-    ? start.toLocaleString(locale, {
+    ? point.toLocaleString(locale, {
         day: '2-digit',
         month: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
       })
-    : start.toLocaleDateString(locale, { day: '2-digit', month: 'long', year: 'numeric' });
+    : point.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-/** A gap is dashed together with the points on both of its sides, so that the line is not broken. */
-function cellsOf(buckets: PriceBucketInterface[]): ChartCellInterface[] {
-  return buckets.map((bucket, index): ChartCellInterface => {
-    const beside = [buckets[index - 1], buckets[index + 1]];
-    const nearGap =
-      !bucket.observed || beside.some((other): boolean => other !== undefined && !other.observed);
+/** How the line comes to a point from the one before: solid when a price was read between them. */
+function segmentKind(
+  bucket: PriceBucketInterface,
+  previous: PriceBucketInterface | undefined,
+): RunKindType | null {
+  if (previous?.value === null || previous === undefined || bucket.value === null) return null;
 
-    return {
-      solid: bucket.observed ? bucket.value : null,
-      dashed: nearGap ? bucket.value : null,
-      bucket,
-    };
+  return bucket.observed ? 'solid' : 'dashed';
+}
+
+/** Each segment goes on the line of its kind; a new run of a kind goes on the other of its two lines. */
+function cellsOf(buckets: PriceBucketInterface[]): ChartCellInterface[] {
+  const cells = buckets.map((bucket): ChartCellInterface => ({
+    solid: [null, null],
+    dashed: [null, null],
+    bucket,
+  }));
+  const runs: Record<RunKindType, number> = { solid: -1, dashed: -1 };
+  let kindBefore: RunKindType | null = null;
+
+  buckets.forEach((bucket, index): void => {
+    const kind = segmentKind(bucket, buckets[index - 1]);
+    const [from, to] = [cells[index - 1], cells[index]];
+    if (kind !== null && kind !== kindBefore) runs[kind] += 1;
+    kindBefore = kind;
+    if (kind === null || from === undefined || to === undefined) return;
+
+    const turn = runs[kind] % 2;
+    from[kind][turn] = from.bucket.value;
+    to[kind][turn] = bucket.value;
   });
+
+  return cells;
+}
+
+/** What the chart draws of a line at a point, by the keys of `ChartRowInterface.values`. */
+function valuesOf(id: string, cell: ChartCellInterface): Record<string, number | null> {
+  const values: Record<string, number | null> = {};
+  for (const kind of runKinds) {
+    for (const turn of runTurns) values[`${id}:${kind}:${String(turn)}`] = cell[kind][turn];
+  }
+  values[`${id}:read`] = cell.bucket.observed ? cell.bucket.value : null;
+  values[`${id}:value`] = cell.bucket.value;
+
+  return values;
 }
 
 /** The lines of a chart share their places: the buckets of every line start at the same moments. */
@@ -66,11 +116,10 @@ export function toRows(
     };
     for (const line of cells) {
       const cell = line.cells[index];
-      if (cell !== undefined) {
-        row.cells[line.id] = cell;
-        row.values[`${line.id}:solid`] = cell.solid;
-        row.values[`${line.id}:dashed`] = cell.dashed;
-      }
+      if (cell === undefined) continue;
+
+      row.cells[line.id] = cell;
+      Object.assign(row.values, valuesOf(line.id, cell));
     }
 
     return row;
@@ -94,4 +143,28 @@ export function paddedDomain(
 
 export function isRow(value: unknown): value is ChartRowInterface {
   return typeof value === 'object' && value !== null && 'cells' in value && 'key' in value;
+}
+
+/** The steps of the axis of prices: 1, 2, 2.5 or 5 times a power of ten, never below a ruble. */
+const stepFactors = [1, 2, 2.5, 5, 10];
+const minStep = 100;
+
+/**
+ * Round marks of the axis of prices that cover the domain, about `count` of them: "110 000 ₽" reads
+ * at a glance, "112 516 ₽" does not. None when the domain is not known yet.
+ */
+export function roundTicks(domain: [number, number] | ['auto', 'auto'], count: number): number[] {
+  const [min, max] = domain;
+  if (min === 'auto') return [];
+
+  const rough = Math.max(minStep, (max - min) / Math.max(1, count - 1));
+  const power = 10 ** Math.floor(Math.log10(rough));
+  const step = Math.max(
+    minStep,
+    (stepFactors.find((factor): boolean => factor * power >= rough) ?? 10) * power,
+  );
+  const ticks: number[] = [];
+  for (let tick = Math.floor(min / step) * step; tick < max + step; tick += step) ticks.push(tick);
+
+  return ticks;
 }

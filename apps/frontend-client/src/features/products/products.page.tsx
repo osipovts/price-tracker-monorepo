@@ -1,151 +1,134 @@
+import './list-row.css';
 import './waiting-glint.css';
 
-import {
-  Button,
-  Card,
-  Group,
-  Loader,
-  Pagination,
-  SegmentedControl,
-  SimpleGrid,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core';
+import { Box, Button, Group, Loader, Pagination, Paper, Stack, Text, Title } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import { ErrorAlert } from 'frontend-shared';
-import { type ReactElement, type SyntheticEvent, useState } from 'react';
+import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
-import { AddProduct } from './add-product.component.js';
-import { DeleteGroup } from './delete-group.component.js';
-import { GroupPrices } from './group-prices.component.js';
+import { LineIcon } from './action-icons.component.js';
+import { AddProductModal } from './add-product-modal.component.js';
+import { BestPrice } from './group-prices.component.js';
+import { MarketplaceName } from './marketplace-name.component.js';
+import { hasPendingAdd } from './pending-add.type.js';
+import { PriceChecks } from './price-checks.component.js';
 import { ProductThumbnail } from './product-thumbnail.component.js';
 import {
   groupPageSize,
+  type ProductGroupPageType,
   type ProductGroupType,
-  statsPeriods,
-  type StatsPeriodType,
-  useChooseStatsPeriod,
-  useCreateGroup,
   useProductGroups,
 } from './use-product-groups.hook.js';
 
-/** Makes an empty group, to fill with products later. */
-function CreateGroup(): ReactElement {
-  const { t } = useTranslation();
-  const [title, setTitle] = useState('');
-  const create = useCreateGroup();
-
-  const submit = (event: SyntheticEvent): void => {
-    event.preventDefault();
-    create.mutate(title.trim() === '' ? null : title.trim(), {
-      onSuccess: (): void => {
-        setTitle('');
-      },
-    });
-  };
+/** When the prices of the group were read last, and on which marketplace. */
+function GroupLastCheck({ group }: { group: ProductGroupType }): ReactElement {
+  const { lastCheck } = group;
 
   return (
-    <form onSubmit={submit}>
-      <Group align="flex-end">
-        <TextInput
-          flex="1 1 12rem"
-          label={t('groups.newLabel')}
-          placeholder={t('groups.newPlaceholder')}
-          maxLength={200}
-          value={title}
-          onChange={(event): void => {
-            setTitle(event.currentTarget.value);
-          }}
-        />
-        <Button type="submit" variant="default" loading={create.isPending}>
-          {t('groups.create')}
-        </Button>
-      </Group>
-      {create.error !== null && <ErrorAlert error={create.error} />}
-    </form>
-  );
-}
-
-/** The period of the lowest and the highest price, kept for the user. */
-function PeriodSwitch({ value }: { value: StatsPeriodType }): ReactElement {
-  const { t } = useTranslation();
-  const choose = useChooseStatsPeriod();
-
-  return (
-    <SegmentedControl
-      aria-label={t('groups.period')}
-      size="xs"
-      value={value}
-      data={statsPeriods.map((period): { value: string; label: string } => ({
-        value: period,
-        label: t(`groups.periods.${period}`),
-      }))}
-      onChange={(period): void => {
-        const chosen = statsPeriods.find((candidate): boolean => candidate === period);
-        if (chosen !== undefined) choose.mutate(chosen);
+    <PriceChecks
+      checks={{
+        checkedAt: lastCheck?.checkedAt ?? null,
+        marketplace: lastCheck?.marketplace ?? null,
+        nextAt: null,
       }}
     />
   );
 }
 
-function GroupCards({
-  items,
-  onDeleted,
-}: {
-  items: ProductGroupType[];
-  onDeleted: () => void;
-}): ReactElement {
+/** The best price of the group, and the marketplace it is on under it. */
+function GroupBestPrice({ group }: { group: ProductGroupType }): ReactElement {
+  return (
+    <Stack gap={0} align="flex-end">
+      <BestPrice group={group} fz={{ base: 'md', sm: 'lg' }} />
+      {group.current !== null && <MarketplaceName marketplace={group.current.marketplace} />}
+    </Stack>
+  );
+}
+
+/** A group in one line: what it is on the left, the best price of it and where on the right. */
+function GroupRow({ group }: { group: ProductGroupType }): ReactElement {
+  const { t } = useTranslation();
+  const title = group.title ?? t('groups.untitled');
+  // Still waiting for the first price: a glint runs over the row until it comes.
+  const waiting = group.productCount > 0 && group.title === null;
+
+  return (
+    <Box
+      component={Link}
+      to={`/groups/${group.id}`}
+      className="list-row row-link"
+      py="sm"
+      data-waiting={waiting ? 'true' : undefined}
+    >
+      <Group wrap="nowrap" gap="md">
+        <ProductThumbnail url={group.thumbnailUrl} alt={title} size={56} />
+        <Stack gap={2} flex={1} miw={0}>
+          {/* A title can be a paragraph: one line of the row, the whole of it in the hint. */}
+          <Text className="row-title" fw={500} truncate title={title}>
+            {title}
+          </Text>
+          {waiting ? (
+            <Text size="xs" c="dimmed">
+              {t('products.waiting')}
+            </Text>
+          ) : (
+            <GroupLastCheck group={group} />
+          )}
+        </Stack>
+        {!waiting && <GroupBestPrice group={group} />}
+      </Group>
+    </Box>
+  );
+}
+
+/** Nothing is tracked yet: what the page is for, and the way to start. */
+function EmptyList({ onAdd }: { onAdd: () => void }): ReactElement {
   const { t } = useTranslation();
 
   return (
-    <SimpleGrid cols={{ base: 1, md: 2 }} spacing="sm">
-      {items.map((group): ReactElement => {
-        const title = group.title ?? t('groups.untitled');
-        // Still waiting for the first price: a glint runs over the card until it comes.
-        const waiting = group.productCount > 0 && group.title === null;
+    <Paper withBorder radius="md" py={48} px="md">
+      <Stack align="center" gap="xs" maw={420} mx="auto" ta="center">
+        <Text fw={500} size="lg">
+          {t('products.empty')}
+        </Text>
+        <Text size="sm" c="dimmed">
+          {t('products.emptyHint')}
+        </Text>
+        <Button mt="sm" leftSection={<LineIcon name="plus" />} onClick={onAdd}>
+          {t('products.addFirst')}
+        </Button>
+      </Stack>
+    </Paper>
+  );
+}
 
-        return (
-          <Card key={group.id} withBorder padding="sm" data-waiting={waiting ? 'true' : undefined}>
-            <Group wrap="nowrap" align="flex-start" gap="sm">
-              <ProductThumbnail url={group.thumbnailUrl} alt={title} size={88} />
-              <Stack gap={6} flex={1} miw={0}>
-                <Group justify="space-between" wrap="nowrap" align="flex-start" gap="xs">
-                  {/* A title can be a paragraph: two lines of the card, the whole of it in the hint. */}
-                  <Text
-                    component={Link}
-                    to={`/groups/${group.id}`}
-                    fw={500}
-                    lineClamp={2}
-                    title={title}
-                  >
-                    {title}
-                  </Text>
-                  <DeleteGroup groupId={group.id} title={title} onDeleted={onDeleted} />
-                </Group>
-                <Text size="xs" c="dimmed">
-                  {t('groups.productCount', { count: group.productCount })}
-                </Text>
-                {waiting ? (
-                  <>
-                    <Text size="sm" c="dimmed">
-                      {t('products.waiting')}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {t('products.waitingHint')}
-                    </Text>
-                  </>
-                ) : (
-                  <GroupPrices group={group} />
-                )}
-              </Stack>
-            </Group>
-          </Card>
-        );
-      })}
-    </SimpleGrid>
+/** The groups of a page, and the way to the other pages when there are more. */
+function GroupList({
+  data,
+  page,
+  onPage,
+}: {
+  data: ProductGroupPageType;
+  page: number;
+  onPage: (page: number) => void;
+}): ReactElement {
+  return (
+    <>
+      <Box>
+        {data.items.map((group): ReactElement => (
+          <GroupRow key={group.id} group={group} />
+        ))}
+      </Box>
+      {data.total > groupPageSize && (
+        <Pagination
+          total={Math.max(1, Math.ceil(data.total / groupPageSize))}
+          value={page}
+          onChange={onPage}
+        />
+      )}
+    </>
   );
 }
 
@@ -154,39 +137,30 @@ export function ProductsPage(): ReactElement {
   const [page, setPage] = useState(1);
   const groups = useProductGroups(page);
   const data = groups.data;
-  // The last group of a page is gone: the page goes with it.
-  const onDeleted = (): void => {
-    if (data?.items.length === 1 && page > 1) setPage(page - 1);
-  };
+  // The form opens by itself when a reload cut short a product being added.
+  const [adding, { open, close }] = useDisclosure(hasPendingAdd(null));
+  const empty = data?.items.length === 0 && page === 1;
 
   return (
-    <Stack>
-      <Card withBorder>
-        <Stack gap="md">
-          <AddProduct groupId={null} />
-          <CreateGroup />
-        </Stack>
-      </Card>
-      <Group justify="space-between" mt="md">
+    <Stack gap="md">
+      <Group justify="space-between" align="center" gap="sm">
         <Title order={2}>{t('products.title')}</Title>
-        {data !== undefined && <PeriodSwitch value={data.statsPeriod} />}
+        {/* Not while the list loads: an empty one offers its own button in its place. */}
+        {data !== undefined && !empty && (
+          <Button leftSection={<LineIcon name="plus" />} onClick={open}>
+            {t('products.add')}
+          </Button>
+        )}
       </Group>
       {groups.isError && <ErrorAlert error={groups.error} />}
       {data === undefined ? (
         !groups.isError && <Loader />
+      ) : empty ? (
+        <EmptyList onAdd={open} />
       ) : (
-        <>
-          <GroupCards items={data.items} onDeleted={onDeleted} />
-          {data.items.length === 0 && <Text c="dimmed">{t('products.empty')}</Text>}
-          {data.total > groupPageSize && (
-            <Pagination
-              total={Math.max(1, Math.ceil(data.total / groupPageSize))}
-              value={page}
-              onChange={setPage}
-            />
-          )}
-        </>
+        <GroupList data={data} page={page} onPage={setPage} />
       )}
+      <AddProductModal groupId={null} opened={adding} onClose={close} />
     </Stack>
   );
 }

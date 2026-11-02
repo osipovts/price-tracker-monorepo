@@ -1,37 +1,46 @@
+import './list-row.css';
+
 import {
+  ActionIcon,
   Anchor,
-  Badge,
+  Box,
   Button,
-  Card,
+  CloseButton,
+  Collapse,
   Group,
   Loader,
+  Menu,
   Pagination,
-  SimpleGrid,
+  Paper,
+  SegmentedControl,
   Stack,
   Table,
   Text,
   TextInput,
   Title,
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import { ApiError, ErrorAlert, useLocale } from 'frontend-shared';
 import { type ReactElement, type SyntheticEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
 
-import { AddProduct } from './add-product.component.js';
+import { LineIcon } from './action-icons.component.js';
+import { AddProductModal } from './add-product-modal.component.js';
 import { DeleteGroup } from './delete-group.component.js';
 import { DeleteProduct } from './delete-product.component.js';
-import { GroupPrices } from './group-prices.component.js';
+import { BestPrice } from './group-prices.component.js';
 import { isHttpLink } from './http-link.type.js';
-import { MarketplaceBadge } from './marketplace-badge.component.js';
+import { MarketplaceName } from './marketplace-name.component.js';
 import { formatMoment } from './moment-format.type.js';
-import { describeNextCheck } from './next-check.type.js';
 import { availabilityLabel, priceOf, toPoints } from './observation.type.js';
+import { hasPendingAdd } from './pending-add.type.js';
 import { type ChartLineInterface, PriceChart } from './price-chart.component.js';
+import { PriceChecks } from './price-checks.component.js';
 import { formatPrice } from './price-format.type.js';
-import { buildPriceSeries } from './price-series.type.js';
+import { buildPriceSeries, granularities, type GranularityType } from './price-series.type.js';
 import { ProductThumbnail } from './product-thumbnail.component.js';
-import { styleSeries } from './series-style.type.js';
+import { type SeriesStyleInterface, styleSeries } from './series-style.type.js';
 import {
   type ProductGroupDetailType,
   useProductGroup,
@@ -39,62 +48,63 @@ import {
 } from './use-product-groups.hook.js';
 import { type ObservationType, usePriceHistories } from './use-products.hook.js';
 
-/** The hours the first chart shows, and the days the second. */
-const hoursShown = 48;
-const daysShown = 30;
+/** How many points the chart shows of each granularity: the hours of two days, the days of a month, the weeks of a year. */
+const bucketsShown: Record<GranularityType, number> = { hour: 48, day: 30, week: 52 };
+const granularityLabels = {
+  hour: 'group.hours',
+  day: 'group.days',
+  week: 'group.year',
+} as const satisfies Record<GranularityType, string>;
 const tablePageSize = 20;
 
 type GroupProductType = ProductGroupDetailType['products'][number];
 
-/** The title with a way to change it. */
-function GroupTitle({
+interface HistoryRowInterface {
+  productId: string;
+  observation: ObservationType;
+}
+
+/** The mark of a product in the list, the chart and the table: the colour of its line. */
+function SeriesDot({ color }: { color: string }): ReactElement {
+  return (
+    <Box
+      w={10}
+      h={10}
+      bg={`var(--mantine-color-${color}-6)`}
+      style={{ borderRadius: '50%', flexShrink: 0 }}
+    />
+  );
+}
+
+/** The title being changed, in place of the title. */
+function RenameForm({
   group,
   title,
+  onDone,
 }: {
   group: ProductGroupDetailType;
   title: string;
+  onDone: () => void;
 }): ReactElement {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState<string | null>(null);
+  const [draft, setDraft] = useState(group.title ?? title);
   const rename = useRenameGroup(group.id);
-
-  if (draft === null) {
-    return (
-      <Group gap="xs" align="center">
-        <Title order={2} fz={{ base: 20, sm: 28 }}>
-          {title}
-        </Title>
-        <Button
-          variant="subtle"
-          size="compact-xs"
-          onClick={(): void => {
-            setDraft(group.title ?? title);
-          }}
-        >
-          {t('group.rename')}
-        </Button>
-      </Group>
-    );
-  }
 
   const save = (event: SyntheticEvent): void => {
     event.preventDefault();
     if (draft.trim() === '') return;
 
-    rename.mutate(draft.trim(), {
-      onSuccess: (): void => {
-        setDraft(null);
-      },
-    });
+    rename.mutate(draft.trim(), { onSuccess: onDone });
   };
 
   return (
-    <form onSubmit={save}>
+    <Box component="form" onSubmit={save} flex={1}>
       <Group align="flex-end" gap="xs">
         <TextInput
           flex="1 1 14rem"
           aria-label={t('group.rename')}
           maxLength={200}
+          autoFocus
           value={draft}
           onChange={(event): void => {
             setDraft(event.currentTarget.value);
@@ -103,172 +113,290 @@ function GroupTitle({
         <Button type="submit" loading={rename.isPending}>
           {t('group.save')}
         </Button>
-        <Button
-          variant="default"
-          onClick={(): void => {
-            setDraft(null);
-          }}
-        >
+        <Button variant="default" onClick={onDone}>
           {t('product.cancel')}
         </Button>
       </Group>
       {rename.error !== null && <ErrorAlert error={rename.error} />}
-    </form>
+    </Box>
   );
 }
 
+/** The picture, the title, and the best price of the group: what the page is for, at the top of it. */
 function GroupHeader({
   group,
   title,
+  onAdd,
   onDeleted,
 }: {
   group: ProductGroupDetailType;
   title: string;
+  onAdd: () => void;
   onDeleted: () => void;
 }): ReactElement {
+  const { t } = useTranslation();
+  const [renaming, setRenaming] = useState(false);
+  const [deleting, deletion] = useDisclosure(false);
+
   return (
-    <Group wrap="nowrap" align="flex-start" gap="md">
-      <ProductThumbnail url={group.thumbnailUrl} alt={title} size={112} />
-      <Stack gap="xs" flex={1} miw={0}>
+    <Group wrap="nowrap" align="stretch" gap="md">
+      <Box visibleFrom="xs">
+        <ProductThumbnail url={group.thumbnailUrl} alt={title} size={96} />
+      </Box>
+      {/* The price stands on the lower edge of the picture. */}
+      <Stack gap={6} flex={1} miw={0} justify="space-between">
         <Group justify="space-between" wrap="nowrap" align="flex-start" gap="xs">
-          <GroupTitle group={group} title={title} />
-          <DeleteGroup groupId={group.id} title={title} onDeleted={onDeleted} />
+          {renaming ? (
+            <RenameForm
+              group={group}
+              title={title}
+              onDone={(): void => {
+                setRenaming(false);
+              }}
+            />
+          ) : (
+            // A title can be a paragraph: one line of the header, the whole of it in the hint.
+            <Title
+              order={2}
+              fz={{ base: 20, sm: 24 }}
+              lh={1.3}
+              fw={600}
+              lineClamp={1}
+              title={title}
+              flex={1}
+              miw={0}
+            >
+              {title}
+            </Title>
+          )}
+          <Menu position="bottom-end" width={220} shadow="md">
+            <Menu.Target>
+              <ActionIcon variant="subtle" color="gray" size="lg" aria-label={t('group.actions')}>
+                <LineIcon name="dots" size={20} />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item
+                onClick={(): void => {
+                  setRenaming(true);
+                }}
+              >
+                {t('group.rename')}
+              </Menu.Item>
+              <Menu.Item color="red" onClick={deletion.open}>
+                {t('groups.delete')}
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
         </Group>
-        <GroupPrices group={group} />
+        {/* The best price, and at the right of it, on its lower edge, the same button as the one of the list of groups. */}
+        <Group justify="space-between" align="flex-end" wrap="nowrap" gap="sm" mt={4}>
+          <Group gap="sm" align="baseline">
+            <BestPrice group={group} fz={{ base: 32, sm: 40 }} lh={1} />
+            {group.current !== null && (
+              <MarketplaceName marketplace={group.current.marketplace} size="md" />
+            )}
+          </Group>
+          <Button leftSection={<LineIcon name="plus" />} onClick={onAdd}>
+            {t('products.add')}
+          </Button>
+        </Group>
       </Stack>
+      <DeleteGroup
+        groupId={group.id}
+        title={title}
+        opened={deleting}
+        onClose={deletion.close}
+        onDeleted={onDeleted}
+      />
     </Group>
   );
 }
 
-function NextCheck({ product }: { product: GroupProductType }): ReactElement | null {
-  const { t } = useTranslation();
-  const locale = useLocale();
-  const next = describeNextCheck(product.nextCheckAt, new Date(), locale);
+interface LinkPropsInterface {
+  component: 'a';
+  href: string;
+  target: string;
+  rel: string;
+  title: string;
+}
 
-  if (next === null) return null;
+/** An offer leads to it on its marketplace; an address that is not a web page leads nowhere. */
+function linkProps(url: string, title: string): LinkPropsInterface | Record<string, never> {
+  return isHttpLink(url)
+    ? {
+        component: 'a',
+        href: url,
+        target: '_blank',
+        rel: 'noreferrer noopener',
+        title,
+      }
+    : {};
+}
+
+/** Under the name of an offer: that it waits for its first price, or when its price was read and is read next. */
+function OfferNote({ product }: { product: GroupProductType }): ReactElement {
+  const { t } = useTranslation();
+
+  if (product.latest === null) {
+    return (
+      <Text size="xs" c="dimmed">
+        {t('products.waiting')}. {t('products.waitingHint')}
+      </Text>
+    );
+  }
 
   return (
-    <Text size="sm" c="dimmed">
-      {next.soon ? t('product.nextCheckSoon') : t('product.nextCheck', { when: next.when })}
+    <PriceChecks
+      checks={{ checkedAt: product.lastCheckedAt, marketplace: null, nextAt: product.nextCheckAt }}
+    />
+  );
+}
+
+/** The newest price of an offer; struck out, with a hint, when it is out of stock. */
+function OfferPrice({
+  product,
+  best,
+}: {
+  product: GroupProductType;
+  best: boolean;
+}): ReactElement | null {
+  const { t } = useTranslation();
+  const { latest } = product;
+  if (latest === null) return null;
+
+  const price = priceOf(latest);
+  if (price === null) {
+    return (
+      <Text c="dimmed" size="sm">
+        {t('products.noPrice')}
+      </Text>
+    );
+  }
+
+  const absent = latest.availability === 'out_of_stock';
+
+  return (
+    <Text
+      fw={best ? 700 : 500}
+      fz={{ base: 'md', sm: 'lg' }}
+      {...(absent ? { c: 'dimmed', td: 'line-through', title: t('product.absentHint') } : {})}
+      style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}
+    >
+      {formatPrice(price)}
     </Text>
   );
 }
 
-/** A product of the group: where it is, its newest price, and its link. */
-function ProductRow({
+/**
+ * A product of the group, a row like the one of a group in the list: where it is, its checks and its newest
+ * price, all of it a link to it; and apart from the link, the way to stop tracking it.
+ */
+function OfferRow({
   product,
-  color,
+  style,
+  best,
 }: {
   product: GroupProductType;
-  color: string;
+  style: SeriesStyleInterface;
+  best: boolean;
 }): ReactElement {
   const { t } = useTranslation();
-  const locale = useLocale();
-  const { latest } = product;
-  const price = latest === null ? null : priceOf(latest);
-  const title = latest?.title ?? `${product.marketplace} ${product.externalId}`;
+  const [deleting, deletion] = useDisclosure(false);
+  const title = product.latest?.title ?? `${product.marketplace} ${product.externalId}`;
+  const link = linkProps(product.url, t('product.openOn', { marketplace: product.marketplace }));
+  const struck =
+    product.latest?.availability === 'out_of_stock' ? { c: 'dimmed', td: 'line-through' } : {};
 
   return (
-    <Card
-      withBorder
-      padding="sm"
-      style={{ borderLeft: `4px solid var(--mantine-color-${color}-6)` }}
-    >
-      <Group justify="space-between" wrap="nowrap" align="flex-start">
-        <Stack gap={4} miw={0} flex={1}>
-          <Group gap="xs">
-            <MarketplaceBadge marketplace={product.marketplace} />
-            {product.cityName !== null && (
-              <Badge variant="light" color="gray">
-                {t('products.cityOf', { name: product.cityName })}
-              </Badge>
-            )}
+    <Box className="list-row" py="sm" title={title}>
+      <Group wrap="nowrap" gap="sm">
+        <Box {...link} className="row-link" flex={1} miw={0}>
+          <Group wrap="nowrap" gap="sm">
+            <SeriesDot color={style.color} />
+            <Stack gap={0} flex={1} miw={0}>
+              <Text className="row-title" fw={500} truncate {...struck}>
+                {style.label}
+              </Text>
+              <OfferNote product={product} />
+            </Stack>
+            <OfferPrice product={product} best={best} />
           </Group>
-          <Text lineClamp={2} title={title} fw={500}>
-            {title}
-          </Text>
-          <Group gap="xs">
-            <Text fw={600}>
-              {latest === null
-                ? t('products.waiting')
-                : price === null
-                  ? t('products.noPrice')
-                  : formatPrice(price)}
-            </Text>
-            {latest !== null && <Badge>{availabilityLabel(latest.availability, t)}</Badge>}
-          </Group>
-          {isHttpLink(product.url) && (
-            <Anchor href={product.url} target="_blank" rel="noreferrer noopener" size="sm">
-              {t('product.openOn', { marketplace: product.marketplace })}
-            </Anchor>
-          )}
-          <Text size="sm" c="dimmed">
-            {t('products.checked')}:{' '}
-            {product.lastCheckedAt === null ? '-' : formatMoment(product.lastCheckedAt, locale)}
-          </Text>
-          <NextCheck product={product} />
-        </Stack>
-        <DeleteProduct productId={product.id} title={title} />
+        </Box>
+        <CloseButton
+          aria-label={t('product.delete')}
+          title={t('product.delete')}
+          onClick={deletion.open}
+        />
       </Group>
-    </Card>
+      <DeleteProduct
+        productId={product.id}
+        title={title}
+        opened={deleting}
+        onClose={deletion.close}
+      />
+    </Box>
   );
 }
 
-/** The hourly and the daily chart of the prices, a line for each product. */
-function PriceCharts({
+/** The order of the offers: the cheapest of those in stock first, then those out of stock, then those with no price. */
+function offerRank(product: GroupProductType): [number, number] {
+  const price = product.latest === null ? null : priceOf(product.latest);
+  if (price === null) return [2, 0];
+
+  return [product.latest?.availability === 'out_of_stock' ? 1 : 0, price];
+}
+
+function byOffer(a: GroupProductType, b: GroupProductType): number {
+  const [rankA, priceA] = offerRank(a);
+  const [rankB, priceB] = offerRank(b);
+
+  return rankA - rankB || priceA - priceB;
+}
+
+/** Where the product can be bought, the cheapest first. */
+function Offers({
   products,
-  histories,
+  styles,
 }: {
   products: GroupProductType[];
-  histories: Array<ObservationType[] | undefined>;
+  styles: SeriesStyleInterface[];
 }): ReactElement {
   const { t } = useTranslation();
-  const lines = useMemo((): { hour: ChartLineInterface[]; day: ChartLineInterface[] } => {
-    const now = new Date();
-    const styles = styleSeries(products);
-    const lineOf = (
-      index: number,
-      granularity: 'hour' | 'day',
-      count: number,
-    ): ChartLineInterface[] => {
-      const style = styles[index];
-      if (style === undefined) return [];
+  const sorted = products.toSorted(byOffer);
+  const [first] = sorted;
+  const bestId = first !== undefined && offerRank(first)[0] === 0 ? first.id : null;
 
-      return [
-        {
-          ...style,
-          buckets: buildPriceSeries(toPoints(histories[index] ?? []), granularity, count, now),
-        },
-      ];
-    };
-
-    return {
-      hour: products.flatMap((_, index) => lineOf(index, 'hour', hoursShown)),
-      day: products.flatMap((_, index) => lineOf(index, 'day', daysShown)),
-    };
-  }, [products, histories]);
+  if (products.length === 0) return <Text c="dimmed">{t('group.empty')}</Text>;
 
   return (
-    <SimpleGrid cols={{ base: 1, md: 2 }}>
-      <PriceChart
-        title={t('product.hourlyTitle', { count: hoursShown })}
-        granularity="hour"
-        lines={lines.hour}
-      />
-      <PriceChart
-        title={t('product.dailyTitle', { count: daysShown })}
-        granularity="day"
-        lines={lines.day}
-      />
-    </SimpleGrid>
+    <Box>
+      {sorted.flatMap((product): ReactElement[] => {
+        // Each product has its style: the styles are made of these very products.
+        const style = styles.find((candidate): boolean => candidate.id === product.id);
+
+        return style === undefined
+          ? []
+          : [
+              <OfferRow
+                key={product.id}
+                product={product}
+                style={style}
+                best={product.id === bestId}
+              />,
+            ];
+      })}
+    </Box>
   );
 }
 
 /** All the observations of all the products, the newest first, a page at a time. */
 function HistoryTable({
   rows,
+  styles,
 }: {
-  rows: Array<{ marketplace: string; observation: ObservationType }>;
+  rows: HistoryRowInterface[];
+  styles: SeriesStyleInterface[];
 }): ReactElement {
   const { t } = useTranslation();
   const locale = useLocale();
@@ -276,10 +404,9 @@ function HistoryTable({
   const shown = rows.slice((page - 1) * tablePageSize, page * tablePageSize);
 
   return (
-    <>
-      <Title order={4}>{t('product.history')}</Title>
+    <Stack gap="xs">
       <Table.ScrollContainer minWidth={300}>
-        <Table>
+        <Table verticalSpacing={6} fz="sm">
           <Table.Thead>
             <Table.Tr>
               <Table.Th>{t('product.observed')}</Table.Th>
@@ -289,8 +416,9 @@ function HistoryTable({
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {shown.map(({ marketplace, observation }): ReactElement => {
+            {shown.map(({ productId, observation }): ReactElement => {
               const amountMinor = priceOf(observation);
+              const style = styles.find((candidate): boolean => candidate.id === productId);
 
               return (
                 <Table.Tr key={observation.id}>
@@ -298,9 +426,16 @@ function HistoryTable({
                     {formatMoment(observation.observedAt, locale)}
                   </Table.Td>
                   <Table.Td>
-                    <MarketplaceBadge marketplace={marketplace} />
+                    <Group gap={6} wrap="nowrap">
+                      <SeriesDot color={style?.color ?? 'gray'} />
+                      <Text size="sm" style={{ whiteSpace: 'nowrap' }}>
+                        {style?.label}
+                      </Text>
+                    </Group>
                   </Table.Td>
-                  <Table.Td>{amountMinor === null ? '-' : formatPrice(amountMinor)}</Table.Td>
+                  <Table.Td style={{ whiteSpace: 'nowrap' }}>
+                    {amountMinor === null ? '-' : formatPrice(amountMinor)}
+                  </Table.Td>
                   <Table.Td>{availabilityLabel(observation.availability, t)}</Table.Td>
                 </Table.Tr>
               );
@@ -308,13 +443,99 @@ function HistoryTable({
           </Table.Tbody>
         </Table>
       </Table.ScrollContainer>
-      {rows.length === 0 && <Text c="dimmed">{t('product.noHistory')}</Text>}
       {rows.length > tablePageSize && (
         <Pagination
+          size="sm"
           total={Math.max(1, Math.ceil(rows.length / tablePageSize))}
           value={page}
           onChange={setPage}
         />
+      )}
+    </Stack>
+  );
+}
+
+/** The chart of the prices, a line for each product, by hour or by day; the raw checks under it on demand. */
+function PriceHistory({
+  products,
+  styles,
+  histories,
+}: {
+  products: GroupProductType[];
+  styles: SeriesStyleInterface[];
+  histories: Array<ObservationType[] | undefined>;
+}): ReactElement {
+  const { t } = useTranslation();
+  const [granularity, setGranularity] = useState<GranularityType>('day');
+  const [tableShown, table] = useDisclosure(false);
+  const lines = useMemo((): ChartLineInterface[] => {
+    const now = new Date();
+
+    return styles.map((style, index): ChartLineInterface => ({
+      ...style,
+      buckets: buildPriceSeries(
+        toPoints(histories[index] ?? []),
+        granularity,
+        bucketsShown[granularity],
+        now,
+      ),
+    }));
+  }, [styles, histories, granularity]);
+  const rows = products
+    .flatMap((product, index): HistoryRowInterface[] =>
+      (histories[index] ?? []).map((observation): HistoryRowInterface => ({
+        productId: product.id,
+        observation,
+      })),
+    )
+    .toSorted((a, b): number => b.observation.observedAt.localeCompare(a.observation.observedAt));
+
+  return (
+    // Two parts of the page: the checks are as far from the chart as the chart is from the offers.
+    <>
+      <Stack gap="xs">
+        <Group justify="space-between" align="center">
+          <Title order={3} fz="lg" fw={600}>
+            {t('group.history')}
+          </Title>
+          <SegmentedControl
+            size="xs"
+            value={granularity}
+            data={granularities.map((value): { value: string; label: string } => ({
+              value,
+              label: t(granularityLabels[value], { count: bucketsShown[value] }),
+            }))}
+            onChange={(value): void => {
+              const chosen = granularities.find((candidate): boolean => candidate === value);
+              if (chosen !== undefined) setGranularity(chosen);
+            }}
+          />
+        </Group>
+        {rows.length === 0 ? (
+          <Text c="dimmed">{t('product.noHistory')}</Text>
+        ) : (
+          <Paper withBorder radius="md" p={{ base: 'xs', sm: 'md' }}>
+            <PriceChart granularity={granularity} lines={lines} />
+          </Paper>
+        )}
+      </Stack>
+      {rows.length > 0 && (
+        <Stack gap="xs">
+          <Button
+            variant="subtle"
+            color="gray"
+            size="compact-sm"
+            w="fit-content"
+            onClick={table.toggle}
+          >
+            {tableShown
+              ? t('group.hideObservations')
+              : t('group.observations', { count: rows.length })}
+          </Button>
+          <Collapse expanded={tableShown}>
+            <HistoryTable rows={rows} styles={styles} />
+          </Collapse>
+        </Stack>
       )}
     </>
   );
@@ -327,18 +548,13 @@ export function GroupPage(): ReactElement {
   const group = useProductGroup(id);
   const data = group.data;
   const products = useMemo((): GroupProductType[] => data?.products ?? [], [data]);
+  const styles = useMemo((): SeriesStyleInterface[] => styleSeries(products), [products]);
   const histories = usePriceHistories(products.map((product): string => product.id));
   const observations = histories.map(
     (history): ObservationType[] | undefined => history.data?.observations,
   );
-  const rows = products
-    .flatMap((product, index) =>
-      (observations[index] ?? []).map((observation) => ({
-        marketplace: product.marketplace,
-        observation,
-      })),
-    )
-    .toSorted((a, b): number => b.observation.observedAt.localeCompare(a.observation.observedAt));
+  // The form opens by itself when a reload cut short a product being added to this group.
+  const [adding, { open, close }] = useDisclosure(hasPendingAdd(id));
 
   if (group.error instanceof ApiError && group.error.status === 404) {
     return (
@@ -354,35 +570,28 @@ export function GroupPage(): ReactElement {
   if (data === undefined) return <Loader />;
 
   const title = data.title ?? t('groups.untitled');
-  const colors = styleSeries(products);
 
   return (
-    <Stack>
-      <Anchor component={Link} to="/" size="sm">
-        {t('common.backToProducts')}
-      </Anchor>
-      <GroupHeader
-        group={data}
-        title={title}
-        onDeleted={(): void => {
-          void navigate('/');
-        }}
-      />
-      <Title order={4}>{t('group.products', { count: products.length })}</Title>
-      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="sm">
-        {products.map((product, index): ReactElement => (
-          <ProductRow key={product.id} product={product} color={colors[index]?.color ?? 'gray'} />
-        ))}
-      </SimpleGrid>
-      {products.length === 0 && <Text c="dimmed">{t('group.empty')}</Text>}
-      <Card withBorder>
-        <Stack gap="xs">
-          <Text fw={500}>{t('group.addProduct')}</Text>
-          <AddProduct groupId={data.id} />
-        </Stack>
-      </Card>
-      <PriceCharts products={products} histories={observations} />
-      <HistoryTable rows={rows} />
+    <Stack gap="xl">
+      <Stack gap="md">
+        <Anchor component={Link} to="/" size="sm" c="dimmed" w="fit-content">
+          <Group gap={4} wrap="nowrap">
+            <LineIcon name="arrowLeft" size={14} />
+            {t('common.backToProducts')}
+          </Group>
+        </Anchor>
+        <GroupHeader
+          group={data}
+          title={title}
+          onAdd={open}
+          onDeleted={(): void => {
+            void navigate('/');
+          }}
+        />
+      </Stack>
+      <Offers products={products} styles={styles} />
+      <PriceHistory products={products} styles={styles} histories={observations} />
+      <AddProductModal groupId={data.id} opened={adding} onClose={close} />
     </Stack>
   );
 }

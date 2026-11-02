@@ -2,7 +2,7 @@ import { MantineProvider } from '@mantine/core';
 import { render, screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
 
-import { MarketplaceBadge, marketplaceColor } from './marketplace-badge.component.js';
+import { marketplaceColor, MarketplaceName } from './marketplace-name.component.js';
 
 test('ozon is blue, dns is orange, and a marketplace not known yet is grey', () => {
   expect(marketplaceColor('ozon')).toBe('blue');
@@ -13,7 +13,7 @@ test('ozon is blue, dns is orange, and a marketplace not known yet is grey', () 
 test('shows the name of the marketplace', () => {
   render(
     <MantineProvider>
-      <MarketplaceBadge marketplace="dns" />
+      <MarketplaceName marketplace="dns" />
     </MantineProvider>,
   );
 

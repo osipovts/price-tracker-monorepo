@@ -43,6 +43,8 @@ export const productGroupSchema = z.object({
   thumbnailUrl: z.url().nullable(),
   createdAt: z.iso.datetime(),
   productCount: z.number().int(),
+  /** The newest read of the prices of its products, with the marketplace it was on; null while none was read. */
+  lastCheck: z.object({ marketplace: z.string(), checkedAt: z.iso.datetime() }).nullable(),
   /** The cheapest of the newest reads of the products that are in stock; null when none is. */
   current: groupPriceSchema.nullable(),
   /** The lowest and the highest price of the chosen period, not counting the newest read of each product. */

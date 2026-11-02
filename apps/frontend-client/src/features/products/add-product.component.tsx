@@ -65,7 +65,13 @@ function CityField({
  * Adds a product by its link: to the group, or to a new group of its own when there is none. A product being
  * added to a group that a reload cut short is asked for again where it was started from.
  */
-export function AddProduct({ groupId }: { groupId: string | null }): ReactElement {
+export function AddProduct({
+  groupId,
+  onAdded,
+}: {
+  groupId: string | null;
+  onAdded?: () => void;
+}): ReactElement {
   const { t } = useTranslation();
   const [url, setUrl] = useState('');
   const [city, setCity] = useState<{ value: string; label: string } | null>(null);
@@ -91,6 +97,7 @@ export function AddProduct({ groupId }: { groupId: string | null }): ReactElemen
       onSuccess: (): void => {
         setUrl('');
         setCity(null);
+        onAdded?.();
       },
     });
   };
@@ -115,36 +122,34 @@ export function AddProduct({ groupId }: { groupId: string | null }): ReactElemen
 
   return (
     <form onSubmit={submit}>
-      <Stack gap="xs">
-        <Group align="flex-end">
-          <TextInput
-            flex="1 1 16rem"
-            label={t('products.linkLabel')}
-            placeholder="https://www.ozon.ru/product/..."
-            type="url"
-            required
-            disabled={add.isPending}
-            value={url}
-            onChange={(event): void => {
-              setUrl(event.currentTarget.value);
-            }}
-          />
-          <Button type="submit" loading={add.isPending}>
-            {t('products.track')}
-          </Button>
-        </Group>
+      <Stack gap="sm">
+        <TextInput
+          label={t('products.linkLabel')}
+          description={t('products.supported')}
+          placeholder="https://www.ozon.ru/product/..."
+          type="url"
+          required
+          data-autofocus
+          disabled={add.isPending}
+          value={url}
+          onChange={(event): void => {
+            setUrl(event.currentTarget.value);
+          }}
+        />
         {linkHasCities(url) && (
           <CityField disabled={add.isPending} chosen={city} onChoose={setCity} />
         )}
-        <Text size="xs" c="dimmed">
-          {t('products.supported')}
-        </Text>
         {slow && (
           <Text size="xs" c="dimmed">
             {t('products.addSlow')}
           </Text>
         )}
         {add.error !== null && <ErrorAlert error={add.error} />}
+        <Group justify="flex-end">
+          <Button type="submit" loading={add.isPending}>
+            {t('products.track')}
+          </Button>
+        </Group>
       </Stack>
     </form>
   );

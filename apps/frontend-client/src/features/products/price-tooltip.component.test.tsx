@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
 
 import { toRows } from './chart-rows.type.js';
-import type { PriceBucketInterface } from './price-series.type.js';
+import type { GranularityType, PriceBucketInterface } from './price-series.type.js';
 import { PriceTooltip } from './price-tooltip.component.js';
 
 const series = [
@@ -16,15 +16,15 @@ function bucket(overrides: Partial<PriceBucketInterface>): PriceBucketInterface 
     start: new Date(2026, 10, 1, 14),
     value: null,
     observed: false,
-    min: null,
-    max: null,
-    last: null,
-    average: null,
     ...overrides,
   };
 }
 
-function show(a: PriceBucketInterface, b: PriceBucketInterface): void {
+function show(
+  a: PriceBucketInterface,
+  b: PriceBucketInterface,
+  granularity: GranularityType = 'hour',
+): void {
   const [row] = toRows([
     { id: 'a', buckets: [a] },
     { id: 'b', buckets: [b] },
@@ -33,26 +33,28 @@ function show(a: PriceBucketInterface, b: PriceBucketInterface): void {
 
   render(
     <MantineProvider>
-      <PriceTooltip row={row} granularity="hour" series={series} />
+      <PriceTooltip row={row} granularity={granularity} series={series} />
     </MantineProvider>,
   );
 }
 
-test('tells the average, the lowest and the highest price of an hour with prices, by product', () => {
+test('tells the price of each product at the point: the one read, or the last known when none was', () => {
+  show(bucket({ value: 130000, observed: true }), bucket({ value: 99000, observed: false }));
+
+  expect(screen.getByText(/^ozon: 1\s300\s₽$/)).toBeInTheDocument();
+  expect(screen.getByText(/^dns: Last known: 990\s₽$/)).toBeInTheDocument();
+  // The point of an hour is its end.
+  expect(screen.getByText(/15:00|3:00/)).toBeInTheDocument();
+});
+
+test('calls the point of a week the week up to its Sunday', () => {
   show(
-    bucket({
-      value: 130000,
-      observed: true,
-      average: 130000,
-      min: 120000,
-      max: 140000,
-      last: 125000,
-    }),
-    bucket({ value: 99000, observed: false }),
+    { start: new Date(2026, 9, 26), value: 100, observed: true },
+    { start: new Date(2026, 9, 26), value: null, observed: false },
+    'week',
   );
 
-  expect(screen.getByText(/ozon:.*average.*min.*max/i)).toBeInTheDocument();
-  expect(screen.getByText(/dns:.*last known/i)).toBeInTheDocument();
+  expect(screen.getByText(/^The week to November 1, 2026$/)).toBeInTheDocument();
 });
 
 test('says there was no price yet before the first one', () => {

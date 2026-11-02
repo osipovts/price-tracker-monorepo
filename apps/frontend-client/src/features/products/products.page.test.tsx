@@ -1,6 +1,6 @@
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, type RenderResult, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StrictMode } from 'react';
 import { MemoryRouter } from 'react-router';
@@ -9,31 +9,63 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { rememberPendingAdd } from './pending-add.type.js';
 import { ProductsPage } from './products.page.js';
 
-function price(
-  marketplace: string,
-  amountMinor: number,
-  observedAt: string,
-): { marketplace: string; amountMinor: number; observedAt: string } {
-  return { marketplace, amountMinor, observedAt };
-}
 const group = {
   thumbnailUrl: null,
   createdAt: '2026-10-31T10:00:00.000Z',
   productCount: 1,
+  lastCheck: null,
   current: null,
   min: null,
   max: null,
   highlighted: false,
 };
 
+function pageOf(items: Array<Record<string, unknown>>): Response {
+  return Response.json({ items, page: 1, pageSize: 20, total: items.length, statsPeriod: '24h' });
+}
+
 function stubGroups(items: Array<Record<string, unknown>>): void {
   vi.stubGlobal(
     'fetch',
-    vi.fn((): Promise<Response> =>
-      Promise.resolve(
-        Response.json({ items, page: 1, pageSize: 20, total: items.length, statsPeriod: '24h' }),
-      ),
-    ),
+    vi.fn((): Promise<Response> => Promise.resolve(pageOf(items))),
+  );
+}
+
+/** The hub lists no group, and records what is sent to it; an add never ends unless `added` says so. */
+function stubAdding(sent: string[], added = false): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (request: Request | string | URL): Promise<Response> => {
+      if (typeof request === 'string' || request instanceof URL || request.method === 'GET')
+        return pageOf([]);
+
+      sent.push(JSON.stringify(await request.json()));
+
+      return added ? Response.json({}, { status: 201 }) : new Promise<Response>(() => undefined);
+    }),
+  );
+}
+
+function renderPage(strict = false): RenderResult {
+  const page = (
+    <MantineProvider env="test">
+      <MemoryRouter>
+        <QueryClientProvider
+          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        >
+          <ProductsPage />
+        </QueryClientProvider>
+      </MemoryRouter>
+    </MantineProvider>
+  );
+
+  return render(strict ? <StrictMode>{page}</StrictMode> : page);
+}
+
+/** The form of a new product is in a window, opened from the header or from the empty list. */
+async function openForm(): Promise<void> {
+  await userEvent.click(
+    await screen.findByRole('button', { name: /^(Add|Add the first product)$/ }),
   );
 }
 
@@ -45,56 +77,80 @@ beforeEach((): void => {
       ...group,
       id: '22222222-2222-4222-8222-222222222222',
       title: 'Notebook',
-      current: price('ozon', 10_000_00, '2026-10-31T10:00:00.000Z'),
+      current: { marketplace: 'ozon', amountMinor: 10_000_00, observedAt: '2026-10-31T10:00:00Z' },
     },
   ]);
 });
 
-test('marks the card that waits for its first price, for the glint over it, and no other', async (): Promise<void> => {
-  const { container } = render(
-    <MantineProvider>
-      <MemoryRouter>
-        <QueryClientProvider
-          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-        >
-          <ProductsPage />
-        </QueryClientProvider>
-      </MemoryRouter>
-    </MantineProvider>,
-  );
+test('marks the row that waits for its first price, for the glint over it, and no other', async (): Promise<void> => {
+  const { container } = renderPage();
 
   expect(await screen.findByText('waiting for the first price')).toBeInTheDocument();
   expect(container.querySelectorAll('[data-waiting="true"]')).toHaveLength(1);
-  expect(container.querySelectorAll('.mantine-Card-root')).toHaveLength(3);
-  expect(screen.getAllByText('It can take up to 10 minutes.')).toHaveLength(1);
+  expect(screen.getByRole('link', { name: /Notebook/ })).toHaveAttribute(
+    'href',
+    '/groups/22222222-2222-4222-8222-222222222222',
+  );
+});
+
+test('shows the best price with its marketplace and when it was read, and the last check of the group', async (): Promise<void> => {
+  stubGroups([
+    {
+      ...group,
+      id: '33333333-3333-4333-8333-333333333333',
+      title: 'Phone',
+      productCount: 2,
+      current: { marketplace: 'dns', amountMinor: 9_000_00, observedAt: '2026-10-31T10:00:00Z' },
+      lastCheck: { marketplace: 'ozon', checkedAt: '2026-10-05T12:00:00Z' },
+    },
+  ]);
+  renderPage();
+
+  expect(await screen.findByText('Phone')).toBeInTheDocument();
+  expect(screen.getByText(/^9[\s\u00a0]000[\s\u00a0]₽$/).getAttribute('title')).toMatch(
+    /^Price received 31\.10\.2026, /,
+  );
+  expect(screen.getByText('dns')).toBeInTheDocument();
+  expect(screen.getByText(/^Checked 05\.10\.2026, [^.]+, ozon$/)).toBeInTheDocument();
+});
+
+test('offers the first product from an empty list, and keeps the header free of the button then', async (): Promise<void> => {
+  stubGroups([]);
+  renderPage();
+
+  expect(await screen.findByText('Nothing is tracked yet.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/link/i)).not.toBeInTheDocument();
+
+  await openForm();
+
+  expect(screen.getByRole('dialog', { name: 'Track a product' })).toBeInTheDocument();
+  expect(screen.getByLabelText(/link/i)).toBeInTheDocument();
+});
+
+test('closes the form once the product is added', async (): Promise<void> => {
+  const sent: string[] = [];
+  stubAdding(sent, true);
+  renderPage();
+
+  await openForm();
+  await userEvent.type(screen.getByLabelText(/link/i), 'https://ozon.ru/t/AbC');
+  await userEvent.click(screen.getByRole('button', { name: 'Track' }));
+
+  await waitFor((): void => {
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+  expect(sent).toEqual([JSON.stringify({ url: 'https://ozon.ru/t/AbC' })]);
 });
 
 test('tells that adding a product can take minutes once it has taken over 5 seconds', async (): Promise<void> => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   try {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((request: Request | string | URL): Promise<Response> =>
-        typeof request === 'string' || request instanceof URL || request.method === 'GET'
-          ? Promise.resolve(
-              Response.json({ items: [], page: 1, pageSize: 20, total: 0, statsPeriod: '24h' }),
-            )
-          : new Promise<Response>(() => undefined),
-      ),
-    );
-    render(
-      <MantineProvider>
-        <MemoryRouter>
-          <QueryClientProvider
-            client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-          >
-            <ProductsPage />
-          </QueryClientProvider>
-        </MemoryRouter>
-      </MantineProvider>,
-    );
+    stubAdding([]);
+    renderPage();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
 
+    await user.click(await screen.findByRole('button', { name: 'Add the first product' }));
     await user.type(screen.getByLabelText(/link/i), 'https://ozon.ru/t/AbC');
     await user.click(screen.getByRole('button', { name: 'Track' }));
     expect(screen.queryByText(/Adding a product can take a few minutes/)).not.toBeInTheDocument();
@@ -108,37 +164,33 @@ test('tells that adding a product can take minutes once it has taken over 5 seco
   }
 });
 
-test('sends again the link whose add was cut short by a reload', async (): Promise<void> => {
+test('opens the form by itself and sends again the link whose add was cut short by a reload', async (): Promise<void> => {
   const sent: string[] = [];
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (request: Request | string | URL): Promise<Response> => {
-      if (typeof request === 'string' || request instanceof URL || request.method === 'GET')
-        return Response.json({ items: [], page: 1, pageSize: 20, total: 0, statsPeriod: '24h' });
-
-      sent.push(JSON.stringify(await request.json()));
-
-      return new Promise<Response>(() => undefined);
-    }),
-  );
+  stubAdding(sent);
   rememberPendingAdd({ url: 'https://ozon.ru/t/AbC', cityId: null, groupId: null });
 
-  render(
-    <MantineProvider>
-      <MemoryRouter>
-        <QueryClientProvider
-          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-        >
-          <ProductsPage />
-        </QueryClientProvider>
-      </MemoryRouter>
-    </MantineProvider>,
-  );
+  renderPage();
 
   expect(await screen.findByDisplayValue('https://ozon.ru/t/AbC')).toBeDisabled();
   await waitFor((): void => {
     expect(sent).toEqual([JSON.stringify({ url: 'https://ozon.ru/t/AbC' })]);
   });
+});
+
+test('leaves the form closed when the add cut short was to a group', async (): Promise<void> => {
+  const sent: string[] = [];
+  stubAdding(sent);
+  rememberPendingAdd({
+    url: 'https://ozon.ru/t/AbC',
+    cityId: null,
+    groupId: '22222222-2222-4222-8222-222222222222',
+  });
+
+  renderPage();
+
+  expect(await screen.findByText('Nothing is tracked yet.')).toBeInTheDocument();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(sent).toEqual([]);
 });
 
 const dnsLink = 'https://www.dns-shop.ru/product/0463bb2411a1d582/156-noutbuk/';
@@ -149,8 +201,7 @@ test('asks for the city of a link of a marketplace that has cities, searches it 
   vi.stubGlobal(
     'fetch',
     vi.fn(async (request: Request | string | URL): Promise<Response> => {
-      if (typeof request === 'string' || request instanceof URL)
-        return Response.json({ items: [], page: 1, pageSize: 20, total: 0, statsPeriod: '24h' });
+      if (typeof request === 'string' || request instanceof URL) return pageOf([]);
       if (request.method === 'GET') {
         const { pathname, searchParams } = new URL(request.url);
         if (pathname === '/marketplaces/dns/cities') {
@@ -161,7 +212,7 @@ test('asks for the city of a link of a marketplace that has cities, searches it 
           });
         }
 
-        return Response.json({ items: [], page: 1, pageSize: 20, total: 0, statsPeriod: '24h' });
+        return pageOf([]);
       }
 
       sent.push(JSON.stringify(await request.json()));
@@ -169,19 +220,10 @@ test('asks for the city of a link of a marketplace that has cities, searches it 
       return new Promise<Response>(() => undefined);
     }),
   );
-  render(
-    <MantineProvider env="test">
-      <MemoryRouter>
-        <QueryClientProvider
-          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-        >
-          <ProductsPage />
-        </QueryClientProvider>
-      </MemoryRouter>
-    </MantineProvider>,
-  );
+  renderPage();
   const user = userEvent.setup();
 
+  await openForm();
   expect(screen.queryByLabelText('City', { selector: 'input' })).not.toBeInTheDocument();
   await user.type(screen.getByLabelText(/link/i), 'https://ozon.ru/t/AbC');
   expect(screen.queryByLabelText('City', { selector: 'input' })).not.toBeInTheDocument();
@@ -198,98 +240,13 @@ test('asks for the city of a link of a marketplace that has cities, searches it 
   expect(searched).toContain('Ирк');
 });
 
-test('shows the best price with its marketplace, highlighted when it is not above the lowest, with the lowest and the highest', async (): Promise<void> => {
-  const today = new Date().toISOString();
-  stubGroups([
-    {
-      ...group,
-      id: '33333333-3333-4333-8333-333333333333',
-      title: 'Phone',
-      productCount: 2,
-      current: price('dns', 9_000_00, today),
-      min: price('ozon', 9_500_00, '2026-10-05T07:08:00.000Z'),
-      max: price('ozon', 12_000_00, '2026-10-06T07:08:00.000Z'),
-      highlighted: true,
-    },
-  ]);
-  render(
-    <MantineProvider>
-      <MemoryRouter>
-        <QueryClientProvider
-          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-        >
-          <ProductsPage />
-        </QueryClientProvider>
-      </MemoryRouter>
-    </MantineProvider>,
-  );
-
-  expect(await screen.findByText('Phone')).toBeInTheDocument();
-  expect(screen.getByText('Products: 2')).toBeInTheDocument();
-  const now = screen.getByTestId('price-Now');
-  expect(within(now).getByText('dns')).toBeInTheDocument();
-  expect(
-    within(now)
-      .getByText(/9[\s\u00a0]000/)
-      .closest('[data-highlighted="true"]'),
-  ).not.toBeNull();
-  expect(within(now).getByText(/^today, /)).toBeInTheDocument();
-  expect(within(screen.getByTestId('price-Lowest')).getByText('ozon')).toBeInTheDocument();
-  expect(screen.getByTestId('price-Lowest')).toHaveTextContent(/\d\d\.\d\d\.2026/);
-  expect(within(screen.getByTestId('price-Highest')).queryByText(/9[\s\u00a0]000/)).toBeNull();
-  expect(document.querySelectorAll('[data-highlighted="true"]')).toHaveLength(1);
-});
-
-test('remembers the period of the lowest and the highest price by telling the hub', async (): Promise<void> => {
-  const sent: string[] = [];
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (request: Request | string | URL): Promise<Response> => {
-      if (typeof request !== 'string' && !(request instanceof URL) && request.method === 'PUT') {
-        sent.push(`${new URL(request.url).pathname} ${JSON.stringify(await request.json())}`);
-
-        return new Response(null, { status: 204 });
-      }
-
-      return Response.json({ items: [], page: 1, pageSize: 20, total: 0, statsPeriod: '24h' });
-    }),
-  );
-  render(
-    <MantineProvider env="test">
-      <MemoryRouter>
-        <QueryClientProvider
-          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-        >
-          <ProductsPage />
-        </QueryClientProvider>
-      </MemoryRouter>
-    </MantineProvider>,
-  );
-
-  await userEvent.click(await screen.findByText('7 days'));
-
-  await waitFor((): void => {
-    expect(sent).toEqual(['/product-groups/stats-period {"statsPeriod":"7d"}']);
-  });
-});
-
 test('says the hub could not be reached when the request does not get there', async (): Promise<void> => {
   vi.stubGlobal(
     'fetch',
     vi.fn((): Promise<Response> => Promise.reject(new TypeError('Failed to fetch'))),
   );
 
-  render(
-    <MantineProvider>
-      <MemoryRouter>
-        <QueryClientProvider
-          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-        >
-          <ProductsPage />
-        </QueryClientProvider>
-      </MemoryRouter>
-    </MantineProvider>,
-  );
+  renderPage();
 
   expect(await screen.findByText('The hub could not be reached.')).toBeInTheDocument();
   expect(screen.queryByText('Failed to fetch')).not.toBeInTheDocument();
@@ -297,32 +254,10 @@ test('says the hub could not be reached when the request does not get there', as
 
 test('sends the link whose add was cut short once, even when the page is mounted twice', async (): Promise<void> => {
   const sent: string[] = [];
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (request: Request | string | URL): Promise<Response> => {
-      if (typeof request === 'string' || request instanceof URL || request.method === 'GET')
-        return Response.json({ items: [], page: 1, pageSize: 20, total: 0, statsPeriod: '24h' });
-
-      sent.push(JSON.stringify(await request.json()));
-
-      return new Promise<Response>(() => undefined);
-    }),
-  );
+  stubAdding(sent);
   rememberPendingAdd({ url: 'https://ozon.ru/t/AbC', cityId: null, groupId: null });
 
-  render(
-    <StrictMode>
-      <MantineProvider>
-        <MemoryRouter>
-          <QueryClientProvider
-            client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-          >
-            <ProductsPage />
-          </QueryClientProvider>
-        </MemoryRouter>
-      </MantineProvider>
-    </StrictMode>,
-  );
+  renderPage(true);
 
   await waitFor((): void => {
     expect(sent).not.toHaveLength(0);
