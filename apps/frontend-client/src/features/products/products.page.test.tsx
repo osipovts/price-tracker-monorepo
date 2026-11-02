@@ -1,6 +1,6 @@
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, type RenderResult, screen, waitFor } from '@testing-library/react';
+import { act, render, type RenderResult, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StrictMode } from 'react';
 import { MemoryRouter } from 'react-router';
@@ -31,17 +31,28 @@ function stubGroups(items: Array<Record<string, unknown>>): void {
   );
 }
 
-/** The hub lists no group, and records what is sent to it; an add never ends unless `added` says so. */
-function stubAdding(sent: string[], added = false): void {
+const trackedGroupId = '44444444-4444-4444-8444-444444444444';
+
+/**
+ * The hub lists no group, and records what is sent to it. An add never ends while `pending`; it is `added` as a
+ * product the user tracks from now on (201), or answered as one the user `tracked` already (200), in the group of
+ * `trackedGroupId`, called Old phone.
+ */
+function stubAdding(sent: string[], answer: 'pending' | 'added' | 'tracked' = 'pending'): void {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (request: Request | string | URL): Promise<Response> => {
-      if (typeof request === 'string' || request instanceof URL || request.method === 'GET')
-        return pageOf([]);
+      if (typeof request === 'string' || request instanceof URL) return pageOf([]);
+      if (request.method === 'GET') {
+        return new URL(request.url).pathname === `/product-groups/${trackedGroupId}`
+          ? Response.json({ ...group, id: trackedGroupId, title: 'Old phone', products: [] })
+          : pageOf([]);
+      }
 
       sent.push(JSON.stringify(await request.json()));
+      if (answer === 'pending') return new Promise<Response>(() => undefined);
 
-      return added ? Response.json({}, { status: 201 }) : new Promise<Response>(() => undefined);
+      return Response.json({ groupId: trackedGroupId }, { status: answer === 'added' ? 201 : 200 });
     }),
   );
 }
@@ -130,7 +141,7 @@ test('offers the first product from an empty list, and keeps the header free of 
 
 test('closes the form once the product is added', async (): Promise<void> => {
   const sent: string[] = [];
-  stubAdding(sent, true);
+  stubAdding(sent, 'added');
   renderPage();
 
   await openForm();
@@ -141,6 +152,44 @@ test('closes the form once the product is added', async (): Promise<void> => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
   expect(sent).toEqual([JSON.stringify({ url: 'https://ozon.ru/t/AbC' })]);
+});
+
+test('keeps the form open and links the group of a product the user tracks already', async (): Promise<void> => {
+  const sent: string[] = [];
+  stubAdding(sent, 'tracked');
+  renderPage();
+
+  await openForm();
+  await userEvent.type(screen.getByLabelText(/link/i), 'https://ozon.ru/t/AbC');
+  await userEvent.click(screen.getByRole('button', { name: 'Track' }));
+
+  const dialog = screen.getByRole('dialog', { name: 'Track a product' });
+  expect(
+    await within(dialog).findByText(/This product is tracked already in the group/),
+  ).toBeInTheDocument();
+  expect(await within(dialog).findByRole('link', { name: 'Old phone' })).toHaveAttribute(
+    'href',
+    `/groups/${trackedGroupId}`,
+  );
+
+  // A new link takes the note away.
+  await userEvent.type(screen.getByLabelText(/link/i), '1');
+  expect(within(dialog).queryByText(/tracked already/)).not.toBeInTheDocument();
+});
+
+test('closes the form when the add a reload cut short turns out to be done already', async (): Promise<void> => {
+  const sent: string[] = [];
+  stubAdding(sent, 'tracked');
+  rememberPendingAdd({ url: 'https://ozon.ru/t/AbC', cityId: null, groupId: null });
+
+  renderPage();
+
+  await waitFor((): void => {
+    expect(sent).toHaveLength(1);
+  });
+  await waitFor((): void => {
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
 
 test('tells that adding a product can take minutes once it has taken over 5 seconds', async (): Promise<void> => {

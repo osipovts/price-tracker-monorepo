@@ -34,7 +34,7 @@ export function AddProductModal({
             {t('group.addHint')}
           </Text>
         )}
-        <AddProduct groupId={groupId} onAdded={onClose} />
+        <AddProduct groupId={groupId} onDone={onClose} />
       </Stack>
     </Modal>
   );

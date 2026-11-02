@@ -10,6 +10,7 @@ import { GroupPage } from './group.page.js';
 const groupId = '11111111-1111-4111-8111-111111111111';
 const ozonId = '22222222-2222-4222-8222-222222222222';
 const dnsId = '33333333-3333-4333-8333-333333333333';
+const otherGroupId = '44444444-4444-4444-8444-444444444444';
 
 function observation(productId: string, n: number, amountMinor: number): Record<string, unknown> {
   return {
@@ -48,6 +49,8 @@ interface HubInterface {
   history?: Record<string, Array<Record<string, unknown>>>;
   status?: number;
   requests?: string[];
+  /** The group the hub says a product added to the group is in. */
+  addedTo?: string;
 }
 
 function stubHub({
@@ -55,6 +58,7 @@ function stubHub({
   history = {},
   status = 200,
   requests = [],
+  addedTo = groupId,
 }: HubInterface = {}): void {
   vi.stubGlobal(
     'fetch',
@@ -65,6 +69,26 @@ function stubHub({
       );
 
       if (request.method === 'DELETE') return new Response(null, { status: 204 });
+      // An add to the group is of a product the user tracks already: in the group of the request, or in another.
+      if (request.method === 'POST' && pathname === '/products') {
+        return Response.json({ groupId: addedTo }, { status: 200 });
+      }
+      if (pathname === `/product-groups/${otherGroupId}`) {
+        return Response.json({
+          id: otherGroupId,
+          title: 'Old phone',
+          thumbnailUrl: null,
+          createdAt: '2026-10-31T10:00:00.000Z',
+          productCount: 0,
+          lastCheck: null,
+          current: null,
+          min: null,
+          max: null,
+          highlighted: false,
+          statsPeriod: '24h',
+          products: [],
+        });
+      }
       if (pathname === `/product-groups/${groupId}`) {
         if (request.method === 'PATCH') return new Response(null, { status: 204 });
         if (status !== 200) return Response.json({ message: 'no' }, { status });
@@ -283,6 +307,38 @@ test('adds a link to the group in a window', async (): Promise<void> => {
 
   expect(screen.getByRole('dialog', { name: 'Add to the group' })).toBeInTheDocument();
   expect(screen.getByLabelText(/link/i)).toBeInTheDocument();
+});
+
+/** Adds a link from the window of the group, and waits for the answer of the hub. */
+async function addLink(): Promise<HTMLElement> {
+  await userEvent.click(await screen.findByRole('button', { name: 'Add' }));
+  const dialog = screen.getByRole('dialog', { name: 'Add to the group' });
+  await userEvent.type(within(dialog).getByLabelText(/link/i), 'https://ozon.ru/t/AbC');
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Track' }));
+
+  return dialog;
+}
+
+test('links the other group of a product that is tracked already, and closes the window on the way there', async (): Promise<void> => {
+  stubHub({ addedTo: otherGroupId });
+  renderPage();
+
+  const dialog = await addLink();
+  const link = await within(dialog).findByRole('link', { name: 'Old phone' });
+  expect(link).toHaveAttribute('href', `/groups/${otherGroupId}`);
+
+  await userEvent.click(link);
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+test('says that a product tracked already is in this very group', async (): Promise<void> => {
+  stubHub();
+  renderPage();
+
+  const dialog = await addLink();
+  expect(
+    await within(dialog).findByText('This product is in this group already.'),
+  ).toBeInTheDocument();
 });
 
 test("says so when the group is not the user's", async (): Promise<void> => {

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { linkHasCities } from './city-link.type.js';
 import { type PendingAddInterface, readPendingAdd } from './pending-add.type.js';
+import { TrackedIn } from './tracked-in.component.js';
 import { useAddProduct, useCities } from './use-products.hook.js';
 
 /** How long a product may be added before the user is told that it can take minutes. */
@@ -67,10 +68,11 @@ function CityField({
  */
 export function AddProduct({
   groupId,
-  onAdded,
+  onDone,
 }: {
   groupId: string | null;
-  onAdded?: () => void;
+  /** The product is added, or the user goes to the group that has it already. */
+  onDone?: () => void;
 }): ReactElement {
   const { t } = useTranslation();
   const [url, setUrl] = useState('');
@@ -92,12 +94,23 @@ export function AddProduct({
     };
   }, [add.isPending]);
 
-  const track = (adding: PendingAddInterface): void => {
+  // The group of a product the user tracks already: the form stays, and says where the product is.
+  const [trackedIn, setTrackedIn] = useState<string | null>(null);
+
+  /** A resent add that a reload cut short finds its own product tracked: that is its success, not a product tracked before. */
+  const track = (adding: PendingAddInterface, resent = false): void => {
+    setTrackedIn(null);
     add.mutate(adding, {
-      onSuccess: (): void => {
+      onSuccess: (added): void => {
+        if (added.trackedAlready && !resent) {
+          setTrackedIn(added.groupId);
+
+          return;
+        }
+
         setUrl('');
         setCity(null);
-        onAdded?.();
+        onDone?.();
       },
     });
   };
@@ -117,7 +130,7 @@ export function AddProduct({
     if (pending?.groupId !== groupId) return;
 
     setUrl(pending.url);
-    track(pending);
+    track(pending, true);
   }, []);
 
   return (
@@ -134,6 +147,7 @@ export function AddProduct({
           value={url}
           onChange={(event): void => {
             setUrl(event.currentTarget.value);
+            setTrackedIn(null);
           }}
         />
         {linkHasCities(url) && (
@@ -145,6 +159,15 @@ export function AddProduct({
           </Text>
         )}
         {add.error !== null && <ErrorAlert error={add.error} />}
+        {trackedIn !== null && (
+          <TrackedIn
+            groupId={trackedIn}
+            askedGroupId={groupId}
+            onFollow={(): void => {
+              onDone?.();
+            }}
+          />
+        )}
         <Group justify="flex-end">
           <Button type="submit" loading={add.isPending}>
             {t('products.track')}

@@ -30,21 +30,34 @@ export type ProductHistoryType = PriceHistoryInterface<
   ObservationType
 >;
 
-export function useAddProduct(): UseMutationResult<void, Error, PendingAddInterface> {
+export interface AddedProductInterface {
+  /** The group the product is in: the one asked for, a new one, or the one it was in already. */
+  groupId: string;
+  /** The user tracked the product before: the hub answers 200, not 201, and leaves it in its group. */
+  trackedAlready: boolean;
+}
+
+export function useAddProduct(): UseMutationResult<
+  AddedProductInterface,
+  Error,
+  PendingAddInterface
+> {
   const client = useQueryClient();
 
   return useMutation({
-    mutationFn: async (add: PendingAddInterface): Promise<void> => {
+    mutationFn: async (add: PendingAddInterface): Promise<AddedProductInterface> => {
       rememberPendingAdd(add);
-      ensure(
-        await api.POST('/products', {
-          body: {
-            url: add.url,
-            ...(add.cityId === null ? {} : { cityId: add.cityId }),
-            ...(add.groupId === null ? {} : { groupId: add.groupId }),
-          },
-        }),
-      );
+      const result = await api.POST('/products', {
+        body: {
+          url: add.url,
+          ...(add.cityId === null ? {} : { cityId: add.cityId }),
+          ...(add.groupId === null ? {} : { groupId: add.groupId }),
+        },
+      });
+      const added = ensure(result);
+      if (added === undefined) throw new Error('The hub answered an add with no product');
+
+      return { groupId: added.groupId, trackedAlready: result.response.status === 200 };
     },
     onSuccess: (): Promise<void> => client.invalidateQueries({ queryKey: ['product-groups'] }),
     // Here, not in the call: the page that made it may be gone by then.
