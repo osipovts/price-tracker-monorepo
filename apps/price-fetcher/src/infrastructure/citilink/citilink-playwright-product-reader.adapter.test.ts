@@ -44,8 +44,12 @@ const parsers: CitilinkReaderParsersInterface = {
   products: new CitilinkProductParser(new CitilinkReferenceParser(), states),
 };
 
-/** The card as the server renders it for a city: the club price in Irkutsk is lower than in Moscow. */
-function pageIn(cityId: string): string {
+/**
+ * The card as the server renders it for a city: the club price in Irkutsk is lower than in Moscow. A product out
+ * of stock has zeros for its prices.
+ */
+function pageIn(cityId: string, isAvailable: boolean): string {
+  const club = cityId === 'msk_cl' ? '237990' : '237900';
   const initialState = {
     system: { metadata: { 'x-citilink-city-id': cityId } },
     productPage: {
@@ -54,8 +58,10 @@ function pageIn(cityId: string): string {
           productBase: {
             id: '2194059',
             name: 'Ноутбук ASUS Zenbook A16',
-            isAvailable: true,
-            price: { current: '239990', club: cityId === 'msk_cl' ? '237990' : '237900' },
+            isAvailable,
+            price: isAvailable
+              ? { current: '239990', club, clubPriceViewType: 'PRICE_IN_RUB' }
+              : { current: '0', club: '0', clubPriceViewType: 'INVALID' },
           },
         },
       },
@@ -67,7 +73,7 @@ function pageIn(cityId: string): string {
 
 /** The server renders the page for the city of the cookie; `fixedCityId` is a server that ignores it. */
 function createReader(
-  options: { country?: string; status?: number; fixedCityId?: string } = {},
+  options: { country?: string; status?: number; fixedCityId?: string; isAvailable?: boolean } = {},
 ): CitilinkPlaywrightProductReaderAdapter {
   return new CitilinkPlaywrightProductReaderAdapter(
     {
@@ -91,6 +97,7 @@ function createReader(
               body: pageIn(
                 options.fixedCityId ??
                   (space === undefined ? 'krasn_cl:cd0008680' : decodeURIComponent(space)),
+                options.isAvailable ?? true,
               ),
             });
           } else {
@@ -130,6 +137,19 @@ void test('reads the price in the city asked for', async (): Promise<void> => {
 
   assert.ok('snapshot' in result);
   assert.equal(result.snapshot.prices[0]?.amountMinor, 23_790_000);
+});
+
+void test('reads a product out of stock without a price', async (): Promise<void> => {
+  const result = await createReader({ isAvailable: false }).read(
+    reference,
+    proxy,
+    new AbortController().signal,
+  );
+
+  assert.equal(result.status, 'partial');
+  assert.ok('snapshot' in result);
+  assert.equal(result.snapshot.availability, 'out_of_stock');
+  assert.deepEqual(result.snapshot.prices, []);
 });
 
 void test('a page rendered for another city than the one asked for is a parse error', async (): Promise<void> => {

@@ -71,10 +71,14 @@ void test('a product without a club price, or with one not below the other, has 
   }
 });
 
-void test('a product out of stock is read with the price it has, or with none', (): void => {
+void test('a product out of stock has no price: the site gives zeros for its prices', (): void => {
   const snapshot = parser.parse(
     reference,
-    pageOf({ ...productBase, isAvailable: false, price: { current: '0', club: '0' } }),
+    pageOf({
+      ...productBase,
+      isAvailable: false,
+      price: { current: '0', old: '0', club: '0', clubPriceViewType: 'INVALID' },
+    }),
   );
 
   assert.equal(snapshot?.availability, 'out_of_stock');

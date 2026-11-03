@@ -39,7 +39,8 @@ export class CitilinkProductParser {
 
   /**
    * The club price first, the price for everyone after it. The site takes the club price for the price of the
-   * product as long as it is not above the other one; a product without it has zero there.
+   * product as long as it is not above the other one; a product without it has zero there. A product out of stock
+   * has zeros for both and none is shown.
    */
   private readPrices(product: CitilinkProductType): PriceObservationInterface[] {
     const current = this.readAmountMinor(product.price.current);
