@@ -25,7 +25,8 @@ export class PriceFetchController {
 
   /**
    * `willRetry` tells whether the queue is going to deliver the job again after a failure; `retryWith`
-   * gives it the data to deliver then: the same job with the products that were read marked, so that they are not read twice.
+   * gives it the data to deliver then: the same job with the products that were read marked, so that they are not read twice,
+   * and with the routes that failed moved to the end.
    */
   async handle(
     data: unknown,
@@ -45,7 +46,7 @@ export class PriceFetchController {
 
     const statuses = new Map<string, ProductFetchResultInterface['status']>();
     await this.lifecycle.run(job.jobId, willRetry, async (): Promise<void> => {
-      await this.fetchPrices.execute(
+      const routes = await this.fetchPrices.execute(
         {
           routes: job.proxies,
           products: job.products,
@@ -68,7 +69,8 @@ export class PriceFetchController {
       });
       if (unread.length === 0) return;
 
-      if (willRetry) await retryWith({ ...job, products: marked });
+      // The next try starts on the routes that did not fail this one.
+      if (willRetry) await retryWith({ ...job, proxies: routes, products: marked });
       // The job that leaves a product unread fails, on the last try too: what was read is recorded already.
       throw new Error(`${String(unread.length)} products could not be read`);
     });

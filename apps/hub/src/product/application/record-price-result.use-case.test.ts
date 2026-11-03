@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import type { ProxyAttemptInterface } from '../../proxy/application/index.js';
 import { InMemoryPriceObservationRepositoryAdapter } from '../infrastructure/in-memory-price-observation-repository.adapter.js';
 import { InMemoryTrackedProductRepositoryAdapter } from '../infrastructure/in-memory-tracked-product-repository.adapter.js';
-import { noThumbnails } from './add-product-defaults.type.js';
+import { noProxyAttempts, noThumbnails } from './add-product-defaults.type.js';
 import { ListPriceHistoryUseCase } from './list-price-history.use-case.js';
 import { ProductNotFoundError } from './product-not-found.error.js';
 import {
@@ -34,7 +35,7 @@ async function setup(): Promise<{
 
   return {
     productId: product.snapshot.id,
-    record: new RecordPriceResultUseCase(products, observations, noThumbnails),
+    record: new RecordPriceResultUseCase(products, observations, noThumbnails, noProxyAttempts),
     history: new ListPriceHistoryUseCase(products, observations),
     products,
   };
@@ -45,6 +46,7 @@ function result(productId: string, overrides: Partial<PriceResultInterface>): Pr
     jobId,
     trackedProductId: productId,
     status: 'success',
+    attempts: [{ proxy: 'socks5://217.71.230.1:1080', status: 'success', httpStatus: null }],
     observation: {
       title: 'Notebook',
       observedAt: new Date('2026-10-24T12:00:00.000Z'),
@@ -153,10 +155,70 @@ void test('hands the picture of the product over once the price is recorded, and
         return Promise.resolve();
       },
     },
+    noProxyAttempts,
   );
 
   await record.execute(result(product.snapshot.id, { imageUrl: 'https://cdn.example/a.jpg' }));
   await record.execute(result(product.snapshot.id, { jobId: 'another-job' }));
 
   assert.deepEqual(order, ['price', 'picture https://cdn.example/a.jpg', 'price', 'picture null']);
+});
+
+void test('tells the proxies what each route came to, for the marketplace of the product', async (): Promise<void> => {
+  const products = new InMemoryTrackedProductRepositoryAdapter();
+  const { product } = await products.add({
+    marketplace: 'dns',
+    externalId: 'b8541ae3b40bd2fe',
+    url: 'https://www.dns-shop.ru/product/b8541ae3b40bd2fe/',
+    cityId: null,
+    cityName: null,
+  });
+  const attempts: ProxyAttemptInterface[][] = [];
+  const record = new RecordPriceResultUseCase(
+    products,
+    new InMemoryPriceObservationRepositoryAdapter(),
+    noThumbnails,
+    {
+      execute: (received): Promise<void> => {
+        attempts.push(received);
+
+        return Promise.reject(new Error('The store is down'));
+      },
+    },
+    undefined,
+    { now: (): Date => new Date('2026-11-03T08:00:00Z') },
+  );
+
+  await record.execute(
+    result(product.snapshot.id, {
+      status: 'http_error',
+      observation: null,
+      attempts: [
+        { proxy: 'socks5://217.71.230.1:1080', status: 'network_error', httpStatus: null },
+        { proxy: null, status: 'network_error', httpStatus: null },
+        { proxy: 'socks5://217.71.230.2:1080', status: 'http_error', httpStatus: 401 },
+      ],
+    }),
+  );
+
+  assert.deepEqual(attempts, [
+    [
+      {
+        server: 'socks5://217.71.230.1:1080',
+        marketplace: 'dns',
+        status: 'network_error',
+        httpStatus: null,
+        attemptedAt: new Date('2026-11-03T08:00:00Z'),
+      },
+      {
+        server: 'socks5://217.71.230.2:1080',
+        marketplace: 'dns',
+        status: 'http_error',
+        httpStatus: 401,
+        attemptedAt: new Date('2026-11-03T08:00:00Z'),
+      },
+    ],
+  ]);
+  // A failure to keep what the routes came to does not hold up the status of the product.
+  assert.equal((await products.findById(product.snapshot.id))?.snapshot.lastStatus, 'http_error');
 });

@@ -80,6 +80,17 @@ export const ru: DictionaryType = {
     deadHint:
       'Последняя проверка не получила ответа. Воркерам он не выдаётся; следующее обновление источника проверит его снова.',
     successOf: '{{percent}}% из {{checks}}',
+    reputation: 'Маркетплейсы',
+    reputationOf: '{{marketplace}} {{successes}}/{{failures}}',
+    reputationHint:
+      'Чтений {{successes}}, неудач {{failures}}: через сутки попытка весит вдвое меньше. Неудач подряд: {{streak}}. Последняя попытка: {{outcome}}, {{when}}.',
+    reputationRest: 'Не выдаётся для этого маркетплейса до {{until}}.',
+    outcome: {
+      read: 'прочитал товар',
+      unreachable: 'не пробился',
+      blocked: 'отвергнут маркетплейсом',
+      misplaced: 'выходит в другой стране',
+    },
     milliseconds: '{{value}} мс',
     add: 'Добавить прокси',
     addTitle: 'Добавить прокси вручную',

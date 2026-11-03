@@ -1,3 +1,4 @@
+import type { RecordProxyAttemptsUseCase } from '../../proxy/application/index.js';
 import { NoProxiesAvailableError } from '../../shared/application/no-proxies-available.error.js';
 import type { ExpandProductLinkUseCase } from './expand-product-link.use-case.js';
 import type { ProductLimitsInterface } from './product-quota.type.js';
@@ -13,6 +14,11 @@ export const unlimitedProducts: ProductLimitsInterface = {
 
 /** For the tests that are not about the pictures: none is kept. */
 export const noThumbnails: Pick<StoreProductThumbnailUseCase, 'execute'> = {
+  execute: (): Promise<void> => Promise.resolve(),
+};
+
+/** For the tests that are not about the proxies: what the routes came to is forgotten. */
+export const noProxyAttempts: Pick<RecordProxyAttemptsUseCase, 'execute'> = {
   execute: (): Promise<void> => Promise.resolve(),
 };
 

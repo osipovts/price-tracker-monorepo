@@ -11,7 +11,10 @@ import { FindCityUseCase } from '../handbook/application/index.js';
 import { HandbookModule } from '../handbook/handbook.module.js';
 import { ScheduleJobUseCase } from '../job/application/index.js';
 import { JobModule } from '../job/job.module.js';
-import { ListBestProxyServersUseCase } from '../proxy/application/index.js';
+import {
+  ListBestProxyServersUseCase,
+  RecordProxyAttemptsUseCase,
+} from '../proxy/application/index.js';
 import { ProxyModule } from '../proxy/proxy.module.js';
 import { APP_CONFIG, type AppConfigInterface } from '../shared/application/app-config.interface.js';
 import { systemClock } from '../shared/application/clock.port.js';
@@ -387,18 +390,21 @@ import { ProductsController } from './presentation/products.controller.js';
         products: TrackedProductRepositoryPort,
         observations: PriceObservationRepositoryPort,
         thumbnails: StoreProductThumbnailUseCase,
+        proxyAttempts: RecordProxyAttemptsUseCase,
         logger: LoggerPort,
       ): RecordPriceResultUseCase =>
         new RecordPriceResultUseCase(
           products,
           observations,
           thumbnails,
+          proxyAttempts,
           logger.child('price-results'),
         ),
       inject: [
         TRACKED_PRODUCT_REPOSITORY,
         PRICE_OBSERVATION_REPOSITORY,
         StoreProductThumbnailUseCase,
+        RecordProxyAttemptsUseCase,
         LOGGER,
       ],
     },

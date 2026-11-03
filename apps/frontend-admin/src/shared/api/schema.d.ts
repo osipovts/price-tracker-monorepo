@@ -191,7 +191,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List proxies, the best first */
+        /**
+         * List proxies, the best by their checks first
+         * @description Each proxy tells how it has done reading the marketplaces it was tried on: the workers report every attempt, and a proxy that a marketplace turned away, or that did not get through, rests for that marketplace.
+         */
         get: operations["ProxiesController_list"];
         put?: never;
         /**
@@ -1280,6 +1283,19 @@ export interface operations {
                             /** Format: date-time */
                             lastCheckedAt: string;
                             disabled: boolean;
+                            reputations: {
+                                /** @enum {string} */
+                                marketplace: "ozon" | "dns";
+                                successes: number;
+                                failures: number;
+                                failureStreak: number;
+                                /** @enum {string} */
+                                lastOutcome: "read" | "unreachable" | "blocked" | "misplaced";
+                                /** Format: date-time */
+                                lastAttemptAt: string;
+                                /** Format: date-time */
+                                cooldownUntil: string | null;
+                            }[];
                         }[];
                         page: number;
                         pageSize: number;

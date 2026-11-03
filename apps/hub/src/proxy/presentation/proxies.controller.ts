@@ -53,7 +53,11 @@ export class ProxiesController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'List proxies, the best first' })
+  @ApiOperation({
+    summary: 'List proxies, the best by their checks first',
+    description:
+      'Each proxy tells how it has done reading the marketplaces it was tried on: the workers report every attempt, and a proxy that a marketplace turned away, or that did not get through, rests for that marketplace.',
+  })
   @ApiOkResponse({ standardSchema: proxyListResponseSchema })
   async list(
     @Query({ schema: proxyListQuerySchema }) query: ProxyListQueryType,
@@ -67,7 +71,7 @@ export class ProxiesController {
       query,
     );
 
-    return toPageResponse(page, query, (proxy) => ({
+    return toPageResponse(page, query, ({ proxy, reputations }) => ({
       server: proxy.snapshot.server,
       source: proxy.snapshot.source,
       country: proxy.snapshot.country,
@@ -78,6 +82,15 @@ export class ProxiesController {
       checksTotal: proxy.snapshot.checksTotal,
       lastCheckedAt: proxy.snapshot.lastCheckedAt.toISOString(),
       disabled: proxy.snapshot.disabledAt !== null,
+      reputations: reputations.map(({ snapshot }) => ({
+        marketplace: snapshot.marketplace,
+        successes: snapshot.successes,
+        failures: snapshot.failures,
+        failureStreak: snapshot.failureStreak,
+        lastOutcome: snapshot.lastOutcome,
+        lastAttemptAt: snapshot.lastAttemptAt.toISOString(),
+        cooldownUntil: snapshot.cooldownUntil?.toISOString() ?? null,
+      })),
     }));
   }
 

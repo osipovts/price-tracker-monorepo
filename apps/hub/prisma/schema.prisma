@@ -32,9 +32,31 @@ model Proxy {
   /// Credentials of an HTTP(S) proxy that asks for them; given to the workers only, never listed.
   username      String?
   password      String?
+  reputations   ProxyReputation[]
 
   @@index([alive, successRate(sort: Desc), latencyMs])
   @@map("proxies")
+}
+
+/// How a proxy has done reading a marketplace: the workers report every attempt they make through it.
+model ProxyReputation {
+  server        String
+  marketplace   String
+  /// Reads through the proxy, faded with time.
+  successes     Float
+  /// Failures through the proxy, faded with time.
+  failures      Float
+  /// Failures in a row since the last read.
+  failureStreak Int
+  /// What the last attempt told of the proxy: read, unreachable, blocked or misplaced.
+  lastOutcome   String
+  lastAttemptAt DateTime
+  /// The proxy is not given for the marketplace until then.
+  cooldownUntil DateTime?
+  proxy         Proxy     @relation(fields: [server], references: [server], onDelete: Cascade)
+
+  @@id([server, marketplace])
+  @@map("proxy_reputations")
 }
 
 model TrackedProduct {

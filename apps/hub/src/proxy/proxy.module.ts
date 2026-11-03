@@ -15,12 +15,18 @@ import { ListBestProxyServersUseCase } from './application/list-best-proxy-serve
 import { ListProxiesUseCase } from './application/list-proxies.use-case.js';
 import { ListProxiesToRecheckUseCase } from './application/list-proxies-to-recheck.use-case.js';
 import { PROXY_REPOSITORY, type ProxyRepositoryPort } from './application/proxy-repository.port.js';
+import {
+  PROXY_REPUTATION_REPOSITORY,
+  type ProxyReputationRepositoryPort,
+} from './application/proxy-reputation-repository.port.js';
 import { PruneProxiesUseCase } from './application/prune-proxies.use-case.js';
+import { RecordProxyAttemptsUseCase } from './application/record-proxy-attempts.use-case.js';
 import { RecordProxyChecksUseCase } from './application/record-proxy-checks.use-case.js';
 import { RefreshProxySourceUseCase } from './application/refresh-proxy-source.use-case.js';
 import { SetProxyDisabledUseCase } from './application/set-proxy-disabled.use-case.js';
 import { PeriodicProxyRefreshAdapter } from './infrastructure/periodic-proxy-refresh.adapter.js';
 import { PrismaProxyRepositoryAdapter } from './infrastructure/prisma-proxy-repository.adapter.js';
+import { PrismaProxyReputationRepositoryAdapter } from './infrastructure/prisma-proxy-reputation-repository.adapter.js';
 import { ProxiesController } from './presentation/proxies.controller.js';
 import { ProxyResultsConsumer } from './presentation/proxy-results.consumer.js';
 import { ProxySourcesController } from './presentation/proxy-sources.controller.js';
@@ -33,6 +39,12 @@ import { ProxySourcesController } from './presentation/proxy-sources.controller.
       provide: PROXY_REPOSITORY,
       useFactory: (prisma: PrismaClient): ProxyRepositoryPort =>
         new PrismaProxyRepositoryAdapter(prisma),
+      inject: [PRISMA],
+    },
+    {
+      provide: PROXY_REPUTATION_REPOSITORY,
+      useFactory: (prisma: PrismaClient): ProxyReputationRepositoryPort =>
+        new PrismaProxyReputationRepositoryAdapter(prisma),
       inject: [PRISMA],
     },
     {
@@ -81,9 +93,11 @@ import { ProxySourcesController } from './presentation/proxy-sources.controller.
     },
     {
       provide: ListProxiesUseCase,
-      useFactory: (proxies: ProxyRepositoryPort): ListProxiesUseCase =>
-        new ListProxiesUseCase(proxies),
-      inject: [PROXY_REPOSITORY],
+      useFactory: (
+        proxies: ProxyRepositoryPort,
+        reputations: ProxyReputationRepositoryPort,
+      ): ListProxiesUseCase => new ListProxiesUseCase(proxies, reputations),
+      inject: [PROXY_REPOSITORY, PROXY_REPUTATION_REPOSITORY],
     },
     {
       provide: AddManualProxyUseCase,
@@ -117,9 +131,21 @@ import { ProxySourcesController } from './presentation/proxy-sources.controller.
     },
     {
       provide: ListBestProxyServersUseCase,
-      useFactory: (proxies: ProxyRepositoryPort): ListBestProxyServersUseCase =>
-        new ListBestProxyServersUseCase(proxies),
-      inject: [PROXY_REPOSITORY],
+      useFactory: (
+        proxies: ProxyRepositoryPort,
+        reputations: ProxyReputationRepositoryPort,
+      ): ListBestProxyServersUseCase => new ListBestProxyServersUseCase(proxies, reputations),
+      inject: [PROXY_REPOSITORY, PROXY_REPUTATION_REPOSITORY],
+    },
+    {
+      provide: RecordProxyAttemptsUseCase,
+      useFactory: (
+        proxies: ProxyRepositoryPort,
+        reputations: ProxyReputationRepositoryPort,
+        logger: LoggerPort,
+      ): RecordProxyAttemptsUseCase =>
+        new RecordProxyAttemptsUseCase(proxies, reputations, logger.child('proxy-attempts')),
+      inject: [PROXY_REPOSITORY, PROXY_REPUTATION_REPOSITORY, LOGGER],
     },
     {
       provide: RecordProxyChecksUseCase,
@@ -129,6 +155,6 @@ import { ProxySourcesController } from './presentation/proxy-sources.controller.
     },
     ProxyResultsConsumer,
   ],
-  exports: [ListBestProxyServersUseCase, GetProxyStatsUseCase],
+  exports: [ListBestProxyServersUseCase, RecordProxyAttemptsUseCase, GetProxyStatsUseCase],
 })
 export class ProxyModule {}

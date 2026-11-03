@@ -78,6 +78,17 @@ export const en = {
     deadHint:
       'The last check found it not answering. The workers are not given it; the next refresh of its source checks it again.',
     successOf: '{{percent}}% of {{checks}}',
+    reputation: 'Marketplaces',
+    reputationOf: '{{marketplace}} {{successes}}/{{failures}}',
+    reputationHint:
+      'Reads {{successes}}, failures {{failures}}: an attempt weighs half as much after a day. Failures in a row: {{streak}}. The last attempt: {{outcome}}, {{when}}.',
+    reputationRest: 'Not given for this marketplace until {{until}}.',
+    outcome: {
+      read: 'read the product',
+      unreachable: 'did not get through',
+      blocked: 'turned away by the marketplace',
+      misplaced: 'exits in another country',
+    },
     milliseconds: '{{value}} ms',
     add: 'Add proxy',
     addTitle: 'Add a proxy by hand',

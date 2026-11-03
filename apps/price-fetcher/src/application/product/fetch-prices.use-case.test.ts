@@ -124,3 +124,64 @@ void test('gives the reader the city the product is asked for in', async (): Pro
 
   assert.deepEqual(cities, [cityId, null]);
 });
+
+void test('learns its routes as it goes: the next product starts on the one that read and tries the failed ones last', async (): Promise<void> => {
+  const dead = 'socks5://217.71.230.1:1080';
+  const refused = 'socks5://217.71.230.2:1080';
+  const good = 'socks5://217.71.230.3:1080';
+  const spare = 'socks5://217.71.230.4:1080';
+  const tried: string[][] = [];
+  const answers: Readonly<Record<string, ReadProductResultType>> = {
+    [dead]: { status: 'network_error' },
+    [refused]: { status: 'http_error', httpStatus: 403 },
+    [good]: {
+      status: 'success',
+      snapshot: {
+        title: 'Notebook',
+        observedAt: '2026-11-03T08:00:00.000Z',
+        prices: [{ amountMinor: 10000000, currency: 'RUB' }],
+        availability: 'in_stock',
+        imageUrl: null,
+      },
+      exitIp: '217.71.230.3',
+    },
+  };
+  const products = ['1', '2'].map((id) => ({
+    trackedProductId: `9a2d0f3c-0a44-4b6a-b8c2-7e7e2f3b1d3${id}`,
+    url: `https://www.ozon.ru/product/${id}/`,
+  }));
+
+  const routes = await new FetchPricesUseCase(
+    new ResolveProductReferenceUseCase([new OzonReferenceParser()]),
+    (): ProductReaderPort => ({
+      read: (reference, endpoint): Promise<ReadProductResultType> => {
+        if (tried.at(-1)?.[0] !== reference.url) tried.push([reference.url]);
+        tried.at(-1)?.push(endpoint.server);
+
+        return Promise.resolve(answers[endpoint.server] ?? { status: 'network_error' });
+      },
+    }),
+  ).execute(
+    {
+      routes: [dead, 'socks5://127.0.0.1:1080', refused, good, spare].map((server) => ({ server })),
+      products,
+      timeoutMs: 1000,
+    },
+    new AbortController().signal,
+    {
+      onProgress: (): Promise<void> => Promise.resolve(),
+      onProduct: (): Promise<void> => Promise.resolve(),
+    },
+  );
+
+  // The first product: the dead route, then the refusal ends it, as a refusal of the site is not rotated around.
+  // The second starts on the routes the first did not try: the dead and the refused ones go last.
+  assert.deepEqual(tried, [
+    ['https://www.ozon.ru/product/1/', dead, refused],
+    ['https://www.ozon.ru/product/2/', good],
+  ]);
+  assert.deepEqual(
+    routes.map(({ server }): string => server),
+    [good, spare, dead, refused, 'socks5://127.0.0.1:1080'],
+  );
+});

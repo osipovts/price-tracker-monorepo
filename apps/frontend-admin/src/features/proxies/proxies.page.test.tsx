@@ -23,6 +23,20 @@ function proxy(server: string): Record<string, unknown> {
     checksTotal: 3,
     lastCheckedAt: '2026-11-01T10:00:00.000Z',
     disabled: false,
+    reputations:
+      server === 'http://10.0.0.0:80'
+        ? [
+            {
+              marketplace: 'ozon',
+              successes: 1,
+              failures: 2.5,
+              failureStreak: 2,
+              lastOutcome: 'blocked',
+              lastAttemptAt: '2026-11-03T08:00:00.000Z',
+              cooldownUntil: '2999-01-01T00:00:00.000Z',
+            },
+          ]
+        : [],
   };
 }
 
@@ -120,6 +134,20 @@ test('stays on the first page when the only proxy is deleted', async (): Promise
         ([request]): boolean => request instanceof Request && !request.url.includes('page=0'),
       ),
   ).toBe(true);
+});
+
+test('tells how a proxy has done reading a marketplace, and until when it rests', async (): Promise<void> => {
+  renderPage();
+
+  const badge = await screen.findByText('ozon 1/2.5');
+  await userEvent.hover(badge);
+
+  expect(
+    await screen.findByText(
+      /Failures in a row: 2\. The last attempt: turned away by the marketplace/,
+    ),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/Not given for this marketplace until/)).toBeInTheDocument();
 });
 
 test('turns a proxy off with its switch', async (): Promise<void> => {

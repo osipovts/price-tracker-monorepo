@@ -6,13 +6,19 @@ import { ProxyEndpointEntity } from 'proxy-endpoint';
 
 import type {
   ProductAttemptInterface,
+  ReadProductResultType,
   TrackingResultInterface,
 } from '../../domain/product/product-snapshot.interface.js';
 import type { ProductReaderPort } from './product-reader.port.js';
 
+export interface FetchPricesRouteInterface {
+  /** Proxy URL, with the credentials if it has them. */
+  server: string;
+}
+
 export interface FetchPricesJobInterface {
   /** Routes in the order they are tried: a product is never read without a proxy. */
-  routes: ReadonlyArray<{ server: string }>;
+  routes: readonly FetchPricesRouteInterface[];
   products: ReadonlyArray<{
     trackedProductId: string;
     url: string;
@@ -43,6 +49,32 @@ const retryableStatuses: ReadonlyArray<ProductFetchResultInterface['status']> = 
   'parse_error',
 ];
 
+/** The answers that refuse the address of the proxy, or come from the proxy itself, rather than from the page. */
+const routeRefusalHttpStatuses: readonly number[] = [401, 403, 407, 429];
+
+/** A route the job tried and that failed for a reason of its own: the next product tries it last. */
+function isRouteFailure(result: ReadProductResultType): boolean {
+  switch (result.status) {
+    case 'network_error':
+    case 'proxy_rejected':
+    case 'challenge_required':
+      return true;
+    case 'http_error':
+      return (
+        result.httpStatus !== undefined && routeRefusalHttpStatuses.includes(result.httpStatus)
+      );
+    case 'success':
+    case 'partial':
+    case 'parse_error':
+      return false;
+  }
+}
+
+interface CandidateInterface {
+  route: FetchPricesRouteInterface;
+  proxy: ProxyEndpointEntity;
+}
+
 export function isRetryable(status: ProductFetchResultInterface['status']): boolean {
   return retryableStatuses.includes(status);
 }
@@ -59,18 +91,24 @@ export class FetchPricesUseCase {
     private readonly logger: LoggerPort = silentLogger,
   ) {}
 
+  /**
+   * Returns the routes in the order a next try of the job should take them: the job learns as it goes which of its
+   * routes reach the marketplace, and a next try does not start on the ones that failed.
+   */
   async execute(
     job: FetchPricesJobInterface,
     signal: AbortSignal,
     listener: FetchPricesListenerInterface,
-  ): Promise<void> {
-    const candidates: ProxyEndpointEntity[] = [];
+  ): Promise<FetchPricesRouteInterface[]> {
+    let candidates: CandidateInterface[] = [];
+    const unsafe: FetchPricesRouteInterface[] = [];
     for (const route of job.routes) {
       try {
-        candidates.push(new ProxyEndpointEntity(route.server));
+        candidates.push({ route, proxy: new ProxyEndpointEntity(route.server) });
       } catch {
         // An unsafe or unsupported address is skipped like an unavailable proxy.
         this.logger.warn('Skipping a route with an unsafe or unsupported proxy address');
+        unsafe.push(route);
       }
     }
 
@@ -84,13 +122,40 @@ export class FetchPricesUseCase {
       if (product.read === true) continue;
 
       signal.throwIfAborted();
-      const result = await this.fetchProduct(product, candidates, reader, signal);
+      const result = await this.fetchProduct(
+        product,
+        candidates.map(({ proxy }): ProxyEndpointEntity => proxy),
+        reader,
+        signal,
+      );
+      candidates = this.reordered(candidates, result.attempts);
       await listener.onProduct(result);
 
       processed += 1;
       if (isRead(result.status)) succeeded += 1;
       await listener.onProgress({ processed, total, succeeded });
     }
+
+    return [...candidates.map(({ route }): FetchPricesRouteInterface => route), ...unsafe];
+  }
+
+  /**
+   * The routes in the order the next product takes them: the one that read the last product first, the ones that
+   * failed it for a reason of their own last, in the order they failed; the others keep their order in between.
+   */
+  private reordered(
+    candidates: readonly CandidateInterface[],
+    attempts: readonly ProductAttemptInterface[],
+  ): CandidateInterface[] {
+    const read = attempts.find(({ result }): boolean => isRead(result.status))?.proxy;
+    const failed = attempts
+      .filter(({ result }): boolean => isRouteFailure(result))
+      .map(({ proxy }): string | null => proxy);
+    // The one that read, then the untried and the unharmed ones, then the failed ones from the first to fail.
+    const rank = ({ proxy }: CandidateInterface): number =>
+      proxy.server === read ? -1 : failed.indexOf(proxy.server) + 1;
+
+    return candidates.toSorted((a, b): number => rank(a) - rank(b));
   }
 
   private async fetchProduct(

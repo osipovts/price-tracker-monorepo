@@ -10,6 +10,8 @@ import { InMemoryJobRepositoryAdapter } from '../../job/infrastructure/in-memory
 import { ListBestProxyServersUseCase } from '../../proxy/application/list-best-proxy-servers.use-case.js';
 import { ProxyEntity } from '../../proxy/domain/proxy.entity.js';
 import { InMemoryProxyRepositoryAdapter } from '../../proxy/infrastructure/in-memory-proxy-repository.adapter.js';
+import { InMemoryProxyReputationRepositoryAdapter } from '../../proxy/infrastructure/in-memory-proxy-reputation-repository.adapter.js';
+import { systemClock } from '../../shared/application/clock.port.js';
 import { NoProxiesAvailableError } from '../../shared/application/no-proxies-available.error.js';
 import { RefreshHandbookUseCase } from './refresh-handbook.use-case.js';
 
@@ -54,7 +56,12 @@ async function setup(
 
   return {
     refresh: new RefreshHandbookUseCase(
-      new ListBestProxyServersUseCase(repository),
+      new ListBestProxyServersUseCase(
+        repository,
+        new InMemoryProxyReputationRepositoryAdapter(),
+        systemClock,
+        (): number => 0.25,
+      ),
       new ScheduleJobUseCase(queue, jobs),
       count,
     ),
