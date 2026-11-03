@@ -25,4 +25,6 @@ export const marketplaceDefaultCities: Readonly<
   dns: { id: '30b7c1f3-03fb-11dc-95ee-00151716f9f5', name: 'Москва' },
   // The region (`dest`) most of the pickup points of Moscow have: the prices are the same for all of them.
   wildberries: { id: '-1257403', name: 'Москва' },
+  // A city of the static list of Ozon (see `ozonCities`).
+  ozon: { id: 'moskva', name: 'Москва' },
 };

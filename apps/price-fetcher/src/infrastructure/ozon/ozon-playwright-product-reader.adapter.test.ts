@@ -15,6 +15,7 @@ import { ProxyEndpointEntity } from 'proxy-endpoint';
 import { GeoIpPageParser } from '../shared/geo-ip-page.parser.js';
 import { OzonChallengeParser } from './ozon-challenge.parser.js';
 import { OzonPageParser } from './ozon-page.parser.js';
+import { OzonPickupPointParser } from './ozon-pickup-point.parser.js';
 import {
   OzonPlaywrightProductReaderAdapter,
   type OzonReaderParsersInterface,
@@ -41,13 +42,38 @@ const parsers: OzonReaderParsersInterface = {
   pages: new OzonPageParser(),
   challenges: new OzonChallengeParser(),
   products: new OzonProductParser(new OzonReferenceParser()),
+  pickupPoints: new OzonPickupPointParser(),
 };
+
+/** The pages of the delivery modal the reader asked for, by the address of each in the API. */
+let deliveryAsked: string[] = [];
+beforeEach((): void => {
+  deliveryAsked = [];
+});
+
+const moscowPoints = '{"layout":[{"link":"/modal/commonDelivery?pid=5&pp=1261805&tab=pp"}]}';
+
+/** Answers the API of the delivery modal: the pickup points near a place, and the choice of one. */
+async function answerDelivery(route: Route, points: string): Promise<boolean> {
+  const url = new URL(route.request().url());
+  if (url.pathname !== '/api/entrypoint-api.bx/page/json/v2') return false;
+
+  const page = url.searchParams.get('url') ?? '';
+  deliveryAsked.push(page);
+  await route.fulfill({
+    contentType: 'application/json',
+    body: page.includes('pid=3') ? points : '{}',
+  });
+
+  return true;
+}
 
 function createReader(
   html: string,
   country = 'RU',
   status = 200,
   inspectOptions?: (options: BrowserContextOptions | undefined) => void,
+  points = moscowPoints,
 ): OzonPlaywrightProductReaderAdapter {
   return new OzonPlaywrightProductReaderAdapter(
     {
@@ -56,6 +82,7 @@ function createReader(
         const context = await browser.newContext(options);
 
         await context.route('**/*', async (route: Route): Promise<void> => {
+          if (await answerDelivery(route, points)) return;
           if (route.request().url().startsWith('https://ipinfo.io/')) {
             await route.fulfill({ json: { ip: '217.71.230.103', country } });
           } else if (route.request().url() === reference.url) {
@@ -116,6 +143,7 @@ void test('reader accepts the final document after a JavaScript challenge redire
         const context = await browser.newContext(options);
 
         await context.route('**/*', async (route: Route): Promise<void> => {
+          if (await answerDelivery(route, moscowPoints)) return;
           if (route.request().url().startsWith('https://ipinfo.io/')) {
             await route.fulfill({ json: { ip: '217.71.230.103', country: 'RU' } });
           } else if (route.request().url() === reference.url) {
@@ -178,4 +206,49 @@ void test('reader reports a challenge', async (): Promise<void> => {
   assert.deepEqual(await reader.read(reference, proxy, new AbortController().signal), {
     status: 'challenge_required',
   });
+});
+
+void test('reads the price at the first pickup point of Moscow for a product without a city', async (): Promise<void> => {
+  const reader = createReader('<h1>Notebook</h1><div data-widget="webPrice">100 000 ₽</div>');
+
+  const result = await reader.read(reference, proxy, new AbortController().signal);
+
+  assert.equal(result.status, 'success');
+  assert.deepEqual(deliveryAsked, [
+    '/modal/commonDelivery?available=t&lat=55.7299&long=37.5907&pid=3&tab=pp',
+    '/modal/commonDelivery?pid=7&pp=1261805&tab=pp',
+  ]);
+});
+
+void test('reads the price at a pickup point of the city of the product', async (): Promise<void> => {
+  const reader = createReader('<h1>Notebook</h1><div data-widget="webPrice">100 000 ₽</div>');
+
+  await reader.read(reference.inCity('irkutsk'), proxy, new AbortController().signal);
+
+  assert.equal(
+    deliveryAsked[0],
+    '/modal/commonDelivery?available=t&lat=52.2753&long=104.2955&pid=3&tab=pp',
+  );
+});
+
+void test('reads no price where it cannot choose a pickup point of the city', async (): Promise<void> => {
+  const html = '<h1>Notebook</h1><div data-widget="webPrice">100 000 ₽</div>';
+
+  assert.deepEqual(
+    await createReader(html, 'RU', 200, undefined, '{"layout":[]}').read(
+      reference,
+      proxy,
+      new AbortController().signal,
+    ),
+    { status: 'parse_error' },
+  );
+  assert.deepEqual(
+    await createReader(html).read(
+      reference.inCity('atlantis'),
+      proxy,
+      new AbortController().signal,
+    ),
+    { status: 'parse_error' },
+  );
+  assert.equal(browser.contexts().length, 0);
 });

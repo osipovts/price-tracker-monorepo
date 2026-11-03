@@ -274,7 +274,7 @@ test('asks for the city of a link of a marketplace that has cities, searches it 
 
   await openForm();
   expect(screen.queryByLabelText('City', { selector: 'input' })).not.toBeInTheDocument();
-  await user.type(screen.getByLabelText(/link/i), 'https://ozon.ru/t/AbC');
+  await user.type(screen.getByLabelText(/link/i), 'https://example.com/item/1');
   expect(screen.queryByLabelText('City', { selector: 'input' })).not.toBeInTheDocument();
 
   await user.clear(screen.getByLabelText(/link/i));

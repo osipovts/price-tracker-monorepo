@@ -5,6 +5,7 @@ export type CityMarketplaceType =
 
 /** The hosts of the marketplaces whose prices depend on the city: the user is asked for one. */
 const cityMarketplaceHosts: ReadonlyArray<[CityMarketplaceType, readonly string[]]> = [
+  ['ozon', ['ozon.ru', 'www.ozon.ru']],
   ['dns', ['dns-shop.ru', 'www.dns-shop.ru']],
   ['wildberries', ['wildberries.ru', 'www.wildberries.ru', 'wb.ru', 'www.wb.ru']],
 ];

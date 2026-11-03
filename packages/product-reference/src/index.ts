@@ -1,6 +1,7 @@
 export * from './dns-reference.parser.js';
 export * from './marketplace.type.js';
 export * from './marketplace-reference-parser.port.js';
+export * from './ozon-city.type.js';
 export * from './ozon-reference.parser.js';
 export * from './ozon-short-link.parser.js';
 export * from './product-reference.entity.js';

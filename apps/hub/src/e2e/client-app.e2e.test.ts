@@ -221,11 +221,12 @@ void test('the hint of a point tells the price read at it, or the last known one
 
   // The right edge of the chart is the end of the current hour, where the price of the worker is.
   await hover(18);
-  await tooltip.getByText(/^ozon: 1\s299\s₽$/).waitFor();
+  // A product of Ozon is read in a city as well: Moscow when none was asked for.
+  await tooltip.getByText(/^ozon, Москва: 1\s299\s₽$/).waitFor();
 
   // The hour before it had no price: the hint says what was known last.
   await hover(30);
-  await tooltip.getByText(/ozon: Last known/).waitFor();
+  await tooltip.getByText(/ozon, Москва: Last known/).waitFor();
 });
 
 void test('a product of another marketplace joins the group: the best price is the cheaper one, and the chart gets a second line', async (): Promise<void> => {

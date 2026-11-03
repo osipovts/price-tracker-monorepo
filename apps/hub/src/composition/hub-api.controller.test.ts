@@ -455,8 +455,8 @@ void test('tracks a product once whatever the link and lists it with its newest 
     marketplace: 'ozon',
     externalId: '4775581891',
     url: productUrl,
-    cityId: null,
-    cityName: null,
+    cityId: 'moskva',
+    cityName: 'Москва',
     lastStatus: null,
     lastCheckedAt: null,
     // The schedule is off in this test.
@@ -535,7 +535,7 @@ void test('queues the read of the first price when a product is added, and serve
   assert.deepEqual(queued.at(-1), {
     jobId,
     routes: [{ server: 'socks5://217.71.230.1:1080' }, { server: 'socks5://217.71.230.2:1080' }],
-    products: [{ trackedProductId: id, url }],
+    products: [{ trackedProductId: id, url, cityId: 'moskva' }],
     timeoutMs: 30000,
   });
   const queuedBefore = queued.length;
@@ -552,8 +552,8 @@ void test('queues the read of the first price when a product is added, and serve
       marketplace: 'ozon',
       externalId: '9000',
       url,
-      cityId: null,
-      cityName: null,
+      cityId: 'moskva',
+      cityName: 'Москва',
       lastStatus: null,
       lastCheckedAt: null,
       nextCheckAt: null,
@@ -847,7 +847,7 @@ void test('tracks a product of DNS in the city asked for, in the default city wi
   const byDefault = await call('/products', post({ url }));
   const asked = await call('/products', post({ url, cityId: irkutskId }));
   const unknown = await call('/products', post({ url, cityId: 'nowhere' }));
-  const ozon = await call('/products', post({ url: productUrl, cityId: irkutskId }));
+  const ozon = await call('/products', post({ url: productUrl }));
 
   assert.equal(byDefault.body['cityId'], marketplaceDefaultCities.dns?.id);
   assert.equal(byDefault.body['cityName'], 'Москва');
@@ -856,11 +856,11 @@ void test('tracks a product of DNS in the city asked for, in the default city wi
   assert.equal(asked.body['cityName'], 'Иркутск');
   assert.notEqual(asked.body['id'], byDefault.body['id']);
   assert.equal(unknown.status, 400);
-  assert.equal(ozon.body['cityId'], null);
-  assert.equal(ozon.body['cityName'], null);
+  assert.equal(ozon.body['cityId'], 'moskva');
+  assert.equal(ozon.body['cityName'], 'Москва');
 });
 
-void test('a user searches the cities of DNS by a part of the name, and asks no city of a marketplace that has none', async (): Promise<void> => {
+void test('a user searches the cities of a marketplace by a part of the name: of DNS in its handbook, of Ozon in their list', async (): Promise<void> => {
   await new SaveHandbookCitiesUseCase(handbooks).execute('dns-cities', [
     { id: irkutskId, name: 'Иркутск', region: 'Иркутская область', aliases: ['other-id'] },
     { id: 'b', name: 'Москва', region: null },
@@ -874,7 +874,10 @@ void test('a user searches the cities of DNS by a part of the name, and asks no 
     { id: irkutskId, name: 'Иркутск', region: 'Иркутская область' },
   ]);
   assert.equal(Array.isArray(all.body['items']) && all.body['items'].length, 1);
-  assert.equal((await call('/marketplaces/ozon/cities')).status, 404);
+  assert.deepEqual(
+    (await call('/marketplaces/ozon/cities?query=%D0%B8%D1%80%D0%BA')).body['items'],
+    [{ id: 'irkutsk', name: 'Иркутск', region: 'Иркутская обл.' }],
+  );
   assert.equal((await call('/marketplaces/dns/cities?limit=0')).status, 400);
 });
 

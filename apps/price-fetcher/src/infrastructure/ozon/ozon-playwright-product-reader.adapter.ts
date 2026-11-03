@@ -1,7 +1,13 @@
 import type { CamoufoxOptionsFactory } from 'camoufox-options';
 import { errorMessage, type LoggerPort, silentLogger } from 'logger';
 import type { Browser, BrowserContext, Page, Response } from 'playwright-core';
-import { marketplaceExitCountries, type ProductReferenceEntity } from 'product-reference';
+import {
+  marketplaceDefaultCities,
+  marketplaceExitCountries,
+  ozonCities,
+  type OzonCityInterface,
+  type ProductReferenceEntity,
+} from 'product-reference';
 import type { ProxyEndpointEntity } from 'proxy-endpoint';
 
 import type { ProductReaderPort } from '../../application/product/product-reader.port.js';
@@ -10,6 +16,7 @@ import type { GeoIpPageParser } from '../shared/geo-ip-page.parser.js';
 import { ProxyExitChecker } from '../shared/proxy-exit.checker.js';
 import type { OzonChallengeParser } from './ozon-challenge.parser.js';
 import type { OzonPageParser } from './ozon-page.parser.js';
+import type { OzonPickupPointParser } from './ozon-pickup-point.parser.js';
 import type { OzonProductParser } from './ozon-product.parser.js';
 
 export interface OzonReaderParsersInterface {
@@ -17,6 +24,12 @@ export interface OzonReaderParsersInterface {
   pages: OzonPageParser;
   challenges: OzonChallengeParser;
   products: OzonProductParser;
+  pickupPoints: OzonPickupPointParser;
+}
+
+/** The address of the API of the pages of Ozon that opens a page of the delivery modal. */
+function deliveryPageUrl(query: string): string {
+  return `/api/entrypoint-api.bx/page/json/v2?url=${encodeURIComponent(`/modal/commonDelivery?${query}`)}`;
 }
 
 export class OzonPlaywrightProductReaderAdapter implements ProductReaderPort {
@@ -87,13 +100,25 @@ export class OzonPlaywrightProductReaderAdapter implements ProductReaderPort {
     this.logger.debug(`Exit IP through ${proxy.server} is ${exitIp} (${country})`);
 
     const lastResponse = await this.open(page, reference);
-    const document = await this.parsers.pages.parse(page);
-    const response = lastResponse();
-    if (this.parsers.challenges.isChallenge(document.title, document.body)) {
-      this.logger.warn(`The site check appeared via ${proxy.server}`);
-
+    if (this.isChallenge(await this.parsers.pages.parse(page), proxy)) {
       return { status: 'challenge_required' };
     }
+
+    // Without a pickup point Ozon prices for the region of the address of the route.
+    const city = this.cityOf(reference);
+    if (city === undefined) {
+      this.logger.warn(`The city ${reference.cityId ?? ''} is not one of the cities of Ozon`);
+
+      return { status: 'parse_error' };
+    }
+
+    const chosen = await this.choosePickupPoint(page, city);
+    if (chosen !== 'chosen') return { status: chosen };
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    const document = await this.parsers.pages.parse(page);
+    const response = lastResponse();
+    if (this.isChallenge(document, proxy)) return { status: 'challenge_required' };
 
     if (response === null) return { status: 'network_error' };
     if (!response.ok()) {
@@ -119,6 +144,78 @@ export class OzonPlaywrightProductReaderAdapter implements ProductReaderPort {
       snapshot,
       exitIp,
     };
+  }
+
+  private isChallenge(
+    document: { title: string; body: string },
+    proxy: ProxyEndpointEntity,
+  ): boolean {
+    const challenge = this.parsers.challenges.isChallenge(document.title, document.body);
+    if (challenge) this.logger.warn(`The site check appeared via ${proxy.server}`);
+
+    return challenge;
+  }
+
+  /** The city of the product, or the default one for a product tracked before Ozon had cities. */
+  private cityOf(reference: ProductReferenceEntity): OzonCityInterface | undefined {
+    const cityId = reference.cityId ?? marketplaceDefaultCities.ozon?.id;
+
+    return ozonCities.find((city): boolean => city.id === cityId);
+  }
+
+  /**
+   * Does what the map of the delivery modal does: asks for the pickup points at the middle of the city, and
+   * chooses the first of them for the session. A city without one is no city to read the price in.
+   */
+  private async choosePickupPoint(
+    page: Page,
+    city: OzonCityInterface,
+  ): Promise<'chosen' | 'network_error' | 'parse_error'> {
+    const near = await this.postDeliveryPage(
+      page,
+      `available=t&lat=${String(city.latitude)}&long=${String(city.longitude)}&pid=3&tab=pp`,
+    );
+    if (near.status !== 200) {
+      this.logger.warn(`The pickup points of ${city.name} answered ${String(near.status)}`);
+
+      return 'network_error';
+    }
+
+    const point = this.parsers.pickupPoints.parse(near.body);
+    if (point === null) {
+      this.logger.warn(`Ozon has no pickup point in ${city.name}`);
+
+      return 'parse_error';
+    }
+
+    const choice = await this.postDeliveryPage(page, `pid=7&pp=${point}&tab=pp`);
+    if (choice.status !== 200) {
+      this.logger.warn(`The choice of the pickup point ${point} answered ${String(choice.status)}`);
+
+      return 'network_error';
+    }
+
+    this.logger.debug(`Chose the pickup point ${point} of ${city.name}`);
+
+    return 'chosen';
+  }
+
+  /** An answer that does not come within the time given is a failure, not a wait without end. */
+  private postDeliveryPage(page: Page, query: string): Promise<{ status: number; body: string }> {
+    return page.evaluate(
+      async ({ target, timeoutMs }): Promise<{ status: number; body: string }> => {
+        const response = await fetch(target, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'content-type': 'application/json' },
+          body: '{}',
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+
+        return { status: response.status, body: await response.text() };
+      },
+      { target: deliveryPageUrl(query), timeoutMs: this.timeoutMs },
+    );
   }
 
   /**
