@@ -126,7 +126,10 @@ export function toRows(
   });
 }
 
-/** The lines keep off the edges of the chart: one would run along the axis at the lowest price. */
+/**
+ * The lines take most of the height of the chart and keep off its edges: a twentieth of the spread of the
+ * prices on each side. A flat price or a small change spans at least 4% of the price, not to look like a cliff.
+ */
 export function paddedDomain(
   lines: readonly PriceBucketInterface[][],
 ): [number, number] | ['auto', 'auto'] {
@@ -136,7 +139,7 @@ export function paddedDomain(
   if (values.length === 0) return ['auto', 'auto'];
 
   const [min, max] = [Math.min(...values), Math.max(...values)];
-  const padding = Math.max((max - min) * 0.1, max * 0.02);
+  const padding = Math.max((max - min) * 0.05, (max * 0.04 - (max - min)) / 2);
 
   return [Math.floor(min - padding), Math.ceil(max + padding)];
 }
@@ -150,7 +153,7 @@ const stepFactors = [1, 2, 2.5, 5, 10];
 const minStep = 100;
 
 /**
- * Round marks of the axis of prices that cover the domain, about `count` of them: "110 000 ₽" reads
+ * Round marks of the axis of prices within the domain, about `count` of them: "110 000 ₽" reads
  * at a glance, "112 516 ₽" does not. None when the domain is not known yet.
  */
 export function roundTicks(domain: [number, number] | ['auto', 'auto'], count: number): number[] {
@@ -164,7 +167,7 @@ export function roundTicks(domain: [number, number] | ['auto', 'auto'], count: n
     (stepFactors.find((factor): boolean => factor * power >= rough) ?? 10) * power,
   );
   const ticks: number[] = [];
-  for (let tick = Math.floor(min / step) * step; tick < max + step; tick += step) ticks.push(tick);
+  for (let tick = Math.ceil(min / step) * step; tick <= max; tick += step) ticks.push(tick);
 
   return ticks;
 }
