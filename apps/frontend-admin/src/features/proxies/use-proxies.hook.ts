@@ -118,6 +118,8 @@ export const proxySources: readonly ProxySourceType[] = [
   'github-free-proxy-list',
   'proxifly',
   'proxyscrape',
+  'geonode',
+  'monosans',
 ];
 
 /** Queues the read of the sources and follows their jobs until they end. */

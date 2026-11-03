@@ -6,7 +6,11 @@ import { z } from 'zod';
 import type { ProxySourcePort } from './application/proxy-source.port.js';
 import { RefreshProxySourceUseCase } from './application/refresh-proxy-source.use-case.js';
 import { GeoIpProxyProbeAdapter } from './infrastructure/geo-ip-proxy-probe.adapter.js';
+import { GeonodeProxyListParser } from './infrastructure/geonode-proxy-list.parser.js';
+import { GeonodeSourceAdapter } from './infrastructure/geonode-source.adapter.js';
 import { GithubFreeProxyListSourceAdapter } from './infrastructure/github-free-proxy-list-source.adapter.js';
+import { MonosansProxyListParser } from './infrastructure/monosans-proxy-list.parser.js';
+import { MonosansSourceAdapter } from './infrastructure/monosans-source.adapter.js';
 import { ProxiflySourceAdapter } from './infrastructure/proxifly-source.adapter.js';
 import { ProxyListParser } from './infrastructure/proxy-list.parser.js';
 import { ProxyscrapeSourceAdapter } from './infrastructure/proxyscrape-source.adapter.js';
@@ -60,6 +64,15 @@ const controller = new ProxyFetchController(
     proxifly: refreshSource(new ProxiflySourceAdapter(proxyListParser, logger.child('source'))),
     proxyscrape: refreshSource(
       new ProxyscrapeSourceAdapter(proxyListParser, logger.child('source')),
+    ),
+    geonode: refreshSource(
+      new GeonodeSourceAdapter(new GeonodeProxyListParser(proxyListParser), logger.child('source')),
+    ),
+    monosans: refreshSource(
+      new MonosansSourceAdapter(
+        new MonosansProxyListParser(proxyListParser),
+        logger.child('source'),
+      ),
     ),
   },
   new QueueMessageParser(logger.child('controller')),

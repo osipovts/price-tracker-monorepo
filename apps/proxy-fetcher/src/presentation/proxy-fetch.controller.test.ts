@@ -31,6 +31,8 @@ function createController(
       'github-free-proxy-list': { execute },
       proxifly: { execute },
       proxyscrape: { execute },
+      geonode: { execute },
+      monosans: { execute },
     },
     new QueueMessageParser(silentLogger),
     new JobLifecycleReporter(publish, silentLogger),
