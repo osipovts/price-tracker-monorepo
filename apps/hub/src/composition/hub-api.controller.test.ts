@@ -62,9 +62,11 @@ import { RefreshProxySourceUseCase } from '../proxy/application/refresh-proxy-so
 import { SetProxyDisabledUseCase } from '../proxy/application/set-proxy-disabled.use-case.js';
 import { ProxyEntity } from '../proxy/domain/proxy.entity.js';
 import { InMemoryProxyRepositoryAdapter } from '../proxy/infrastructure/in-memory-proxy-repository.adapter.js';
+import { InMemoryProxyReputationRepositoryAdapter } from '../proxy/infrastructure/in-memory-proxy-reputation-repository.adapter.js';
 import { ProxiesController } from '../proxy/presentation/proxies.controller.js';
 import { ProxySourcesController } from '../proxy/presentation/proxy-sources.controller.js';
 import { APP_CONFIG, type AppConfigInterface } from '../shared/application/app-config.interface.js';
+import { systemClock } from '../shared/application/clock.port.js';
 import { LOGGER } from '../shared/application/logger.port.js';
 import { InMemoryObjectStorageAdapter } from '../shared/infrastructure/in-memory-object-storage.adapter.js';
 import { InMemoryRateLimiterAdapter } from '../shared/infrastructure/in-memory-rate-limiter.adapter.js';
@@ -102,7 +104,15 @@ const queue: JobQueuePort = {
 const scheduleJob = new ScheduleJobUseCase(queue, jobs);
 const requestObservation = new RequestPriceObservationUseCase(
   products,
-  new ChoosePriceRoutesUseCase(new ListBestProxyServersUseCase(proxies), 3),
+  new ChoosePriceRoutesUseCase(
+    new ListBestProxyServersUseCase(
+      proxies,
+      new InMemoryProxyReputationRepositoryAdapter(),
+      systemClock,
+      (): number => 0.25,
+    ),
+    3,
+  ),
   scheduleJob,
   30000,
 );
@@ -196,7 +206,7 @@ before(async (): Promise<void> => {
       { provide: RefreshProxySourceUseCase, useValue: new RefreshProxySourceUseCase(scheduleJob) },
       {
         provide: ListProxiesUseCase,
-        useValue: new ListProxiesUseCase(proxies),
+        useValue: new ListProxiesUseCase(proxies, new InMemoryProxyReputationRepositoryAdapter()),
       },
       {
         provide: AddProductUseCase,
@@ -221,7 +231,12 @@ before(async (): Promise<void> => {
       {
         provide: RefreshHandbookUseCase,
         useValue: new RefreshHandbookUseCase(
-          new ListBestProxyServersUseCase(proxies),
+          new ListBestProxyServersUseCase(
+            proxies,
+            new InMemoryProxyReputationRepositoryAdapter(),
+            systemClock,
+            (): number => 0.25,
+          ),
           scheduleJob,
           2,
         ),
@@ -416,6 +431,7 @@ void test('lists proxies with pagination and validates the query', async (): Pro
       checksTotal: 1,
       lastCheckedAt: '2026-10-24T12:00:00.000Z',
       disabled: false,
+      reputations: [],
     },
   ]);
 

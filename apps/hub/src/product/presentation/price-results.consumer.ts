@@ -10,6 +10,7 @@ import {
 import { LOGGER, type LoggerPort } from '../../shared/application/logger.port.js';
 import { ResultsConsumer } from '../../shared/presentation/results.consumer.js';
 import {
+  type PriceAttemptInterface,
   type PriceResultInterface,
   RecordPriceResultUseCase,
 } from '../application/record-price-result.use-case.js';
@@ -50,6 +51,12 @@ export class PriceResultsConsumer extends ResultsConsumer<PriceFetchResultType> 
   }
 
   private toResult(message: ProductResultType): PriceResultInterface {
+    const attempts = message.attempts.map(({ proxy, result }): PriceAttemptInterface => ({
+      proxy,
+      status: result.status,
+      httpStatus: 'httpStatus' in result ? (result.httpStatus ?? null) : null,
+    }));
+
     for (const attempt of message.attempts) {
       if (!('snapshot' in attempt.result)) continue;
 
@@ -67,6 +74,7 @@ export class PriceResultsConsumer extends ResultsConsumer<PriceFetchResultType> 
           exitIp,
         },
         imageUrl: snapshot.imageUrl ?? null,
+        attempts,
       };
     }
 
@@ -75,6 +83,7 @@ export class PriceResultsConsumer extends ResultsConsumer<PriceFetchResultType> 
       trackedProductId: message.trackedProductId,
       status: message.status,
       observation: null,
+      attempts,
     };
   }
 }

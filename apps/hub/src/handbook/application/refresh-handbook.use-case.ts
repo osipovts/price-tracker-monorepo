@@ -1,13 +1,13 @@
-import { marketplaceExitCountries } from 'product-reference';
+import type { MarketplaceType } from 'product-reference';
 import type { HandbookType } from 'queue-contract';
 
 import type { ScheduleJobUseCase } from '../../job/application/index.js';
 import type { ListBestProxyServersUseCase } from '../../proxy/application/index.js';
 import { NoProxiesAvailableError } from '../../shared/application/no-proxies-available.error.js';
 
-/** The country the proxies exit in to read a handbook: the one the marketplace serves. */
-const handbookExitCountries: Readonly<Record<HandbookType, string>> = {
-  'dns-cities': marketplaceExitCountries.dns,
+/** The marketplace a handbook is read from: the proxies are chosen for it. */
+const handbookMarketplaces: Readonly<Record<HandbookType, MarketplaceType>> = {
+  'dns-cities': 'dns',
 };
 
 /** Queues the read of a handbook by a worker, through the best proxies. */
@@ -22,7 +22,7 @@ export class RefreshHandbookUseCase {
   /** `requestedBy` is the administrator who asked, who follows the job; null for the schedule and the operator. */
   async execute(handbook: HandbookType, requestedBy: string | null): Promise<{ jobId: string }> {
     const servers = await this.proxyServers.execute({
-      country: handbookExitCountries[handbook],
+      marketplace: handbookMarketplaces[handbook],
       limit: this.proxyCount,
     });
     if (servers.length === 0) throw new NoProxiesAvailableError();

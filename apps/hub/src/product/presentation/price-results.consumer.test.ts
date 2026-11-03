@@ -9,7 +9,7 @@ import { RecordJobEventUseCase } from '../../job/application/record-job-event.us
 import { RecordJobMessageUseCase } from '../../job/application/record-job-message.use-case.js';
 import { InMemoryJobRepositoryAdapter } from '../../job/infrastructure/in-memory-job-repository.adapter.js';
 import type { AppConfigInterface } from '../../shared/application/app-config.interface.js';
-import { noThumbnails } from '../application/add-product-defaults.type.js';
+import { noProxyAttempts, noThumbnails } from '../application/add-product-defaults.type.js';
 import { ListPriceHistoryUseCase } from '../application/list-price-history.use-case.js';
 import { RecordPriceResultUseCase } from '../application/record-price-result.use-case.js';
 import { InMemoryPriceObservationRepositoryAdapter } from '../infrastructure/in-memory-price-observation-repository.adapter.js';
@@ -84,7 +84,7 @@ async function setup(): Promise<{
 
   return {
     consumer: new PriceResultsConsumer(
-      new RecordPriceResultUseCase(products, observations, noThumbnails),
+      new RecordPriceResultUseCase(products, observations, noThumbnails, noProxyAttempts),
       new RecordJobMessageUseCase(new RecordJobEventUseCase(new InMemoryJobRepositoryAdapter())),
       new QueueMessageParser(silentLogger),
       config,

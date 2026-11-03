@@ -10,6 +10,8 @@ import { InMemoryJobRepositoryAdapter } from '../../job/infrastructure/in-memory
 import { ListBestProxyServersUseCase } from '../../proxy/application/index.js';
 import { ProxyEntity } from '../../proxy/domain/proxy.entity.js';
 import { InMemoryProxyRepositoryAdapter } from '../../proxy/infrastructure/in-memory-proxy-repository.adapter.js';
+import { InMemoryProxyReputationRepositoryAdapter } from '../../proxy/infrastructure/in-memory-proxy-reputation-repository.adapter.js';
+import { systemClock } from '../../shared/application/clock.port.js';
 import { NoProxiesAvailableError } from '../../shared/application/no-proxies-available.error.js';
 import { InMemoryTrackedProductRepositoryAdapter } from '../infrastructure/in-memory-tracked-product-repository.adapter.js';
 import { ChoosePriceRoutesUseCase } from './choose-price-routes.use-case.js';
@@ -76,7 +78,15 @@ async function createUseCase(
   return {
     useCase: new RequestPriceObservationUseCase(
       products,
-      new ChoosePriceRoutesUseCase(new ListBestProxyServersUseCase(repository), 2),
+      new ChoosePriceRoutesUseCase(
+        new ListBestProxyServersUseCase(
+          repository,
+          new InMemoryProxyReputationRepositoryAdapter(),
+          systemClock,
+          (): number => 0.25,
+        ),
+        2,
+      ),
       new ScheduleJobUseCase(queue, jobs),
       30000,
     ),

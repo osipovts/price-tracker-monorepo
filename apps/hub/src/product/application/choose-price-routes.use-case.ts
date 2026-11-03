@@ -1,4 +1,4 @@
-import { marketplaceExitCountries, type MarketplaceType } from 'product-reference';
+import type { MarketplaceType } from 'product-reference';
 
 import type { RouteInterface } from '../../job/application/index.js';
 import type { ListBestProxyServersUseCase } from '../../proxy/application/index.js';
@@ -13,11 +13,8 @@ export class ChoosePriceRoutesUseCase {
 
   /** None is an empty list. */
   async execute(marketplace: MarketplaceType): Promise<RouteInterface[]> {
-    // The workers accept exits in the country of the marketplace only: others would be rejected anyway.
-    const best = await this.proxyServers.execute({
-      country: marketplaceExitCountries[marketplace],
-      limit: this.proxyCount,
-    });
+    // The proxies exit in the country of the marketplace: the workers reject others anyway.
+    const best = await this.proxyServers.execute({ marketplace, limit: this.proxyCount });
 
     // The workers connect with the credentials of a proxy, which the hub keeps apart from its server.
     const urls = await this.proxyServers.urlsOf(best);
