@@ -20,6 +20,7 @@ import { DnsPlaywrightProductReaderAdapter } from './infrastructure/dns/dns-play
 import { DnsProductParser } from './infrastructure/dns/dns-product.parser.js';
 import { OzonChallengeParser } from './infrastructure/ozon/ozon-challenge.parser.js';
 import { OzonPageParser } from './infrastructure/ozon/ozon-page.parser.js';
+import { OzonPickupPointParser } from './infrastructure/ozon/ozon-pickup-point.parser.js';
 import { OzonPlaywrightLinkExpanderAdapter } from './infrastructure/ozon/ozon-playwright-link-expander.adapter.js';
 import {
   OzonPlaywrightProductReaderAdapter,
@@ -100,6 +101,7 @@ const parsers: OzonReaderParsersInterface = {
   pages: new OzonPageParser(),
   challenges: new OzonChallengeParser(),
   products: new OzonProductParser(references),
+  pickupPoints: new OzonPickupPointParser(),
 };
 const controller = new PriceFetchController(
   new FetchPricesUseCase(
