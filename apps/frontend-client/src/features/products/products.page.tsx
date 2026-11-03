@@ -3,7 +3,7 @@ import './waiting-glint.css';
 
 import { Box, Button, Group, Loader, Pagination, Paper, Stack, Text, Title } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { ErrorAlert } from 'frontend-shared';
+import { ErrorAlert, MarketplaceName, marketplaceName } from 'frontend-shared';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -11,7 +11,6 @@ import { Link } from 'react-router';
 import { LineIcon } from './action-icons.component.js';
 import { AddProductModal } from './add-product-modal.component.js';
 import { BestPrice } from './group-prices.component.js';
-import { MarketplaceName } from './marketplace-name.component.js';
 import { hasPendingAdd } from './pending-add.type.js';
 import { PriceChecks } from './price-checks.component.js';
 import { ProductThumbnail } from './product-thumbnail.component.js';
@@ -30,7 +29,7 @@ function GroupLastCheck({ group }: { group: ProductGroupType }): ReactElement {
     <PriceChecks
       checks={{
         checkedAt: lastCheck?.checkedAt ?? null,
-        marketplace: lastCheck?.marketplace ?? null,
+        marketplace: lastCheck === null ? null : marketplaceName(lastCheck.marketplace),
         nextAt: null,
       }}
     />
