@@ -34,3 +34,19 @@ void test('keeps an empty read as read when there was nothing before', async ():
 
   assert.deepEqual((await handbooks.findCities('dns-cities'))?.cities, []);
 });
+
+void test('a city read again keeps the id the handbook gave it', async (): Promise<void> => {
+  const handbooks = new InMemoryHandbookRepositoryAdapter();
+  const save = new SaveHandbookCitiesUseCase(handbooks);
+  await save.execute('wildberries-cities', [
+    { id: '-1257403', name: 'Москва', region: null, aliases: ['-442733'] },
+  ]);
+
+  await save.execute('wildberries-cities', [
+    { id: '-442733', name: 'Москва', region: null, aliases: ['-1257403'] },
+  ]);
+
+  assert.deepEqual((await handbooks.findCities('wildberries-cities'))?.cities, [
+    { id: '-1257403', name: 'Москва', region: null, aliases: ['-442733'] },
+  ]);
+});

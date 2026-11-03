@@ -3,7 +3,7 @@ import { ErrorAlert } from 'frontend-shared';
 import { type ReactElement, type SyntheticEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { linkHasCities } from './city-link.type.js';
+import { cityMarketplaceOf, type CityMarketplaceType } from './city-link.type.js';
 import { type PendingAddInterface, readPendingAdd } from './pending-add.type.js';
 import { TrackedIn } from './tracked-in.component.js';
 import { useAddProduct, useCities } from './use-products.hook.js';
@@ -20,17 +20,19 @@ function cityLabel(city: { name: string; region: string | null }): string {
 
 /** Searches the cities of the marketplace by what is typed, and tells the one that is chosen. */
 function CityField({
+  marketplace,
   disabled,
   chosen,
   onChoose,
 }: {
+  marketplace: CityMarketplaceType;
   disabled: boolean;
   chosen: { value: string; label: string } | null;
   onChoose: (city: { value: string; label: string } | null) => void;
 }): ReactElement {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const cities = useCities(search, true);
+  const cities = useCities(marketplace, search, true);
   const found = (cities.data ?? []).map((city): { value: string; label: string } => ({
     value: city.id,
     label: cityLabel(city),
@@ -77,6 +79,7 @@ export function AddProduct({
   const { t } = useTranslation();
   const [url, setUrl] = useState('');
   const [city, setCity] = useState<{ value: string; label: string } | null>(null);
+  const cityMarketplace = cityMarketplaceOf(url);
   const add = useAddProduct();
   const [slow, setSlow] = useState(false);
   const resumed = useRef(false);
@@ -117,7 +120,7 @@ export function AddProduct({
 
   const submit = (event: SyntheticEvent): void => {
     event.preventDefault();
-    track({ url, cityId: linkHasCities(url) ? (city?.value ?? null) : null, groupId });
+    track({ url, cityId: cityMarketplace === null ? null : (city?.value ?? null), groupId });
   };
 
   // A reload cut the add short, not stopped it: the hub joins it when the same link is sent again.
@@ -146,12 +149,21 @@ export function AddProduct({
           disabled={add.isPending}
           value={url}
           onChange={(event): void => {
-            setUrl(event.currentTarget.value);
+            const next = event.currentTarget.value;
+            // A city of one marketplace is no city of another.
+            if (cityMarketplaceOf(next) !== cityMarketplace) setCity(null);
+            setUrl(next);
             setTrackedIn(null);
           }}
         />
-        {linkHasCities(url) && (
-          <CityField disabled={add.isPending} chosen={city} onChoose={setCity} />
+        {cityMarketplace !== null && (
+          <CityField
+            key={cityMarketplace}
+            marketplace={cityMarketplace}
+            disabled={add.isPending}
+            chosen={city}
+            onChoose={setCity}
+          />
         )}
         {slow && (
           <Text size="xs" c="dimmed">

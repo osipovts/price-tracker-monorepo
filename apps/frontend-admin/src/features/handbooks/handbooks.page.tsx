@@ -8,6 +8,7 @@ import {
   Progress,
   Stack,
   Table,
+  Tabs,
   Text,
   TextInput,
   Title,
@@ -20,23 +21,37 @@ import { jobStatusLabel } from '../jobs/job-status-label.type.js';
 import {
   type HandbookCitiesPageType,
   handbookPageSize,
+  type HandbookType,
   useHandbookCities,
   useRefreshHandbook,
 } from './use-handbooks.hook.js';
 
+/** The handbooks of the cities, in the order of their tabs. */
+const cityHandbooks: readonly HandbookType[] = ['dns-cities', 'wildberries-cities'];
+
+function isCityHandbook(value: string | null): value is HandbookType {
+  return cityHandbooks.some((handbook): boolean => handbook === value);
+}
+
 /** When the cities were read, and the button that reads them again with the progress of the read. */
-function RefreshBar({ fetchedAt }: { fetchedAt: string | null | undefined }): ReactElement {
+function RefreshBar({
+  handbook,
+  fetchedAt,
+}: {
+  handbook: HandbookType;
+  fetchedAt: string | null | undefined;
+}): ReactElement {
   const { t } = useTranslation();
   const locale = useLocale();
-  const refresh = useRefreshHandbook('dns-cities');
+  const refresh = useRefreshHandbook(handbook);
 
   return (
     <>
       <Group justify="space-between" align="flex-start">
         <Stack gap={2}>
-          <Title order={3}>{t('handbooks.dnsCities')}</Title>
+          <Title order={3}>{t(`handbooks.cities.${handbook}.title`)}</Title>
           <Text size="sm" c="dimmed">
-            {t('handbooks.dnsCitiesHint')}
+            {t(`handbooks.cities.${handbook}.hint`)}
           </Text>
           {fetchedAt !== undefined && (
             <Text size="sm">
@@ -66,10 +81,12 @@ function RefreshBar({ fetchedAt }: { fetchedAt: string | null | undefined }): Re
 }
 
 function CitiesTable({
+  handbook,
   data,
   page,
   onPage,
 }: {
+  handbook: HandbookType;
   data: HandbookCitiesPageType;
   page: number;
   onPage: (page: number) => void;
@@ -86,7 +103,7 @@ function CitiesTable({
           <Table.Tr>
             <Table.Th>{t('handbooks.name')}</Table.Th>
             <Table.Th>{t('handbooks.region')}</Table.Th>
-            <Table.Th>{t('handbooks.id')}</Table.Th>
+            <Table.Th>{t(`handbooks.cities.${handbook}.id`)}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -111,34 +128,63 @@ function CitiesTable({
   );
 }
 
-export function HandbooksPage(): ReactElement {
+/** The cities of one handbook: when they were read, the search, and the table. */
+function CityHandbook({ handbook }: { handbook: HandbookType }): ReactElement {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const cities = useHandbookCities('dns-cities', query, page);
+  const cities = useHandbookCities(handbook, query, page);
+
+  return (
+    <Card withBorder>
+      <Stack>
+        <RefreshBar handbook={handbook} fetchedAt={cities.data?.fetchedAt} />
+        <TextInput
+          label={t('handbooks.search')}
+          value={query}
+          onChange={(event): void => {
+            setQuery(event.currentTarget.value);
+            setPage(1);
+          }}
+        />
+        {cities.isError && <ErrorAlert error={cities.error} />}
+        {cities.data === undefined ? (
+          !cities.isError && <Loader />
+        ) : (
+          <CitiesTable handbook={handbook} data={cities.data} page={page} onPage={setPage} />
+        )}
+      </Stack>
+    </Card>
+  );
+}
+
+export function HandbooksPage(): ReactElement {
+  const { t } = useTranslation();
+  const [handbook, setHandbook] = useState<HandbookType>('dns-cities');
 
   return (
     <Stack>
       <Title order={2}>{t('handbooks.title')}</Title>
-      <Card withBorder>
-        <Stack>
-          <RefreshBar fetchedAt={cities.data?.fetchedAt} />
-          <TextInput
-            label={t('handbooks.search')}
-            value={query}
-            onChange={(event): void => {
-              setQuery(event.currentTarget.value);
-              setPage(1);
-            }}
-          />
-          {cities.isError && <ErrorAlert error={cities.error} />}
-          {cities.data === undefined ? (
-            !cities.isError && <Loader />
-          ) : (
-            <CitiesTable data={cities.data} page={page} onPage={setPage} />
-          )}
-        </Stack>
-      </Card>
+      <Tabs
+        value={handbook}
+        keepMounted={false}
+        onChange={(value): void => {
+          if (isCityHandbook(value)) setHandbook(value);
+        }}
+      >
+        <Tabs.List>
+          {cityHandbooks.map((each): ReactElement => (
+            <Tabs.Tab key={each} value={each}>
+              {t(`handbooks.cities.${each}.title`)}
+            </Tabs.Tab>
+          ))}
+        </Tabs.List>
+        {cityHandbooks.map((each): ReactElement => (
+          <Tabs.Panel key={each} value={each} pt="md">
+            <CityHandbook handbook={each} />
+          </Tabs.Panel>
+        ))}
+      </Tabs>
     </Stack>
   );
 }

@@ -93,7 +93,9 @@ export class InMemoryProxyRepositoryAdapter implements ProxyRepositoryPort {
     return Promise.resolve(
       Array.from(this.proxies.values())
         .filter((proxy): boolean => !proxy.isManual && proxy.snapshot.lastSeenAt < since)
-        .toSorted((a, b): number => a.snapshot.lastCheckedAt.getTime() - b.snapshot.lastCheckedAt.getTime())
+        .toSorted(
+          (a, b): number => a.snapshot.lastCheckedAt.getTime() - b.snapshot.lastCheckedAt.getTime(),
+        )
         .slice(0, limit),
     );
   }

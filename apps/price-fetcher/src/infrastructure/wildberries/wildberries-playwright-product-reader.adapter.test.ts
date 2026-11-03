@@ -93,7 +93,9 @@ function createReader(
             await route.fulfill({ status, contentType: 'text/html; charset=utf-8', body: html });
           } else if (url.pathname.endsWith('/cards/v4/detail')) {
             const id = Number(url.searchParams.get('nm')?.split(';')[0]);
-            await route.fulfill({ json: cardOf(id, id === 169684889 ? 329900 : 100) });
+            // The price of the product is lower in Irkutsk than in the region the page asks for by itself.
+            const amountMinor = url.searchParams.get('dest') === '-5827226' ? 297700 : 329900;
+            await route.fulfill({ json: cardOf(id, id === 169684889 ? amountMinor : 100) });
           } else {
             await route.abort();
           }
@@ -122,6 +124,20 @@ void test('reads the product from the answer of the card service to the page, no
     'https://basket-12.wbbasket.ru/vol1696/part169684/169684889/images/c246x328/1.webp',
   );
   assert.equal(result.exitIp, '217.71.230.103');
+  assert.equal(browser.contexts().length, 0);
+});
+
+void test('reads the price in the city asked for, by its region in the request of the page', async (): Promise<void> => {
+  const reader = createReader(pageAsking('169684889', '1;2'));
+
+  const result = await reader.read(
+    reference.inCity('-5827226'),
+    proxy,
+    new AbortController().signal,
+  );
+
+  assert.ok('snapshot' in result);
+  assert.deepEqual(result.snapshot.prices, [{ amountMinor: 297700, currency: 'RUB' }]);
   assert.equal(browser.contexts().length, 0);
 });
 

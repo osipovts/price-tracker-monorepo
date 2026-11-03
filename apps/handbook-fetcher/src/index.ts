@@ -7,6 +7,8 @@ import { z } from 'zod';
 
 import { FetchCitiesUseCase } from './application/fetch-cities.use-case.js';
 import { DnsBrowserCitySourceAdapter } from './infrastructure/dns-browser-city-source.adapter.js';
+import { WildberriesBrowserCitySourceAdapter } from './infrastructure/wildberries-browser-city-source.adapter.js';
+import { WildberriesPickupCitiesParser } from './infrastructure/wildberries-pickup-cities.parser.js';
 import { HandbookFetchController } from './presentation/handbook-fetch.controller.js';
 
 const env = z
@@ -17,6 +19,8 @@ const env = z
     browserPath: z.string().min(1).optional(),
     /** How long the site may take to open, and to answer, through a route. */
     timeoutMs: z.coerce.number().int().min(1000).max(120_000).default(30_000),
+    /** How long a file of the site may take to come through a route: the pickup points of Wildberries are tens of megabytes. */
+    fileTimeoutMs: z.coerce.number().int().min(1000).max(600_000).default(180_000),
   })
   .parse({
     redisUrl: process.env['REDIS_URL'],
@@ -24,6 +28,7 @@ const env = z
     headed: process.env['HEADED'],
     browserPath: process.env['BROWSER_PATH'],
     timeoutMs: process.env['SITE_TIMEOUT_MS'],
+    fileTimeoutMs: process.env['FILE_TIMEOUT_MS'],
   });
 const logger = new ConsoleLoggerAdapter(
   parseLogLevel(process.env['LOG_LEVEL'], 'verbose'),
@@ -72,6 +77,18 @@ const controller = new HandbookFetchController(
       new DnsBrowserCitySourceAdapter(browser, options, env.timeoutMs, logger.child('dns-site')),
       russianLetters,
       logger.child('dns-cities'),
+    ),
+    'wildberries-cities': new FetchCitiesUseCase(
+      new WildberriesBrowserCitySourceAdapter(
+        browser,
+        options,
+        new WildberriesPickupCitiesParser(),
+        env.timeoutMs,
+        env.fileTimeoutMs,
+        logger.child('wildberries-site'),
+      ),
+      russianLetters,
+      logger.child('wildberries-cities'),
     ),
   },
   new QueueMessageParser(logger.child('controller')),

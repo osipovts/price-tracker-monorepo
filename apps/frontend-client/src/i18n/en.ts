@@ -93,7 +93,7 @@ export const en = {
     linkLabel: 'Link to a product',
     supported: 'Supported marketplaces: ozon.ru, dns-shop.ru, wildberries.ru',
     city: 'City',
-    cityHint: 'The prices of DNS depend on the city. Moscow when none is chosen.',
+    cityHint: 'The prices of this marketplace depend on the city. Moscow when none is chosen.',
     cityPlaceholder: 'Start typing the name of a city',
     cityNothing: 'No city found',
     noPicture: 'No picture',

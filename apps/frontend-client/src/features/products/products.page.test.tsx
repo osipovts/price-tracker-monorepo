@@ -289,6 +289,49 @@ test('asks for the city of a link of a marketplace that has cities, searches it 
   expect(searched).toContain('Ирк');
 });
 
+const wildberriesLink = 'https://www.wildberries.ru/catalog/175088486/detail.aspx';
+
+test('searches the cities of the marketplace of the link, and forgets a city of another one', async (): Promise<void> => {
+  const sent: string[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (request: Request | string | URL): Promise<Response> => {
+      if (typeof request === 'string' || request instanceof URL) return pageOf([]);
+      if (request.method === 'GET') {
+        const { pathname } = new URL(request.url);
+        if (pathname === '/marketplaces/dns/cities')
+          return Response.json({ items: [{ id: 'dns-irkutsk', name: 'Иркутск', region: null }] });
+        if (pathname === '/marketplaces/wildberries/cities')
+          return Response.json({ items: [{ id: '-5827226', name: 'Иркутск', region: null }] });
+
+        return pageOf([]);
+      }
+
+      sent.push(JSON.stringify(await request.json()));
+
+      return new Promise<Response>(() => undefined);
+    }),
+  );
+  renderPage();
+  const user = userEvent.setup();
+
+  await openForm();
+  await user.type(screen.getByLabelText(/link/i), dnsLink);
+  await user.type(screen.getByLabelText('City', { selector: 'input' }), 'Ирк');
+  await user.click(await screen.findByRole('option', { name: /Иркутск/ }));
+  await user.clear(screen.getByLabelText(/link/i));
+  await user.type(screen.getByLabelText(/link/i), wildberriesLink);
+  expect(screen.getByLabelText('City', { selector: 'input' })).toHaveValue('');
+
+  await user.type(screen.getByLabelText('City', { selector: 'input' }), 'Ирк');
+  await user.click(await screen.findByRole('option', { name: /Иркутск/ }));
+  await user.click(screen.getByRole('button', { name: 'Track' }));
+
+  await waitFor((): void => {
+    expect(sent).toEqual([JSON.stringify({ url: wildberriesLink, cityId: '-5827226' })]);
+  });
+});
+
 test('says the hub could not be reached when the request does not get there', async (): Promise<void> => {
   vi.stubGlobal(
     'fetch',

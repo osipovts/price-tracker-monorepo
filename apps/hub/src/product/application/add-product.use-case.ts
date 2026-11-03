@@ -1,6 +1,5 @@
 import { errorMessage, type LoggerPort, silentLogger } from 'logger';
 import {
-  type MarketplaceCityInterface,
   marketplaceDefaultCities,
   type ProductReferenceEntity,
   type ResolveProductReferenceUseCase,
@@ -12,7 +11,7 @@ import type { RateLimiterPort } from '../../shared/application/rate-limiter.port
 import type { TrackedProductEntity } from '../domain/tracked-product.entity.js';
 import { unchangedLinks } from './add-product-defaults.type.js';
 import type { ExpandProductLinkUseCase } from './expand-product-link.use-case.js';
-import type { MarketplaceCitiesPort } from './marketplace-cities.port.js';
+import type { KnownCityInterface, MarketplaceCitiesPort } from './marketplace-cities.port.js';
 import type { PriceObservationRepositoryPort } from './price-observation-repository.port.js';
 import { ProductAddingInProgressError } from './product-adding-in-progress.error.js';
 import { ProductGoneError } from './product-gone.error.js';
@@ -59,7 +58,7 @@ export class AddProductUseCase {
     private readonly logger: LoggerPort = silentLogger,
     private readonly expandLink: Pick<ExpandProductLinkUseCase, 'execute'> = unchangedLinks,
     private readonly cities: MarketplaceCitiesPort = {
-      find: (): Promise<{ name: string } | null> => Promise.resolve(null),
+      find: (): Promise<KnownCityInterface | null> => Promise.resolve(null),
     },
     private readonly clock: ClockPort = systemClock,
   ) {}
@@ -116,13 +115,21 @@ export class AddProductUseCase {
     }
 
     const city = await this.cityOf(reference, askedCityId);
+    // The city may have had another id when the item was tracked in it: that product is the one.
+    const trackedInCity =
+      city === null || city.aliases.length === 0
+        ? null
+        : await this.products.findInCities(reference.marketplace, reference.id, [
+            city.id,
+            ...city.aliases,
+          ]);
 
     const tracked = {
       marketplace: reference.marketplace,
       externalId: reference.id,
       url: reference.url,
-      cityId: city?.id ?? null,
-      cityName: city?.name ?? null,
+      cityId: trackedInCity?.snapshot.cityId ?? city?.id ?? null,
+      cityName: trackedInCity?.snapshot.cityName ?? city?.name ?? null,
     };
 
     // Before the product is created: a refused one would be left, tracked by nobody.
@@ -189,19 +196,24 @@ export class AddProductUseCase {
     return groupId;
   }
 
-  /** A marketplace with cities has the city asked for if it knows it, else its default one; one without has none. */
+  /**
+   * A marketplace with cities has the city asked for if it knows it, else its default one; one without has none.
+   * The city is the one of the handbook, by whichever of its ids is asked for; the default one is known before
+   * the handbook is read.
+   */
   private async cityOf(
     reference: ProductReferenceEntity,
     askedCityId: string | null,
-  ): Promise<MarketplaceCityInterface | null> {
+  ): Promise<KnownCityInterface | null> {
     const defaultCity = marketplaceDefaultCities[reference.marketplace];
     if (defaultCity === undefined) return null;
-    if (askedCityId === null || askedCityId === defaultCity.id) return defaultCity;
 
-    const found = await this.cities.find(reference.marketplace, askedCityId);
-    if (found === null) throw new UnknownCityError(askedCityId);
+    const cityId = askedCityId ?? defaultCity.id;
+    const found = await this.cities.find(reference.marketplace, cityId);
+    if (found !== null) return found;
+    if (cityId === defaultCity.id) return { ...defaultCity, aliases: [] };
 
-    return { id: askedCityId, name: found.name };
+    throw new UnknownCityError(cityId);
   }
 
   private async track(

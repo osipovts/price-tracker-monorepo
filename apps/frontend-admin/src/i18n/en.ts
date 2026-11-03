@@ -116,9 +116,18 @@ export const en = {
   },
   handbooks: {
     title: 'Handbooks',
-    dnsCities: 'Cities of DNS',
-    dnsCitiesHint:
-      'The cities a visitor of dns-shop.ru can choose: the prices of DNS depend on the city.',
+    cities: {
+      'dns-cities': {
+        title: 'Cities of DNS',
+        hint: 'The cities a visitor of dns-shop.ru can choose: the prices of DNS depend on the city.',
+        id: 'Id on dns-shop.ru',
+      },
+      'wildberries-cities': {
+        title: 'Cities of Wildberries',
+        hint: 'The towns with pickup points of wildberries.ru: the prices depend on the town, the same for all its points.',
+        id: 'Region (dest) on wildberries.ru',
+      },
+    },
     updated: 'Updated: {{when}}',
     never: 'Never read',
     refresh: 'Refresh',
@@ -127,7 +136,6 @@ export const en = {
     total: 'Cities: {{count}}',
     name: 'City',
     region: 'Region',
-    id: 'Id on dns-shop.ru',
     none: 'No cities.',
   },
 } as const;

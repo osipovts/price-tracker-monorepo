@@ -86,7 +86,7 @@ model TrackedProduct {
   @@map("tracked_products")
 }
 
-/// What the workers read of the marketplaces to keep: the cities of DNS, by the name of the fetcher.
+/// What the workers read of the marketplaces to keep: the cities of DNS and of Wildberries, by the name of the fetcher.
 model Handbook {
   key       String   @id
   /// The entries of the handbook as the fetcher gave them.

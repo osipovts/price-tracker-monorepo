@@ -61,6 +61,17 @@ beforeEach((): void => {
         `${request.method} ${pathname}${searchParams.size > 0 ? `?${searchParams.toString()}` : ''}`,
       );
 
+      if (pathname === '/handbooks/wildberries-cities' && request.method === 'GET') {
+        return Promise.resolve(
+          Response.json({
+            items: [{ id: '-5827226', name: 'Иркутск', region: 'Иркутская обл.' }],
+            page: 1,
+            pageSize: 20,
+            total: 1,
+            fetchedAt: hub.fetchedAt,
+          }),
+        );
+      }
       if (pathname === '/handbooks/dns-cities' && request.method === 'GET') {
         return Promise.resolve(
           Response.json({
@@ -148,4 +159,17 @@ test('follows a read that is still running when the page is opened', async (): P
   await waitFor((): void => {
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
   });
+});
+
+test('shows the cities of Wildberries on their own tab, with the region of each as its id', async (): Promise<void> => {
+  renderPage();
+  const user = userEvent.setup();
+  await screen.findByText(irkutsk.id);
+
+  await user.click(screen.getByRole('tab', { name: 'Cities of Wildberries' }));
+
+  expect(await screen.findByText('-5827226')).toBeInTheDocument();
+  expect(screen.getByText('Region (dest) on wildberries.ru')).toBeInTheDocument();
+  expect(screen.queryByText(irkutsk.id)).not.toBeInTheDocument();
+  expect(hub.requests).toContain('GET /handbooks/wildberries-cities?page=1&pageSize=20&query=');
 });

@@ -196,6 +196,18 @@ void test('validates the results of a handbook fetch: the cities and the lifecyc
   assert.equal(
     handbookFetchResultSchema.safeParse({
       ...cities,
+      handbook: 'wildberries-cities',
+      cities: [{ id: '-5827226', name: 'Иркутск', region: 'Иркутская обл.' }],
+    }).success,
+    true,
+  );
+  assert.equal(
+    handbookFetchResultSchema.safeParse({ ...cities, handbook: 'unknown' }).success,
+    false,
+  );
+  assert.equal(
+    handbookFetchResultSchema.safeParse({
+      ...cities,
       cities: [{ id: '', name: 'x', region: null }],
     }).success,
     false,

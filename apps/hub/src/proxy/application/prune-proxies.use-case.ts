@@ -14,11 +14,16 @@ export class PruneProxiesUseCase {
   ) {}
 
   async execute(now: Date): Promise<number> {
-    const unseen = await this.proxies.listUnseen(new Date(now.getTime() - proxyUnseenLimitMs), batchSize);
+    const unseen = await this.proxies.listUnseen(
+      new Date(now.getTime() - proxyUnseenLimitMs),
+      batchSize,
+    );
     const expired = unseen.filter((proxy): boolean => proxy.isExpired(now));
     if (expired.length === 0) return 0;
 
-    const deleted = await this.proxies.deleteMany(expired.map((proxy): string => proxy.snapshot.server));
+    const deleted = await this.proxies.deleteMany(
+      expired.map((proxy): string => proxy.snapshot.server),
+    );
     this.logger.info(`Dropped ${String(deleted)} dead proxies that no list names`);
 
     return deleted;

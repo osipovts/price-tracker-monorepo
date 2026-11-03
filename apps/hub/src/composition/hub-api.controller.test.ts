@@ -42,6 +42,7 @@ import { GetProductGroupUseCase } from '../product/application/get-product-group
 import { GetProductThumbnailUrlUseCase } from '../product/application/get-product-thumbnail-url.use-case.js';
 import { ListPriceHistoryUseCase } from '../product/application/list-price-history.use-case.js';
 import { ListProductGroupsUseCase } from '../product/application/list-product-groups.use-case.js';
+import type { KnownCityInterface } from '../product/application/marketplace-cities.port.js';
 import { RemoveProductUseCase } from '../product/application/remove-product.use-case.js';
 import { RemoveProductGroupUseCase } from '../product/application/remove-product-group.use-case.js';
 import { RenameProductGroupUseCase } from '../product/application/rename-product-group.use-case.js';
@@ -221,8 +222,10 @@ before(async (): Promise<void> => {
           undefined,
           undefined,
           {
-            find: (_marketplace, cityId): Promise<{ name: string } | null> =>
-              Promise.resolve(cityId === irkutskId ? { name: 'Иркутск' } : null),
+            find: (_marketplace, cityId): Promise<KnownCityInterface | null> =>
+              Promise.resolve(
+                cityId === irkutskId ? { id: irkutskId, name: 'Иркутск', aliases: [] } : null,
+              ),
           },
         ),
       },
@@ -859,7 +862,7 @@ void test('tracks a product of DNS in the city asked for, in the default city wi
 
 void test('a user searches the cities of DNS by a part of the name, and asks no city of a marketplace that has none', async (): Promise<void> => {
   await new SaveHandbookCitiesUseCase(handbooks).execute('dns-cities', [
-    { id: irkutskId, name: 'Иркутск', region: 'Иркутская область' },
+    { id: irkutskId, name: 'Иркутск', region: 'Иркутская область', aliases: ['other-id'] },
     { id: 'b', name: 'Москва', region: null },
   ]);
 

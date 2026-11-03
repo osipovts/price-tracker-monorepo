@@ -1,4 +1,4 @@
-import { marketplaceSchema } from 'queue-contract';
+import { type HandbookCityType, marketplaceSchema } from 'queue-contract';
 import { z } from 'zod';
 
 import {
@@ -22,6 +22,13 @@ export const citySchema = z.object({
   name: z.string(),
   region: z.string().nullable(),
 });
+
+export type CityResponseType = z.infer<typeof citySchema>;
+
+/** A city as the hub shows it: its aliases are the hub's own, for finding the products tracked in it. */
+export function cityResponseOf({ id, name, region }: HandbookCityType): CityResponseType {
+  return { id, name, region };
+}
 
 export const cityListResponseSchema = z.object({ items: z.array(citySchema) });
 

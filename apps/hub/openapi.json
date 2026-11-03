@@ -2359,7 +2359,8 @@
             "schema": {
               "type": "string",
               "enum": [
-                "dns-cities"
+                "dns-cities",
+                "wildberries-cities"
               ]
             }
           },
@@ -2486,7 +2487,8 @@
             "schema": {
               "type": "string",
               "enum": [
-                "dns-cities"
+                "dns-cities",
+                "wildberries-cities"
               ]
             }
           }
