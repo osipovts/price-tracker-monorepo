@@ -16,7 +16,7 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core';
-import { ErrorAlert, useLocale } from 'frontend-shared';
+import { ErrorAlert, marketplaceColor, marketplaceName, useLocale } from 'frontend-shared';
 import { type ReactElement, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -43,15 +43,6 @@ function restingUntil(reputation: ProxyReputationType, now: number): Date | null
   const until = reputation.cooldownUntil === null ? null : new Date(reputation.cooldownUntil);
 
   return until !== null && until.getTime() > now ? until : null;
-}
-
-/** The color of how a proxy does for a marketplace: resting after a refusal, resting otherwise, reading, or none of these. */
-function reputationColor(reputation: ProxyReputationType, now: number): string {
-  if (restingUntil(reputation, now) !== null) {
-    return reputation.lastOutcome === 'blocked' ? 'red' : 'orange';
-  }
-
-  return reputation.lastOutcome === 'read' ? 'green' : 'gray';
 }
 
 /** How the proxy has done reading each marketplace, with what the workers last found in the hint. */
@@ -89,8 +80,14 @@ function ProxyReputations({
 
         return (
           <Tooltip key={reputation.marketplace} multiline w={300} label={`${hint}${resting}`}>
-            <Badge color={reputationColor(reputation, now)} variant="light">
-              {t('proxies.reputationOf', { marketplace: reputation.marketplace, ...counts })}
+            <Badge
+              color={marketplaceColor(reputation.marketplace)}
+              variant={until === null ? 'light' : 'outline'}
+            >
+              {t('proxies.reputationOf', {
+                marketplace: marketplaceName(reputation.marketplace),
+                ...counts,
+              })}
             </Badge>
           </Tooltip>
         );

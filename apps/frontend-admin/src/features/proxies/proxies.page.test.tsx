@@ -35,6 +35,15 @@ function proxy(server: string): Record<string, unknown> {
               lastAttemptAt: '2026-11-03T08:00:00.000Z',
               cooldownUntil: '2999-01-01T00:00:00.000Z',
             },
+            {
+              marketplace: 'wildberries',
+              successes: 3,
+              failures: 0,
+              failureStreak: 0,
+              lastOutcome: 'read',
+              lastAttemptAt: '2026-11-03T08:00:00.000Z',
+              cooldownUntil: null,
+            },
           ]
         : [],
   };
@@ -148,6 +157,12 @@ test('tells how a proxy has done reading a marketplace, and until when it rests'
     ),
   ).toBeInTheDocument();
   expect(screen.getByText(/Not given for this marketplace until/)).toBeInTheDocument();
+});
+
+test('names a marketplace with a long name by its short one', async (): Promise<void> => {
+  renderPage();
+
+  expect(await screen.findByText('wb 3/0')).toBeInTheDocument();
 });
 
 test('turns a proxy off with its switch', async (): Promise<void> => {

@@ -6,11 +6,13 @@ test('a line has the colour of its marketplace, and is named after it and the ci
   const styles = styleSeries([
     { id: 'a', marketplace: 'ozon', cityName: null },
     { id: 'b', marketplace: 'dns', cityName: 'Иркутск' },
+    { id: 'c', marketplace: 'wildberries', cityName: null },
   ]);
 
   expect(styles).toEqual([
     { id: 'a', label: 'ozon', color: 'blue' },
     { id: 'b', label: 'dns, Иркутск', color: 'orange' },
+    { id: 'c', label: 'wb', color: 'grape' },
   ]);
 });
 

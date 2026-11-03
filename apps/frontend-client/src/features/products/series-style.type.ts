@@ -1,4 +1,4 @@
-import { marketplaceColor } from './marketplace-name.component.js';
+import { marketplaceColor, marketplaceName } from 'frontend-shared';
 
 export interface SeriesProductInterface {
   id: string;
@@ -42,6 +42,10 @@ export function styleSeries(products: readonly SeriesProductInterface[]): Series
         ? ` #${String(sameMarketplace.indexOf(product) + 1)}`
         : '';
 
-    return { id: product.id, label: `${product.marketplace}${city}${number}`, color };
+    return {
+      id: product.id,
+      label: `${marketplaceName(product.marketplace)}${city}${number}`,
+      color,
+    };
   });
 }

@@ -20,7 +20,7 @@ import {
   Title,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { ApiError, ErrorAlert, useLocale } from 'frontend-shared';
+import { ApiError, ErrorAlert, MarketplaceName, marketplaceName, useLocale } from 'frontend-shared';
 import { type ReactElement, type SyntheticEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -31,7 +31,6 @@ import { DeleteGroup } from './delete-group.component.js';
 import { DeleteProduct } from './delete-product.component.js';
 import { BestPrice } from './group-prices.component.js';
 import { isHttpLink } from './http-link.type.js';
-import { MarketplaceName } from './marketplace-name.component.js';
 import { formatMoment } from './moment-format.type.js';
 import { availabilityLabel, priceOf, toPoints } from './observation.type.js';
 import { hasPendingAdd } from './pending-add.type.js';
@@ -303,8 +302,12 @@ function OfferRow({
 }): ReactElement {
   const { t } = useTranslation();
   const [deleting, deletion] = useDisclosure(false);
-  const title = product.latest?.title ?? `${product.marketplace} ${product.externalId}`;
-  const link = linkProps(product.url, t('product.openOn', { marketplace: product.marketplace }));
+  const title =
+    product.latest?.title ?? `${marketplaceName(product.marketplace)} ${product.externalId}`;
+  const link = linkProps(
+    product.url,
+    t('product.openOn', { marketplace: marketplaceName(product.marketplace) }),
+  );
   const struck =
     product.latest?.availability === 'out_of_stock' ? { c: 'dimmed', td: 'line-through' } : {};
 
