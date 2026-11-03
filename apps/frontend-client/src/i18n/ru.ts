@@ -92,7 +92,7 @@ export const ru: DictionaryType = {
     addTitle: 'Отслеживать товар',
     addFirst: 'Добавить первый товар',
     linkLabel: 'Ссылка на товар',
-    supported: 'Поддерживаемые маркетплейсы: ozon.ru, dns-shop.ru',
+    supported: 'Поддерживаемые маркетплейсы: ozon.ru, dns-shop.ru, wildberries.ru',
     city: 'Город',
     cityHint: 'Цены DNS зависят от города. Если не выбрать, будет Москва.',
     cityPlaceholder: 'Начните вводить название города',

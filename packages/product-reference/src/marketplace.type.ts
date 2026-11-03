@@ -1,4 +1,4 @@
-export const marketplaces = ['ozon', 'dns'] as const;
+export const marketplaces = ['ozon', 'dns', 'wildberries'] as const;
 
 export type MarketplaceType = (typeof marketplaces)[number];
 
@@ -6,6 +6,7 @@ export type MarketplaceType = (typeof marketplaces)[number];
 export const marketplaceExitCountries: Readonly<Record<MarketplaceType, string>> = {
   ozon: 'RU',
   dns: 'RU',
+  wildberries: 'RU',
 };
 
 export interface MarketplaceCityInterface {
