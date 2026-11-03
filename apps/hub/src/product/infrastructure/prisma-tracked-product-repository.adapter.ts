@@ -103,10 +103,15 @@ export class PrismaTrackedProductRepositoryAdapter implements TrackedProductRepo
   async findInCities(
     marketplace: MarketplaceType,
     externalId: string,
-    cityIds: readonly string[],
+    cityIds: ReadonlyArray<string | null>,
   ): Promise<TrackedProductEntity | null> {
     const row = await this.prisma.trackedProduct.findFirst({
-      where: { marketplace, externalId, cityId: { in: [...cityIds] } },
+      // A product without a city keeps an empty one.
+      where: {
+        marketplace,
+        externalId,
+        cityId: { in: cityIds.map((cityId): string => cityId ?? '') },
+      },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
 

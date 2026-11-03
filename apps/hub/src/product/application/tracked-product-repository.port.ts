@@ -37,11 +37,14 @@ export interface TrackedProductRepositoryPort {
   findById(id: string): Promise<TrackedProductEntity | null>;
   /** The product, if the user tracks it. */
   findSubscribed(userId: string, productId: string): Promise<TrackedProductEntity | null>;
-  /** The product of the item tracked in a city by one of the ids, the one tracked first; null if there is none. */
+  /**
+   * The product of the item tracked in a city by one of the ids, or without a city for null, the one tracked
+   * first; null if there is none.
+   */
   findInCities(
     marketplace: MarketplaceType,
     externalId: string,
-    cityIds: readonly string[],
+    cityIds: ReadonlyArray<string | null>,
   ): Promise<TrackedProductEntity | null>;
   /** The product of the reference, if the user tracks it. */
   findSubscribedByReference(

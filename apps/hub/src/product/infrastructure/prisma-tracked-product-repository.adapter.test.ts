@@ -253,3 +253,26 @@ void test(
     await prisma.trackedProduct.deleteMany({ where: { id: { in: [first, second] } } });
   },
 );
+
+void test(
+  'finds the product of an item tracked without a city for a null city',
+  { skip },
+  async (): Promise<void> => {
+    const externalId = randomUUID();
+    const { product } = await products.add({
+      marketplace: 'ozon',
+      externalId,
+      url: `https://www.ozon.ru/product/${externalId}/`,
+      cityId: null,
+      cityName: null,
+    });
+
+    assert.equal(
+      (await products.findInCities('ozon', externalId, ['moskva', null]))?.snapshot.id,
+      product.snapshot.id,
+    );
+    assert.equal(await products.findInCities('ozon', externalId, ['moskva']), null);
+
+    await prisma.trackedProduct.delete({ where: { id: product.snapshot.id } });
+  },
+);

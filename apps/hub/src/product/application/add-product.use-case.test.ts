@@ -424,13 +424,23 @@ void test('the default city is the one of the handbook when it was read', async 
   assert.equal(asked.product.snapshot.id, byDefault.product.snapshot.id);
 });
 
-void test('a marketplace without cities has no city whatever is asked for', async (): Promise<void> => {
-  const { add } = setup(roomy, null, undefined, knownCities);
+void test('a product tracked before its marketplace had cities is the one of its default city', async (): Promise<void> => {
+  const { add, products } = setup();
+  const before = await products.add({
+    marketplace: 'ozon',
+    externalId: '4775581891',
+    url: 'https://www.ozon.ru/product/4775581891/',
+    cityId: null,
+    cityName: null,
+  });
 
-  const added = await add.execute(jane, 'https://www.ozon.ru/product/4775581891/', irkutsk);
+  const byDefault = await add.execute(jane, 'https://www.ozon.ru/product/4775581891/');
+  const another = await add.execute(jane, 'https://www.ozon.ru/product/1/');
 
-  assert.equal(added.product.snapshot.cityId, null);
-  assert.equal(added.product.snapshot.cityName, null);
+  assert.equal(byDefault.product.snapshot.id, before.product.snapshot.id);
+  assert.equal(byDefault.product.snapshot.cityId, null);
+  assert.equal(another.product.snapshot.cityId, 'moskva');
+  assert.equal(another.product.snapshot.cityName, 'Москва');
 });
 
 void test('a product added alone goes into a new group of the user', async (): Promise<void> => {

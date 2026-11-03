@@ -3,7 +3,6 @@ import { test } from 'node:test';
 
 import { InMemoryHandbookRepositoryAdapter } from '../infrastructure/in-memory-handbook-repository.adapter.js';
 import { FindCityUseCase } from './find-city.use-case.js';
-import { MarketplaceWithoutCitiesError } from './marketplace-without-cities.error.js';
 import { SaveHandbookCitiesUseCase } from './save-handbook-cities.use-case.js';
 import { SearchCitiesUseCase } from './search-cities.use-case.js';
 
@@ -53,16 +52,16 @@ void test('without a query gives the first cities by name, up to the limit', asy
   );
 });
 
-void test('has no cities until the handbook is read, and none for a marketplace without them', async (): Promise<void> => {
+void test('has no cities until the handbook is read, and those of Ozon without a read', async (): Promise<void> => {
   const empty = new InMemoryHandbookRepositoryAdapter();
 
   assert.deepEqual(
     await new SearchCitiesUseCase(empty).execute('dns', { query: '', limit: 5 }),
     [],
   );
-  await assert.rejects(
-    new SearchCitiesUseCase(empty).execute('ozon', { query: '', limit: 5 }),
-    MarketplaceWithoutCitiesError,
+  assert.deepEqual(
+    await new SearchCitiesUseCase(empty).execute('ozon', { query: 'иркут', limit: 5 }),
+    [{ id: 'irkutsk', name: 'Иркутск', region: 'Иркутская обл.' }],
   );
 });
 
@@ -76,4 +75,5 @@ void test('finds a city of a marketplace by its id', async (): Promise<void> => 
   });
   assert.equal(await find.execute('dns', 'nowhere'), null);
   assert.equal(await find.execute('ozon', '3'), null);
+  assert.equal((await find.execute('ozon', 'irkutsk'))?.name, 'Иркутск');
 });

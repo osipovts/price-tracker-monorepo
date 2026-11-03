@@ -70,14 +70,13 @@ export class InMemoryTrackedProductRepositoryAdapter implements TrackedProductRe
   findInCities(
     marketplace: MarketplaceType,
     externalId: string,
-    cityIds: readonly string[],
+    cityIds: ReadonlyArray<string | null>,
   ): Promise<TrackedProductEntity | null> {
     // The products are kept in the order they were added.
     const product = Array.from(this.products.values()).find(
       ({ snapshot }): boolean =>
         snapshot.marketplace === marketplace &&
         snapshot.externalId === externalId &&
-        snapshot.cityId !== null &&
         cityIds.includes(snapshot.cityId),
     );
 

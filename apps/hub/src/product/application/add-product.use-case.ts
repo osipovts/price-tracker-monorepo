@@ -115,21 +115,14 @@ export class AddProductUseCase {
     }
 
     const city = await this.cityOf(reference, askedCityId);
-    // The city may have had another id when the item was tracked in it: that product is the one.
-    const trackedInCity =
-      city === null || city.aliases.length === 0
-        ? null
-        : await this.products.findInCities(reference.marketplace, reference.id, [
-            city.id,
-            ...city.aliases,
-          ]);
+    const trackedInCity = city === null ? null : await this.trackedIn(reference, city);
 
     const tracked = {
       marketplace: reference.marketplace,
       externalId: reference.id,
       url: reference.url,
-      cityId: trackedInCity?.snapshot.cityId ?? city?.id ?? null,
-      cityName: trackedInCity?.snapshot.cityName ?? city?.name ?? null,
+      cityId: trackedInCity === null ? (city?.id ?? null) : trackedInCity.snapshot.cityId,
+      cityName: trackedInCity === null ? (city?.name ?? null) : trackedInCity.snapshot.cityName,
     };
 
     // Before the product is created: a refused one would be left, tracked by nobody.
@@ -194,6 +187,21 @@ export class AddProductUseCase {
     await this.groups.place(userId, groupId, productId);
 
     return groupId;
+  }
+
+  /**
+   * The product of the item tracked in the city already by another id than its own: one it had before, or none
+   * for a product tracked before its marketplace had cities, which reads the price in the default city.
+   */
+  private async trackedIn(
+    reference: ProductReferenceEntity,
+    city: KnownCityInterface,
+  ): Promise<TrackedProductEntity | null> {
+    const others: Array<string | null> = [...city.aliases];
+    if (city.id === marketplaceDefaultCities[reference.marketplace]?.id) others.push(null);
+    if (others.length === 0) return null;
+
+    return this.products.findInCities(reference.marketplace, reference.id, [city.id, ...others]);
   }
 
   /**
