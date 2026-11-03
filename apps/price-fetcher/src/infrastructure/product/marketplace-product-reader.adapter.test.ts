@@ -15,6 +15,9 @@ void test('delegates reading to the reader of the reference marketplace', async 
     dns: {
       read: (): Promise<ReadProductResultType> => Promise.resolve({ status: 'network_error' }),
     },
+    wildberries: {
+      read: (): Promise<ReadProductResultType> => Promise.resolve({ status: 'network_error' }),
+    },
   });
 
   const result = await reader.read(

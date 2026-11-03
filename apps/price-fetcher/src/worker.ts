@@ -6,6 +6,7 @@ import {
   OzonReferenceParser,
   OzonShortLinkParser,
   ResolveProductReferenceUseCase,
+  WildberriesReferenceParser,
 } from 'product-reference';
 import { type PriceFetchResultType, queueNames } from 'queue-contract';
 import { JobLifecycleReporter, QueueMessageParser, QueueWorkerRunner } from 'queue-worker';
@@ -27,6 +28,10 @@ import {
 import { OzonProductParser } from './infrastructure/ozon/ozon-product.parser.js';
 import { MarketplaceProductReaderAdapter } from './infrastructure/product/marketplace-product-reader.adapter.js';
 import { GeoIpPageParser } from './infrastructure/shared/geo-ip-page.parser.js';
+import { WildberriesChallengeParser } from './infrastructure/wildberries/wildberries-challenge.parser.js';
+import { WildberriesPageParser } from './infrastructure/wildberries/wildberries-page.parser.js';
+import { WildberriesPlaywrightProductReaderAdapter } from './infrastructure/wildberries/wildberries-playwright-product-reader.adapter.js';
+import { WildberriesProductParser } from './infrastructure/wildberries/wildberries-product.parser.js';
 import { LinkExpandController } from './presentation/link/link-expand.controller.js';
 import { PriceFetchController } from './presentation/product/price-fetch.controller.js';
 
@@ -89,6 +94,7 @@ const expandRunner = new QueueWorkerRunner<never>(
 
 const references = new OzonReferenceParser();
 const dnsReferences = new DnsReferenceParser();
+const wildberriesReferences = new WildberriesReferenceParser();
 const parsers: OzonReaderParsersInterface = {
   geoIp: new GeoIpPageParser(),
   pages: new OzonPageParser(),
@@ -97,7 +103,7 @@ const parsers: OzonReaderParsersInterface = {
 };
 const controller = new PriceFetchController(
   new FetchPricesUseCase(
-    new ResolveProductReferenceUseCase([references, dnsReferences]),
+    new ResolveProductReferenceUseCase([references, dnsReferences, wildberriesReferences]),
     (timeoutMs): MarketplaceProductReaderAdapter =>
       new MarketplaceProductReaderAdapter({
         ozon: new OzonPlaywrightProductReaderAdapter(
@@ -118,6 +124,18 @@ const controller = new PriceFetchController(
           },
           timeoutMs,
           logger.child('dns'),
+        ),
+        wildberries: new WildberriesPlaywrightProductReaderAdapter(
+          browser,
+          options,
+          {
+            geoIp: parsers.geoIp,
+            pages: new WildberriesPageParser(),
+            challenges: new WildberriesChallengeParser(),
+            products: new WildberriesProductParser(wildberriesReferences),
+          },
+          timeoutMs,
+          logger.child('wildberries'),
         ),
       }),
     logger.child('prices'),
