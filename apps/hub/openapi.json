@@ -1806,6 +1806,7 @@
     },
     "/proxies": {
       "get": {
+        "description": "Each proxy tells how it has done reading the marketplaces it was tried on: the workers report every attempt, and a proxy that a marketplace turned away, or that did not get through, rests for that marketplace.",
         "operationId": "ProxiesController_list",
         "parameters": [
           {
@@ -1915,6 +1916,62 @@
                           },
                           "disabled": {
                             "type": "boolean"
+                          },
+                          "reputations": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "marketplace": {
+                                  "type": "string",
+                                  "enum": [
+                                    "ozon",
+                                    "dns"
+                                  ]
+                                },
+                                "successes": {
+                                  "type": "number"
+                                },
+                                "failures": {
+                                  "type": "number"
+                                },
+                                "failureStreak": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "lastOutcome": {
+                                  "type": "string",
+                                  "enum": [
+                                    "read",
+                                    "unreachable",
+                                    "blocked",
+                                    "misplaced"
+                                  ]
+                                },
+                                "lastAttemptAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                                },
+                                "cooldownUntil": {
+                                  "nullable": true,
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                                }
+                              },
+                              "required": [
+                                "marketplace",
+                                "successes",
+                                "failures",
+                                "failureStreak",
+                                "lastOutcome",
+                                "lastAttemptAt",
+                                "cooldownUntil"
+                              ],
+                              "additionalProperties": false
+                            }
                           }
                         },
                         "required": [
@@ -1927,7 +1984,8 @@
                           "successRate",
                           "checksTotal",
                           "lastCheckedAt",
-                          "disabled"
+                          "disabled",
+                          "reputations"
                         ],
                         "additionalProperties": false
                       }
@@ -1965,7 +2023,7 @@
             "bearer": []
           }
         ],
-        "summary": "List proxies, the best first",
+        "summary": "List proxies, the best by their checks first",
         "tags": [
           "proxies"
         ]

@@ -60,7 +60,9 @@ function isRouteFailure(result: ReadProductResultType): boolean {
     case 'challenge_required':
       return true;
     case 'http_error':
-      return result.httpStatus !== undefined && routeRefusalHttpStatuses.includes(result.httpStatus);
+      return (
+        result.httpStatus !== undefined && routeRefusalHttpStatuses.includes(result.httpStatus)
+      );
     case 'success':
     case 'partial':
     case 'parse_error':

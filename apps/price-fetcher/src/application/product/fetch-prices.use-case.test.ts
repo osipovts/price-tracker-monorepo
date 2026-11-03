@@ -168,7 +168,10 @@ void test('learns its routes as it goes: the next product starts on the one that
       timeoutMs: 1000,
     },
     new AbortController().signal,
-    { onProgress: (): Promise<void> => Promise.resolve(), onProduct: (): Promise<void> => Promise.resolve() },
+    {
+      onProgress: (): Promise<void> => Promise.resolve(),
+      onProduct: (): Promise<void> => Promise.resolve(),
+    },
   );
 
   // The first product: the dead route, then the refusal ends it, as a refusal of the site is not rotated around.

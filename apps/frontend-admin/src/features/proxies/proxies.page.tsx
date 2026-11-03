@@ -36,6 +36,69 @@ import {
 
 type ProxyItemType = ProxyPageType['items'][number];
 
+type ProxyReputationType = ProxyItemType['reputations'][number];
+
+/** The time until which the proxy is not given for the marketplace; null when it does not rest. */
+function restingUntil(reputation: ProxyReputationType, now: number): Date | null {
+  const until = reputation.cooldownUntil === null ? null : new Date(reputation.cooldownUntil);
+
+  return until !== null && until.getTime() > now ? until : null;
+}
+
+/** The color of how a proxy does for a marketplace: resting after a refusal, resting otherwise, reading, or none of these. */
+function reputationColor(reputation: ProxyReputationType, now: number): string {
+  if (restingUntil(reputation, now) !== null) {
+    return reputation.lastOutcome === 'blocked' ? 'red' : 'orange';
+  }
+
+  return reputation.lastOutcome === 'read' ? 'green' : 'gray';
+}
+
+/** How the proxy has done reading each marketplace, with what the workers last found in the hint. */
+function ProxyReputations({
+  reputations,
+}: {
+  reputations: ProxyItemType['reputations'];
+}): ReactElement {
+  const { t } = useTranslation();
+  const locale = useLocale();
+  if (reputations.length === 0) return <>-</>;
+
+  const now = Date.now();
+  const amount = (value: number): string =>
+    value.toLocaleString(locale, { maximumFractionDigits: 1 });
+
+  return (
+    <Group gap={4}>
+      {reputations.map((reputation): ReactElement => {
+        const counts = {
+          successes: amount(reputation.successes),
+          failures: amount(reputation.failures),
+        };
+        const hint = t('proxies.reputationHint', {
+          ...counts,
+          streak: reputation.failureStreak,
+          outcome: t(`proxies.outcome.${reputation.lastOutcome}`),
+          when: new Date(reputation.lastAttemptAt).toLocaleString(locale),
+        });
+        const until = restingUntil(reputation, now);
+        const resting =
+          until === null
+            ? ''
+            : ` ${t('proxies.reputationRest', { until: until.toLocaleString(locale) })}`;
+
+        return (
+          <Tooltip key={reputation.marketplace} multiline w={300} label={`${hint}${resting}`}>
+            <Badge color={reputationColor(reputation, now)} variant="light">
+              {t('proxies.reputationOf', { marketplace: reputation.marketplace, ...counts })}
+            </Badge>
+          </Tooltip>
+        );
+      })}
+    </Group>
+  );
+}
+
 type ChoiceType = 'all' | 'true' | 'false';
 
 function toFilter(choice: ChoiceType): 'true' | 'false' | undefined {
@@ -159,6 +222,9 @@ function ProxyRow({
           percent: Math.round(proxy.successRate * 100),
           checks: proxy.checksTotal,
         })}
+      </Table.Td>
+      <Table.Td>
+        <ProxyReputations reputations={proxy.reputations} />
       </Table.Td>
       <Table.Td>{new Date(proxy.lastCheckedAt).toLocaleString(locale)}</Table.Td>
       <Table.Td>
@@ -346,6 +412,7 @@ export function ProxiesPage(): ReactElement {
                   <Table.Th>{t('proxies.status')}</Table.Th>
                   <Table.Th>{t('proxies.latency')}</Table.Th>
                   <Table.Th>{t('proxies.success')}</Table.Th>
+                  <Table.Th>{t('proxies.reputation')}</Table.Th>
                   <Table.Th>{t('proxies.checked')}</Table.Th>
                   <Table.Th>{t('proxies.enabled')}</Table.Th>
                   <Table.Th />
