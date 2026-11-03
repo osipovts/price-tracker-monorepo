@@ -30,17 +30,15 @@ export interface ChartLineInterface extends SeriesStyleInterface {
   buckets: PriceBucketInterface[];
 }
 
-/** The marks of the axis of prices: round ones over the lines, or the choice of the chart when there is no price. */
+/** The axis of prices: close around the lines with round marks inside, or the choice of the chart when there is no price. */
 function priceAxis(
   lines: ChartLineInterface[],
 ): { domain: [number, number]; ticks: number[] } | { domain: ['auto', 'auto'] } {
-  const ticks = roundTicks(paddedDomain(lines.map(({ buckets }) => buckets)), 5);
-  const [lowest] = ticks;
-  const highest = ticks.at(-1);
+  const domain = paddedDomain(lines.map(({ buckets }) => buckets));
 
-  return lowest === undefined || highest === undefined
+  return domain[0] === 'auto'
     ? { domain: ['auto', 'auto'] }
-    : { domain: [lowest, highest], ticks };
+    : { domain, ticks: roundTicks(domain, 8) };
 }
 
 /** The names of the lines in their colours, under the chart. */

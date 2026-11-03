@@ -76,7 +76,7 @@ test('puts the lines of several products into the same rows, each under its own 
 });
 
 test('keeps the lines off the edges of the chart, and lets the chart choose when there is no price', () => {
-  expect(paddedDomain([[bucket(1, 1000, true)], [bucket(2, 2000, true)]])).toEqual([900, 2100]);
+  expect(paddedDomain([[bucket(1, 1000, true)], [bucket(2, 2000, true)]])).toEqual([950, 2050]);
   expect(paddedDomain([[bucket(1, null, false)]])).toEqual(['auto', 'auto']);
 
   const [low, high] = paddedDomain([[bucket(1, 1000, true)]]);
@@ -84,18 +84,25 @@ test('keeps the lines off the edges of the chart, and lets the chart choose when
   expect(Number(high)).toBeGreaterThan(1000);
 });
 
-test('marks the axis of prices at round steps that cover the domain', () => {
-  expect(roundTicks([10_149_000, 12_211_400], 5)).toEqual([
-    10_000_000, 11_000_000, 12_000_000, 13_000_000,
+test('gives the prices most of the height of the chart, the axis ending close to them', () => {
+  const domain = paddedDomain([line(19_040_000, 19_520_000), line(20_500_000, 23_800_000)]);
+
+  expect(domain).toEqual([18_802_000, 24_038_000]);
+  expect(roundTicks(domain, 8)).toEqual([
+    19_000_000, 20_000_000, 21_000_000, 22_000_000, 23_000_000, 24_000_000,
   ]);
+});
+
+test('marks the axis of prices at round steps within the domain', () => {
+  expect(roundTicks([10_149_000, 12_211_400], 5)).toEqual([11_000_000, 12_000_000]);
   expect(roundTicks([4_500_000, 5_400_000], 5)).toEqual([
-    4_500_000, 4_750_000, 5_000_000, 5_250_000, 5_500_000,
+    4_500_000, 4_750_000, 5_000_000, 5_250_000,
   ]);
   expect(roundTicks(['auto', 'auto'], 5)).toEqual([]);
 });
 
 test('never marks the axis closer than a ruble', () => {
-  expect(roundTicks([1000, 1050], 5)).toEqual([1000, 1100]);
+  expect(roundTicks([1000, 1050], 5)).toEqual([1000]);
 });
 
 test('labels a point by the moment it stands for: the end of the hour, the day, the Sunday of the week', () => {
