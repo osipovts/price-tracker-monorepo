@@ -131,7 +131,10 @@ void test('only a found proxy that is dead, failed enough checks and is unseen f
     false,
   );
   assert.equal(
-    proxy({ ...expired.snapshot, lastSeenAt: new Date(now.getTime() - proxyUnseenLimitMs) }).isExpired(now),
+    proxy({
+      ...expired.snapshot,
+      lastSeenAt: new Date(now.getTime() - proxyUnseenLimitMs),
+    }).isExpired(now),
     false,
   );
   assert.equal(proxy({ ...expired.snapshot, source: manualProxySource }).isExpired(now), false);

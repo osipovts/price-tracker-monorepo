@@ -1,4 +1,4 @@
-import { marketplaces } from 'product-reference';
+import { marketplaces, type MarketplaceType } from 'product-reference';
 import { z } from 'zod';
 
 import type {
@@ -98,6 +98,19 @@ export class PrismaTrackedProductRepositoryAdapter implements TrackedProductRepo
 
       return true;
     });
+  }
+
+  async findInCities(
+    marketplace: MarketplaceType,
+    externalId: string,
+    cityIds: readonly string[],
+  ): Promise<TrackedProductEntity | null> {
+    const row = await this.prisma.trackedProduct.findFirst({
+      where: { marketplace, externalId, cityId: { in: [...cityIds] } },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+
+    return row === null ? null : toEntity(row);
   }
 
   async findSubscribedByReference(

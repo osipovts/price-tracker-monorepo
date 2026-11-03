@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import type { MarketplaceType } from 'product-reference';
+
 import {
   type PageInterface,
   pageOf,
@@ -63,6 +65,23 @@ export class InMemoryTrackedProductRepositoryAdapter implements TrackedProductRe
     }
 
     return Promise.resolve(true);
+  }
+
+  findInCities(
+    marketplace: MarketplaceType,
+    externalId: string,
+    cityIds: readonly string[],
+  ): Promise<TrackedProductEntity | null> {
+    // The products are kept in the order they were added.
+    const product = Array.from(this.products.values()).find(
+      ({ snapshot }): boolean =>
+        snapshot.marketplace === marketplace &&
+        snapshot.externalId === externalId &&
+        snapshot.cityId !== null &&
+        cityIds.includes(snapshot.cityId),
+    );
+
+    return Promise.resolve(product ?? null);
   }
 
   findSubscribedByReference(

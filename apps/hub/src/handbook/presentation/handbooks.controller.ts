@@ -29,6 +29,7 @@ import { routeAccess } from '../../shared/presentation/route-access.type.js';
 import { ListHandbookCitiesUseCase } from '../application/list-handbook-cities.use-case.js';
 import { RefreshHandbookUseCase } from '../application/refresh-handbook.use-case.js';
 import {
+  cityResponseOf,
   handbookCitiesQuerySchema,
   type HandbookCitiesQueryType,
   handbookCitiesResponseSchema,
@@ -59,7 +60,7 @@ export class HandbooksController {
     const { fetchedAt, page } = await this.listCities.execute(handbook, query);
 
     return {
-      ...toPageResponse(page, query, (city) => city),
+      ...toPageResponse(page, query, cityResponseOf),
       fetchedAt: fetchedAt?.toISOString() ?? null,
     };
   }

@@ -10,6 +10,7 @@ import { ensure } from 'frontend-shared';
 
 import { api } from '../../shared/api/api.client.js';
 import type { operations } from '../../shared/api/schema.js';
+import type { CityMarketplaceType } from './city-link.type.js';
 import {
   forgetPendingAdd,
   type PendingAddInterface,
@@ -127,14 +128,18 @@ export function usePriceHistories(
 export type CityType =
   operations['CitiesController_list']['responses'][200]['content']['application/json']['items'][number];
 
-/** The cities of DNS whose names have the query in them, for the user to choose from. */
-export function useCities(query: string, enabled: boolean): UseQueryResult<CityType[] | undefined> {
+/** The cities of the marketplace whose names have the query in them, for the user to choose from. */
+export function useCities(
+  marketplace: CityMarketplaceType,
+  query: string,
+  enabled: boolean,
+): UseQueryResult<CityType[] | undefined> {
   return useQuery({
-    queryKey: ['cities', 'dns', query],
+    queryKey: ['cities', marketplace, query],
     queryFn: async (): Promise<CityType[] | undefined> =>
       ensure(
         await api.GET('/marketplaces/{marketplace}/cities', {
-          params: { path: { marketplace: 'dns' }, query: { query, limit: 20 } },
+          params: { path: { marketplace }, query: { query, limit: 20 } },
         }),
       )?.items,
     enabled,

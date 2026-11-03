@@ -1483,7 +1483,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                handbook: "dns-cities";
+                handbook: "dns-cities" | "wildberries-cities";
             };
             cookie?: never;
         };
@@ -1515,7 +1515,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                handbook: "dns-cities";
+                handbook: "dns-cities" | "wildberries-cities";
             };
             cookie?: never;
         };

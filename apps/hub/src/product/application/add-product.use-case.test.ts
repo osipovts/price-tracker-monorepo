@@ -6,6 +6,7 @@ import {
   marketplaceDefaultCities,
   OzonReferenceParser,
   ResolveProductReferenceUseCase,
+  WildberriesReferenceParser,
 } from 'product-reference';
 
 import { NoProxiesAvailableError } from '../../shared/application/no-proxies-available.error.js';
@@ -16,7 +17,7 @@ import { InMemoryProductGroupRepositoryAdapter } from '../infrastructure/in-memo
 import { InMemoryTrackedProductRepositoryAdapter } from '../infrastructure/in-memory-tracked-product-repository.adapter.js';
 import { AddProductUseCase } from './add-product.use-case.js';
 import { ListPriceHistoryUseCase } from './list-price-history.use-case.js';
-import type { MarketplaceCitiesPort } from './marketplace-cities.port.js';
+import type { KnownCityInterface, MarketplaceCitiesPort } from './marketplace-cities.port.js';
 import { ProductAddingInProgressError } from './product-adding-in-progress.error.js';
 import { ProductGroupFullError } from './product-group-full.error.js';
 import { ProductGroupNotFoundError } from './product-group-not-found.error.js';
@@ -58,7 +59,7 @@ function setup(
   request: Pick<RequestPriceObservationUseCase, 'execute'> | null = null,
   products: InMemoryTrackedProductRepositoryAdapter = new InMemoryTrackedProductRepositoryAdapter(),
   cities: MarketplaceCitiesPort = {
-    find: (): Promise<{ name: string } | null> => Promise.resolve(null),
+    find: (): Promise<KnownCityInterface | null> => Promise.resolve(null),
   },
 ): {
   add: AddProductUseCase;
@@ -80,7 +81,11 @@ function setup(
 
   return {
     add: new AddProductUseCase(
-      new ResolveProductReferenceUseCase([new OzonReferenceParser(), new DnsReferenceParser()]),
+      new ResolveProductReferenceUseCase([
+        new OzonReferenceParser(),
+        new DnsReferenceParser(),
+        new WildberriesReferenceParser(),
+      ]),
       products,
       groups,
       observations,
@@ -342,8 +347,8 @@ void test('refuses another link of a user while one is being added, and takes it
 const irkutsk = '30b7c1f1-03fb-11dc-95ee-00151716f9f5';
 const dnsLink = 'https://www.dns-shop.ru/product/0463bb2411a1d582/156-noutbuk-asus/';
 const knownCities: MarketplaceCitiesPort = {
-  find: (_marketplace, cityId): Promise<{ name: string } | null> =>
-    Promise.resolve(cityId === irkutsk ? { name: 'Иркутск' } : null),
+  find: (_marketplace, cityId): Promise<KnownCityInterface | null> =>
+    Promise.resolve(cityId === irkutsk ? { id: irkutsk, name: 'Иркутск', aliases: [] } : null),
 };
 const moscow = marketplaceDefaultCities.dns;
 if (moscow === undefined) throw new Error('DNS has a default city');
@@ -383,6 +388,40 @@ void test('refuses a city the marketplace is not known to have, but not its defa
   );
   const byDefault = await add.execute(jane, dnsLink, moscow.id);
   assert.equal(byDefault.product.snapshot.cityId, moscow.id);
+});
+
+const wildberriesLink = 'https://www.wildberries.ru/catalog/175088486/detail.aspx';
+
+void test('an item tracked in a city by an id the city had before is the same product', async (): Promise<void> => {
+  let spb = { id: '-1205339', name: 'Санкт-Петербург', aliases: ['-1198680'] };
+  const cities: MarketplaceCitiesPort = {
+    find: (_marketplace, cityId): Promise<KnownCityInterface | null> =>
+      Promise.resolve(cityId === spb.id || spb.aliases.includes(cityId) ? spb : null),
+  };
+  const { add } = setup(roomy, null, undefined, cities);
+  const before = await add.execute(jane, wildberriesLink, '-1205339');
+
+  // The handbook was read again, and the city is known by another id now.
+  spb = { id: '-1198680', name: 'Санкт-Петербург', aliases: ['-1205339'] };
+  const after = await add.execute(sam, wildberriesLink, '-1198680');
+
+  assert.equal(after.product.snapshot.id, before.product.snapshot.id);
+  assert.equal(after.product.snapshot.cityId, '-1205339');
+});
+
+void test('the default city is the one of the handbook when it was read', async (): Promise<void> => {
+  const moscow = { id: '-1257403', name: 'Москва', aliases: [] };
+  const cities: MarketplaceCitiesPort = {
+    find: (_marketplace, cityId): Promise<KnownCityInterface | null> =>
+      Promise.resolve(cityId === moscow.id ? moscow : null),
+  };
+  const { add } = setup(roomy, null, undefined, cities);
+
+  const byDefault = await add.execute(jane, wildberriesLink);
+  const asked = await add.execute(sam, wildberriesLink, '-1257403');
+
+  assert.equal(byDefault.product.snapshot.cityId, '-1257403');
+  assert.equal(asked.product.snapshot.id, byDefault.product.snapshot.id);
 });
 
 void test('a marketplace without cities has no city whatever is asked for', async (): Promise<void> => {

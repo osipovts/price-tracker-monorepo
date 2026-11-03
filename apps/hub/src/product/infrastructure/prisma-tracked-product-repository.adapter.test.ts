@@ -222,3 +222,34 @@ void test(
     }
   },
 );
+
+void test(
+  'finds the product of an item tracked in a city by any of the ids given, the one tracked first',
+  { skip },
+  async (): Promise<void> => {
+    const externalId = randomUUID();
+    const inCity = (cityId: string): TrackedProductReferenceInterface => ({
+      marketplace: 'wildberries',
+      externalId,
+      url: `https://www.wildberries.ru/catalog/${externalId}/detail.aspx`,
+      cityId,
+      cityName: 'Санкт-Петербург',
+    });
+    const first = (await products.add(inCity('-1205339'))).product.snapshot.id;
+    const second = (await products.add(inCity('-1198680'))).product.snapshot.id;
+
+    assert.equal(
+      (await products.findInCities('wildberries', externalId, ['-1198680', '-1205339']))?.snapshot
+        .id,
+      first,
+    );
+    assert.equal(
+      (await products.findInCities('wildberries', externalId, ['-1198680']))?.snapshot.id,
+      second,
+    );
+    assert.equal(await products.findInCities('wildberries', externalId, ['-1']), null);
+    assert.equal(await products.findInCities('ozon', externalId, ['-1205339']), null);
+
+    await prisma.trackedProduct.deleteMany({ where: { id: { in: [first, second] } } });
+  },
+);

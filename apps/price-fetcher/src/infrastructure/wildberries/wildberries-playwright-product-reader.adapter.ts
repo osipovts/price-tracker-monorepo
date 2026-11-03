@@ -89,6 +89,8 @@ export class WildberriesPlaywrightProductReaderAdapter implements ProductReaderP
     const exitIp = exit.exitIp;
     this.logger.debug(`Exit IP through ${proxy.server} is ${exitIp} (${country})`);
 
+    if (reference.cityId !== null) await this.askInCity(page, reference.cityId);
+
     const card = this.watchCard(page, reference);
     const lastResponse = this.watch(page);
     await page.goto(reference.url, { waitUntil: 'domcontentloaded' });
@@ -127,6 +129,21 @@ export class WildberriesPlaywrightProductReaderAdapter implements ProductReaderP
       snapshot,
       exitIp,
     };
+  }
+
+  /**
+   * The page asks the card service for the prices in the region of the address its visitor chose: the region
+   * of the city asked for goes in its place. The prices are the same for all the regions of a city.
+   */
+  private async askInCity(page: Page, cityId: string): Promise<void> {
+    await page.route(
+      (url): boolean => cardPath.test(url.pathname),
+      async (route): Promise<void> => {
+        const url = new URL(route.request().url());
+        url.searchParams.set('dest', cityId);
+        await route.fallback({ url: url.href });
+      },
+    );
   }
 
   /**

@@ -94,7 +94,7 @@ export const ru: DictionaryType = {
     linkLabel: 'Ссылка на товар',
     supported: 'Поддерживаемые маркетплейсы: ozon.ru, dns-shop.ru, wildberries.ru',
     city: 'Город',
-    cityHint: 'Цены DNS зависят от города. Если не выбрать, будет Москва.',
+    cityHint: 'Цены этого маркетплейса зависят от города. Если не выбрать, будет Москва.',
     cityPlaceholder: 'Начните вводить название города',
     cityNothing: 'Город не найден',
     noPicture: 'Нет картинки',

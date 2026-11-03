@@ -13,6 +13,7 @@ import {
   cityListResponseSchema,
   type CityListResponseType,
   cityMarketplaceParamSchema,
+  cityResponseOf,
   citySearchQuerySchema,
   type CitySearchQueryType,
 } from './city.type.js';
@@ -35,6 +36,6 @@ export class CitiesController {
     @Param('marketplace', { schema: cityMarketplaceParamSchema }) marketplace: MarketplaceType,
     @Query({ schema: citySearchQuerySchema }) query: CitySearchQueryType,
   ): Promise<CityListResponseType> {
-    return { items: await this.searchCities.execute(marketplace, query) };
+    return { items: (await this.searchCities.execute(marketplace, query)).map(cityResponseOf) };
   }
 }

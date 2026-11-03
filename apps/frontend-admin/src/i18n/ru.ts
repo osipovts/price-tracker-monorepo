@@ -118,8 +118,18 @@ export const ru: DictionaryType = {
   },
   handbooks: {
     title: 'Справочники',
-    dnsCities: 'Города DNS',
-    dnsCitiesHint: 'Города, которые можно выбрать на dns-shop.ru: цены DNS зависят от города.',
+    cities: {
+      'dns-cities': {
+        title: 'Города DNS',
+        hint: 'Города, которые можно выбрать на dns-shop.ru: цены DNS зависят от города.',
+        id: 'Идентификатор на dns-shop.ru',
+      },
+      'wildberries-cities': {
+        title: 'Города Wildberries',
+        hint: 'Города с пунктами выдачи wildberries.ru: цены зависят от города и одинаковы для всех его пунктов.',
+        id: 'Регион (dest) на wildberries.ru',
+      },
+    },
     updated: 'Обновлён: {{when}}',
     never: 'Ещё не читался',
     refresh: 'Обновить',
@@ -128,7 +138,6 @@ export const ru: DictionaryType = {
     total: 'Городов: {{count}}',
     name: 'Город',
     region: 'Регион',
-    id: 'Идентификатор на dns-shop.ru',
     none: 'Городов нет.',
   },
 };

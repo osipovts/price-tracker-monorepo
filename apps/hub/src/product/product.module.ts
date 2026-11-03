@@ -37,6 +37,7 @@ import { GetProductThumbnailUrlUseCase } from './application/get-product-thumbna
 import { IMAGE_DOWNLOADER, type ImageDownloaderPort } from './application/image-downloader.port.js';
 import { ListPriceHistoryUseCase } from './application/list-price-history.use-case.js';
 import { ListProductGroupsUseCase } from './application/list-product-groups.use-case.js';
+import type { KnownCityInterface } from './application/marketplace-cities.port.js';
 import {
   PRICE_OBSERVATION_REPOSITORY,
   type PriceObservationRepositoryPort,
@@ -144,8 +145,13 @@ import { ProductsController } from './presentation/products.controller.js';
           logger.child('products'),
           expandLink,
           {
-            find: (marketplace, cityId): Promise<{ name: string } | null> =>
-              findCity.execute(marketplace, cityId),
+            find: async (marketplace, cityId): Promise<KnownCityInterface | null> => {
+              const city = await findCity.execute(marketplace, cityId);
+
+              return city === null
+                ? null
+                : { id: city.id, name: city.name, aliases: city.aliases ?? [] };
+            },
           },
         ),
       inject: [
