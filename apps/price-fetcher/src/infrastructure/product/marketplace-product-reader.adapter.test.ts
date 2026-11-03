@@ -18,6 +18,9 @@ void test('delegates reading to the reader of the reference marketplace', async 
     wildberries: {
       read: (): Promise<ReadProductResultType> => Promise.resolve({ status: 'network_error' }),
     },
+    citilink: {
+      read: (): Promise<ReadProductResultType> => Promise.resolve({ status: 'network_error' }),
+    },
   });
 
   const result = await reader.read(

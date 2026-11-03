@@ -8,6 +8,7 @@ const cityMarketplaceHosts: ReadonlyArray<[CityMarketplaceType, readonly string[
   ['ozon', ['ozon.ru', 'www.ozon.ru']],
   ['dns', ['dns-shop.ru', 'www.dns-shop.ru']],
   ['wildberries', ['wildberries.ru', 'www.wildberries.ru', 'wb.ru', 'www.wb.ru']],
+  ['citilink', ['citilink.ru', 'www.citilink.ru']],
 ];
 
 /** The marketplace of the link when its prices depend on the city; null for the others and for what is not a link. */

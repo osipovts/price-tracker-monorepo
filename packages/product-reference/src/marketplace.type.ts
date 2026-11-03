@@ -1,4 +1,4 @@
-export const marketplaces = ['ozon', 'dns', 'wildberries'] as const;
+export const marketplaces = ['ozon', 'dns', 'wildberries', 'citilink'] as const;
 
 export type MarketplaceType = (typeof marketplaces)[number];
 
@@ -7,6 +7,7 @@ export const marketplaceExitCountries: Readonly<Record<MarketplaceType, string>>
   ozon: 'RU',
   dns: 'RU',
   wildberries: 'RU',
+  citilink: 'RU',
 };
 
 export interface MarketplaceCityInterface {
@@ -27,4 +28,6 @@ export const marketplaceDefaultCities: Readonly<
   wildberries: { id: '-1257403', name: 'Москва' },
   // A city of the static list of Ozon (see `ozonCities`).
   ozon: { id: 'moskva', name: 'Москва' },
+  // A city of the static list of Citilink (see `citilinkCities`).
+  citilink: { id: 'msk_cl', name: 'Москва' },
 };

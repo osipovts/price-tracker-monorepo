@@ -1927,7 +1927,8 @@
                                   "enum": [
                                     "ozon",
                                     "dns",
-                                    "wildberries"
+                                    "wildberries",
+                                    "citilink"
                                   ]
                                 },
                                 "successes": {
@@ -2265,7 +2266,8 @@
               "enum": [
                 "ozon",
                 "dns",
-                "wildberries"
+                "wildberries",
+                "citilink"
               ]
             }
           },

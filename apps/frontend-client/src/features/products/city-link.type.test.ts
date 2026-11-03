@@ -11,6 +11,8 @@ test('tells the marketplace of a link whose prices depend on the city', (): void
     'wildberries',
   );
   expect(cityMarketplaceOf('https://wb.ru/catalog/169684889/detail.aspx')).toBe('wildberries');
+  expect(cityMarketplaceOf('https://www.citilink.ru/product/noutbuk-2194059/')).toBe('citilink');
+  expect(cityMarketplaceOf('https://citilink.ru/product/2194059/')).toBe('citilink');
   expect(cityMarketplaceOf('https://www.ozon.ru/product/1/')).toBe('ozon');
   expect(cityMarketplaceOf('https://ozon.ru/t/AbC')).toBe('ozon');
 });
