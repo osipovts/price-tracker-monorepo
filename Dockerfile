@@ -61,11 +61,13 @@ ARG APP_NAME
 # Only the workspace packages and the app itself: changes of the other apps keep the cache.
 COPY packages ./packages
 COPY apps/${APP_NAME} ./apps/${APP_NAME}
-# Links the app and the workspace packages it depends on from the store, without the registry.
+# Links the app and the workspace packages it depends on from the store. The store is a cache mount,
+# which the layer cache of CI does not keep: when the fetch layer comes from that cache, the store
+# is empty and the packages it lacks are downloaded.
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm-store \
     --mount=type=cache,id=pnpm-metadata,target=/root/.cache/pnpm \
     --mount=type=cache,id=prisma-engines,target=/root/.cache/prisma \
-    pnpm --trust-lockfile install --offline --frozen-lockfile --filter ${APP_NAME}...
+    pnpm --trust-lockfile install --prefer-offline --frozen-lockfile --filter ${APP_NAME}...
 
 ################################
 # Build
@@ -77,7 +79,7 @@ RUN pnpm --filter ${APP_NAME}... build
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm-store \
     --mount=type=cache,id=pnpm-metadata,target=/root/.cache/pnpm \
     --mount=type=cache,id=prisma-engines,target=/root/.cache/prisma \
-    pnpm --trust-lockfile --offline --filter ${APP_NAME} deploy --prod /deploy
+    pnpm --trust-lockfile --prefer-offline --filter ${APP_NAME} deploy --prod /deploy
 
 ################################
 # Development (the code is mounted, see docker-compose.dev.yml)
@@ -93,7 +95,7 @@ COPY packages/frontend-shared ./packages/frontend-shared
 COPY apps/frontend-admin ./apps/frontend-admin
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm-store \
     --mount=type=cache,id=pnpm-metadata,target=/root/.cache/pnpm \
-    pnpm --trust-lockfile install --offline --frozen-lockfile --filter frontend-admin...
+    pnpm --trust-lockfile install --prefer-offline --frozen-lockfile --filter frontend-admin...
 RUN pnpm --filter frontend-admin build
 
 ################################
@@ -104,7 +106,7 @@ COPY packages/frontend-shared ./packages/frontend-shared
 COPY apps/frontend-client ./apps/frontend-client
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm-store \
     --mount=type=cache,id=pnpm-metadata,target=/root/.cache/pnpm \
-    pnpm --trust-lockfile install --offline --frozen-lockfile --filter frontend-client...
+    pnpm --trust-lockfile install --prefer-offline --frozen-lockfile --filter frontend-client...
 RUN pnpm --filter frontend-client build
 
 ################################
