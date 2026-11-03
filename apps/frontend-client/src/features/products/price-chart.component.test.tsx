@@ -12,7 +12,7 @@ function bucket(hour: number, value: number | null, observed: boolean): PriceBuc
 // jsdom lays nothing out: the container of the chart is given the size a browser would give it.
 beforeEach((): void => {
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(
-    new DOMRect(0, 0, 600, 280),
+    new DOMRect(0, 0, 600, 560),
   );
 });
 
