@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { silentLogger } from 'logger';
-import type { ProxySourceType } from 'queue-contract';
+import { proxySourceSchema, type ProxySourceType } from 'queue-contract';
 
 import type { GetJobActivityUseCase, JobActivityInterface } from '../../job/application/index.js';
 import type { JobKindType } from '../../job/domain/job.entity.js';
@@ -17,6 +17,8 @@ type RefreshType = Pick<RefreshProxySourceUseCase, 'execute'>;
 
 const settings = { pauseMs: 600_000, pollMs: 10_000, maxCandidates: 150, probeTimeoutMs: 8000 };
 const minute = 60_000;
+/** Every source is queued on a run. */
+const sourceCount = proxySourceSchema.options.length;
 
 /** What the proxy jobs are doing, as the activity of the job context tells. */
 function activityOf(
@@ -93,6 +95,8 @@ void test('queues every source with the settings when the hub starts, for no use
     ['github-free-proxy-list', 150, 8000, null],
     ['proxifly', 150, 8000, null],
     ['proxyscrape', 150, 8000, null],
+    ['geonode', 150, 8000, null],
+    ['monosans', 150, 8000, null],
   ]);
 });
 
@@ -113,7 +117,7 @@ void test('a source that cannot be queued does not keep the others from it', asy
 
   assert.deepEqual(
     calls.map(([source]): ProxySourceType => source),
-    ['github-free-proxy-list', 'proxyscrape'],
+    ['github-free-proxy-list', 'proxyscrape', 'geonode', 'monosans'],
   );
 });
 
@@ -133,7 +137,7 @@ void test('repeats on every poll once the pause is over, until it shuts down', a
   await adapter.onApplicationShutdown();
 
   // The window is shorter than the interval, so a run is allowed in each of them.
-  assert.ok(calls.length >= 6, `queued ${String(calls.length)} refreshes`);
+  assert.ok(calls.length >= 2 * sourceCount, `queued ${String(calls.length)} refreshes`);
   const stopped = calls.length;
   await wait(100);
   assert.equal(calls.length, stopped);
@@ -158,7 +162,7 @@ void test('of the instances of the hub that share a Redis only one queues in a w
   await wait(30);
   for (const adapter of adapters) await adapter.onApplicationShutdown();
 
-  assert.equal(first.calls.length + second.calls.length, 3);
+  assert.equal(first.calls.length + second.calls.length, sourceCount);
 });
 
 void test('does nothing when the pause is 0', async (): Promise<void> => {
@@ -190,7 +194,7 @@ void test('waits for the proxy jobs that are on their way, and for the pause aft
     [
       'the last job ended long ago',
       { active: false, lastFinishedAt: new Date(Date.now() - 11 * minute) },
-      3,
+      sourceCount,
     ],
   ];
 
@@ -228,7 +232,7 @@ void test('drops the expired proxies, then deals the ones to check again among t
     },
     activityOf(idle),
     new InMemoryRateLimiterAdapter(),
-    upkeep(['a', 'b', 'c', 'd'], pruned),
+    upkeep(['a', 'b', 'c', 'd', 'e', 'f'], pruned),
     settings,
     silentLogger,
   );
@@ -239,9 +243,11 @@ void test('drops the expired proxies, then deals the ones to check again among t
 
   assert.equal(pruned.length, 1);
   assert.deepEqual(shares, [
-    ['github-free-proxy-list', ['a', 'd']],
+    ['github-free-proxy-list', ['a', 'f']],
     ['proxifly', ['b']],
     ['proxyscrape', ['c']],
+    ['geonode', ['d']],
+    ['monosans', ['e']],
   ]);
 });
 
@@ -263,5 +269,5 @@ void test('queues the sources even when the upkeep of the stored proxies fails',
   await wait(30);
   await adapter.onApplicationShutdown();
 
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, sourceCount);
 });

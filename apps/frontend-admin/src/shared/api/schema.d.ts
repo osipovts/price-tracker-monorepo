@@ -1409,7 +1409,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                source: "github-free-proxy-list" | "proxifly" | "proxyscrape";
+                source: "github-free-proxy-list" | "proxifly" | "proxyscrape" | "geonode" | "monosans";
             };
             cookie?: never;
         };

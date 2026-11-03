@@ -2185,7 +2185,9 @@
               "enum": [
                 "github-free-proxy-list",
                 "proxifly",
-                "proxyscrape"
+                "proxyscrape",
+                "geonode",
+                "monosans"
               ]
             }
           }
