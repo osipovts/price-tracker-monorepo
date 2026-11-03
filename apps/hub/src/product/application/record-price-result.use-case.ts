@@ -74,6 +74,7 @@ export class RecordPriceResultUseCase {
     attempts: PriceAttemptInterface[],
   ): Promise<void> {
     const attemptedAt = this.clock.now();
+
     try {
       await this.proxyAttempts.execute(
         attempts.flatMap(({ proxy, status, httpStatus }): ProxyAttemptInterface[] =>
