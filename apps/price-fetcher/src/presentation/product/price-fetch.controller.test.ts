@@ -258,3 +258,52 @@ void test('rejects a malformed job', async (): Promise<void> => {
     { name: 'UnrecoverableError' },
   );
 });
+
+void test('starts the next try on the routes that did not fail this one', async (): Promise<void> => {
+  const dead = 'socks5://217.71.230.1:1080';
+  const refused = 'socks5://217.71.230.2:1080';
+  const untried = 'socks5://217.71.230.3:1080';
+  const answers: Readonly<Record<string, ReadProductResultType>> = {
+    [dead]: { status: 'network_error' },
+    [refused]: { status: 'challenge_required' },
+  };
+  const publish = (): Promise<void> => Promise.resolve();
+  const controller = new PriceFetchController(
+    new FetchPricesUseCase(
+      new ResolveProductReferenceUseCase([new OzonReferenceParser()]),
+      (): ProductReaderPort => ({
+        read: (_reference, endpoint): Promise<ReadProductResultType> =>
+          Promise.resolve(answers[endpoint.server] ?? success),
+      }),
+    ),
+    new QueueMessageParser(silentLogger),
+    new JobLifecycleReporter(publish, silentLogger),
+    publish,
+  );
+  const next: unknown[] = [];
+
+  await assert.rejects(
+    controller.handle(
+      {
+        ...job,
+        proxies: [{ server: dead }, { server: refused }, { server: untried }],
+        products: [job.products[0]],
+      },
+      new AbortController().signal,
+      true,
+      (data): Promise<void> => {
+        next.push(data);
+
+        return Promise.resolve();
+      },
+    ),
+  );
+
+  assert.deepEqual(next, [
+    {
+      ...job,
+      proxies: [{ server: untried }, { server: dead }, { server: refused }],
+      products: [job.products[0]],
+    },
+  ]);
+});
