@@ -4,6 +4,7 @@ import {
   OzonReferenceParser,
   OzonShortLinkParser,
   ResolveProductReferenceUseCase,
+  WildberriesReferenceParser,
 } from 'product-reference';
 
 import { PrismaClient } from '../generated/prisma/client.js';
@@ -108,7 +109,11 @@ import { ProductsController } from './presentation/products.controller.js';
     {
       provide: ResolveProductReferenceUseCase,
       useFactory: (): ResolveProductReferenceUseCase =>
-        new ResolveProductReferenceUseCase([new OzonReferenceParser(), new DnsReferenceParser()]),
+        new ResolveProductReferenceUseCase([
+          new OzonReferenceParser(),
+          new DnsReferenceParser(),
+          new WildberriesReferenceParser(),
+        ]),
     },
     {
       provide: AddProductUseCase,

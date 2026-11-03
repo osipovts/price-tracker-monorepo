@@ -1285,7 +1285,7 @@ export interface operations {
                             disabled: boolean;
                             reputations: {
                                 /** @enum {string} */
-                                marketplace: "ozon" | "dns";
+                                marketplace: "ozon" | "dns" | "wildberries";
                                 successes: number;
                                 failures: number;
                                 failureStreak: number;
@@ -1445,7 +1445,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                marketplace: "ozon" | "dns";
+                marketplace: "ozon" | "dns" | "wildberries";
             };
             cookie?: never;
         };

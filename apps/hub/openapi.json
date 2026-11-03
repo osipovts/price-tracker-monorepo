@@ -1926,7 +1926,8 @@
                                   "type": "string",
                                   "enum": [
                                     "ozon",
-                                    "dns"
+                                    "dns",
+                                    "wildberries"
                                   ]
                                 },
                                 "successes": {
@@ -2263,7 +2264,8 @@
               "type": "string",
               "enum": [
                 "ozon",
-                "dns"
+                "dns",
+                "wildberries"
               ]
             }
           },
