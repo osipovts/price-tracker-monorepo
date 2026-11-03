@@ -30,9 +30,11 @@ const product = {
 };
 const base: WildberriesPageInterface = {
   url: 'https://www.wildberries.ru/catalog/169684889/detail.aspx',
-  title: 'Кроссовки беговые Demix',
-  body: '',
-  imageUrl: 'https://basket-12.wbbasket.ru/vol1696/part169684/169684889/images/big/1.webp',
+  imageUrls: [
+    'https://basket-12.wbbasket.ru/vol1696/part169684/169684888/images/tm/1.webp',
+    'https://basket-12.wbbasket.ru/vol1696/part169684/169684889/images/big/1.webp?picsUpdate=0',
+    'https://basket-12.wbbasket.ru/vol1696/part169684/169684889/images/big/2.webp?picsUpdate=0',
+  ],
   card: cardOf([{ id: 1, name: 'Другой товар', sizes: [] }, product]),
 };
 
@@ -45,16 +47,22 @@ void test('reads the title and the lowest price of the sizes in stock, in kopeck
   assert.equal(snapshot.availability, 'in_stock');
 });
 
-void test('takes the thumbnail of a picture of the CDN of Wildberries, and keeps other pictures', (): void => {
+void test('takes the thumbnail of the first picture of the product, not of other products', (): void => {
   assert.equal(
     parser.parse(reference, base)?.imageUrl,
-    'https://basket-12.wbbasket.ru/vol1696/part169684/169684889/images/c246x328/1.webp',
+    'https://basket-12.wbbasket.ru/vol1696/part169684/169684889/images/c246x328/1.webp?picsUpdate=0',
   );
   assert.equal(
-    parser.parse(reference, { ...base, imageUrl: 'https://example.test/1.webp' })?.imageUrl,
-    'https://example.test/1.webp',
+    parser.parse(reference, {
+      ...base,
+      imageUrls: [
+        'https://basket-12.wbbasket.ru/vol1696/part169684/169684888/images/big/1.webp',
+        'https://example.test/vol1696/part169684/169684889/images/big/1.webp',
+        'not a link',
+      ],
+    })?.imageUrl,
+    null,
   );
-  assert.equal(parser.parse(reference, { ...base, imageUrl: '' })?.imageUrl, null);
 });
 
 void test('reads the answer of an older card service, wrapped in data', (): void => {

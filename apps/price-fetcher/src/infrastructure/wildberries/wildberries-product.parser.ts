@@ -19,31 +19,12 @@ const productsSchema = z.object({ products: z.array(z.unknown()) });
 // Older versions of the card service wrap the products in `data`.
 const cardSchema = z.union([productsSchema, z.object({ data: productsSchema })]);
 
-/** The pictures of Wildberries are served in sizes, named by the folder before the file: `c246x328` is a thumbnail. */
-const wildberriesPicturePath = /^(\/vol\d+\/part\d+\/\d+\/images\/)[^/]+(\/[^/]+)$/;
-const thumbnailFolder = 'c246x328';
-
 /**
- * An address a browser can load: the page may give a relative one, or none. A picture of the CDN of Wildberries
- * is the small size of it: a card shows it at less than 120 pixels.
+ * The pictures of Wildberries are kept by the number of the product and served in sizes, named by the folder
+ * before the file: `c246x328` is a thumbnail.
  */
-function httpUrlOf(value: string): string | null {
-  try {
-    const url = new URL(value);
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
-
-    const parts = url.hostname.endsWith('.wbbasket.ru')
-      ? wildberriesPicturePath.exec(url.pathname)
-      : null;
-    if (parts?.[1] !== undefined && parts[2] !== undefined) {
-      url.pathname = `${parts[1]}${thumbnailFolder}${parts[2]}`;
-    }
-
-    return url.href;
-  } catch {
-    return null;
-  }
-}
+const picturePath = /^(\/vol\d+\/part\d+\/(\d+)\/images\/)[^/]+(\/[^/]+)$/;
+const thumbnailFolder = 'c246x328';
 
 export class WildberriesProductParser {
   constructor(private readonly references: MarketplaceReferenceParserPort) {}
@@ -71,7 +52,7 @@ export class WildberriesProductParser {
       // The sizes of a product may differ in price: the page offers it from the lowest.
       prices: prices.length > 0 ? [{ amountMinor: Math.min(...prices), currency: 'RUB' }] : [],
       availability,
-      imageUrl: httpUrlOf(page.imageUrl),
+      imageUrl: this.readPicture(reference, page.imageUrls),
     };
   }
 
@@ -86,6 +67,34 @@ export class WildberriesProductParser {
     for (const value of products) {
       const product = productSchema.safeParse(value);
       if (product.success && String(product.data.id) === reference.id) return product.data;
+    }
+
+    return null;
+  }
+
+  /**
+   * The thumbnail of the first picture of the product: the page shows those of other products too. A card shows
+   * it at less than 120 pixels.
+   */
+  private readPicture(
+    reference: ProductReferenceEntity,
+    imageUrls: readonly string[],
+  ): string | null {
+    for (const imageUrl of imageUrls) {
+      const url = URL.parse(imageUrl);
+      const parts = url === null ? null : picturePath.exec(url.pathname);
+      if (
+        url?.protocol !== 'https:' ||
+        !url.hostname.endsWith('.wbbasket.ru') ||
+        parts?.[1] === undefined ||
+        parts[2] !== reference.id ||
+        parts[3] === undefined
+      )
+        continue;
+
+      url.pathname = `${parts[1]}${thumbnailFolder}${parts[3]}`;
+
+      return url.href;
     }
 
     return null;

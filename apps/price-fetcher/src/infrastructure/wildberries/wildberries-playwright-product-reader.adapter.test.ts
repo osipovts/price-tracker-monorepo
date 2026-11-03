@@ -44,10 +44,21 @@ const parsers: WildberriesReaderParsersInterface = {
 };
 const cardPath = '/__internal/u-card/cards/v4/detail?appType=1&curr=rub&dest=-1257786';
 
+const gallery = [
+  'https://basket-12.wbbasket.ru/vol1696/part169684/169684888/images/tm/1.webp',
+  'https://basket-12.wbbasket.ru/vol1696/part169684/169684889/images/big/1.webp',
+]
+  .map((src): string => `<img src="${src}">`)
+  .join('');
+
 /** A product page that asks the card service for the products it shows, as the site does. */
 function pageAsking(...numbers: string[]): string {
-  return `<title>Кроссовки</title><meta property="og:image" content="https://basket-12.wbbasket.ru/vol1696/part169684/169684889/images/big/1.webp"><script>
+  return `<title>Кроссовки</title><script>
     for (const nm of ${JSON.stringify(numbers)}) void fetch('${cardPath}&nm=' + nm);
+    // The gallery is drawn after the card has come, and the pictures of other products with it.
+    setTimeout(() => {
+      document.body.innerHTML = ${JSON.stringify(gallery)};
+    }, 200);
   </script>`;
 }
 
@@ -124,7 +135,7 @@ void test('a page whose card service did not answer about the product is a parse
 });
 
 void test('reports the antibot check of the site', async (): Promise<void> => {
-  const reader = createReader('<title>Почти готово...</title><p>Проверяем браузер</p>', 'RU', 498);
+  const reader = createReader('<title>Почти готово...</title>', 'RU', 498);
 
   assert.deepEqual(await reader.read(reference, proxy, new AbortController().signal), {
     status: 'challenge_required',

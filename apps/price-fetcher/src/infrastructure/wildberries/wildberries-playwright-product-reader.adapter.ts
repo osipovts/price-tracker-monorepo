@@ -94,13 +94,12 @@ export class WildberriesPlaywrightProductReaderAdapter implements ProductReaderP
     await page.goto(reference.url, { waitUntil: 'domcontentloaded' });
     const document = await this.parsers.pages.parse(page, card);
     const response = lastResponse();
-    if (this.parsers.challenges.isChallenge(document.title, document.body)) {
-      this.logger.warn(`The site check appeared via ${proxy.server}`);
+    if (response === null) return { status: 'network_error' };
+    if (this.parsers.challenges.isChallenge(response.status())) {
+      this.logger.warn(`The site check was not passed via ${proxy.server}`);
 
       return { status: 'challenge_required' };
     }
-
-    if (response === null) return { status: 'network_error' };
     if (!response.ok()) {
       this.logger.warn(`HTTP ${String(response.status())} instead of the product page`);
 

@@ -1,8 +1,7 @@
-/** Recognizes the antibot check Wildberries shows instead of its pages. */
+/** Recognizes the antibot check Wildberries answers with instead of its pages. */
 export class WildberriesChallengeParser {
-  isChallenge(title: string, body: string): boolean {
-    return /antibot|captcha|почти готово|проверяем браузер|подозрительн|доступ ограничен/i.test(
-      `${title}\n${body.slice(0, 4000)}`,
-    );
+  /** The check answers HTTP 498; a browser that passes it is let through to the page with HTTP 200. */
+  isChallenge(httpStatus: number): boolean {
+    return httpStatus === 498;
   }
 }
