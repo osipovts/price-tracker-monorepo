@@ -6,6 +6,7 @@ const marketplaceColors: Record<string, string> = {
   ozon: 'blue',
   dns: 'orange',
   wildberries: 'grape',
+  citilink: 'red',
 };
 
 /** The short names of the marketplaces whose own is long; the others are shown by their own. */

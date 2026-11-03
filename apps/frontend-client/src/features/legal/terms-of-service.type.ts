@@ -14,7 +14,7 @@ export const termsOfService: LegalDocumentsType = {
       {
         heading: 'What the service does',
         paragraphs: [
-          'The service reads the public pages of products on supported marketplaces (at present, ozon.ru, dns-shop.ru and wildberries.ru) and shows you their prices over time. It is a personal project, offered for personal, non-commercial use.',
+          'The service reads the public pages of products on supported marketplaces (at present, ozon.ru, dns-shop.ru, wildberries.ru and citilink.ru) and shows you their prices over time. It is a personal project, offered for personal, non-commercial use.',
         ],
       },
       {
@@ -86,7 +86,7 @@ export const termsOfService: LegalDocumentsType = {
       {
         heading: 'Что делает сервис',
         paragraphs: [
-          'Сервис читает публичные страницы товаров на поддерживаемых маркетплейсах (сейчас ozon.ru, dns-shop.ru и wildberries.ru) и показывает, как менялись их цены. Это личный проект, предлагаемый для личного некоммерческого использования.',
+          'Сервис читает публичные страницы товаров на поддерживаемых маркетплейсах (сейчас ozon.ru, dns-shop.ru, wildberries.ru и citilink.ru) и показывает, как менялись их цены. Это личный проект, предлагаемый для личного некоммерческого использования.',
         ],
       },
       {

@@ -1,3 +1,5 @@
+export * from './citilink-city.type.js';
+export * from './citilink-reference.parser.js';
 export * from './dns-reference.parser.js';
 export * from './marketplace.type.js';
 export * from './marketplace-reference-parser.port.js';

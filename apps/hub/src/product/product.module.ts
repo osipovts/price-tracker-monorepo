@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import {
+  CitilinkReferenceParser,
   DnsReferenceParser,
   OzonReferenceParser,
   OzonShortLinkParser,
@@ -114,6 +115,7 @@ import { ProductsController } from './presentation/products.controller.js';
           new OzonReferenceParser(),
           new DnsReferenceParser(),
           new WildberriesReferenceParser(),
+          new CitilinkReferenceParser(),
         ]),
     },
     {
