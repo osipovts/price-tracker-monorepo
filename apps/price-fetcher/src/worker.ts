@@ -2,6 +2,7 @@ import { Camoufox } from 'camoufox-js';
 import { CamoufoxOptionsFactory } from 'camoufox-options';
 import { ConsoleLoggerAdapter, parseLogLevel } from 'logger';
 import {
+  CitilinkReferenceParser,
   DnsReferenceParser,
   OzonReferenceParser,
   OzonShortLinkParser,
@@ -14,6 +15,10 @@ import { z } from 'zod';
 
 import { ExpandLinkUseCase } from './application/link/expand-link.use-case.js';
 import { FetchPricesUseCase } from './application/product/fetch-prices.use-case.js';
+import { CitilinkPageParser } from './infrastructure/citilink/citilink-page.parser.js';
+import { CitilinkPlaywrightProductReaderAdapter } from './infrastructure/citilink/citilink-playwright-product-reader.adapter.js';
+import { CitilinkProductParser } from './infrastructure/citilink/citilink-product.parser.js';
+import { CitilinkStateParser } from './infrastructure/citilink/citilink-state.parser.js';
 import { DnsCityCookieParser } from './infrastructure/dns/dns-city-cookie.parser.js';
 import { DnsPageParser } from './infrastructure/dns/dns-page.parser.js';
 import { DnsPlaywrightProductReaderAdapter } from './infrastructure/dns/dns-playwright-product-reader.adapter.js';
@@ -96,6 +101,8 @@ const expandRunner = new QueueWorkerRunner<never>(
 const references = new OzonReferenceParser();
 const dnsReferences = new DnsReferenceParser();
 const wildberriesReferences = new WildberriesReferenceParser();
+const citilinkReferences = new CitilinkReferenceParser();
+const citilinkStates = new CitilinkStateParser();
 const parsers: OzonReaderParsersInterface = {
   geoIp: new GeoIpPageParser(),
   pages: new OzonPageParser(),
@@ -105,7 +112,12 @@ const parsers: OzonReaderParsersInterface = {
 };
 const controller = new PriceFetchController(
   new FetchPricesUseCase(
-    new ResolveProductReferenceUseCase([references, dnsReferences, wildberriesReferences]),
+    new ResolveProductReferenceUseCase([
+      references,
+      dnsReferences,
+      wildberriesReferences,
+      citilinkReferences,
+    ]),
     (timeoutMs): MarketplaceProductReaderAdapter =>
       new MarketplaceProductReaderAdapter({
         ozon: new OzonPlaywrightProductReaderAdapter(
@@ -138,6 +150,18 @@ const controller = new PriceFetchController(
           },
           timeoutMs,
           logger.child('wildberries'),
+        ),
+        citilink: new CitilinkPlaywrightProductReaderAdapter(
+          browser,
+          options,
+          {
+            geoIp: parsers.geoIp,
+            pages: new CitilinkPageParser(),
+            states: citilinkStates,
+            products: new CitilinkProductParser(citilinkReferences, citilinkStates),
+          },
+          timeoutMs,
+          logger.child('citilink'),
         ),
       }),
     logger.child('prices'),
