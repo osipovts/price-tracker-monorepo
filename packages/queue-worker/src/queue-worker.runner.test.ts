@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 
-import { Queue } from 'bullmq';
+import { type Job, Queue } from 'bullmq';
+import { Redis } from 'ioredis';
 import { silentLogger } from 'logger';
 
 import { QueueWorkerRunner } from './queue-worker.runner.js';
@@ -101,5 +102,55 @@ void test(
     assert.equal(finished, true);
     assert.equal(aborted, false);
     await jobs.close();
+  },
+);
+
+void test(
+  'a job the queue fails before the handler sees it, as one that stalled too often, is reported failed',
+  { skip },
+  async (): Promise<void> => {
+    assert.ok(redisUrl !== undefined);
+    const jobsQueue = `jobs-${randomUUID()}`;
+    const resultsQueue = `results-${randomUUID()}`;
+    const jobs = new Queue(jobsQueue, { connection: { url: redisUrl } });
+    const results = new Queue(resultsQueue, { connection: { url: redisUrl } });
+    const redis = new Redis(redisUrl);
+    const jobId = randomUUID();
+    await jobs.add('job', { jobId }, { jobId, attempts: 3 });
+    // What the queue writes on a job that stalled more often than it allows.
+    await redis.hset(jobs.toKey(jobId), 'defa', 'job stalled more than allowable limit');
+    const runner = new QueueWorkerRunner(
+      { redisUrl, jobsQueue, resultsQueue, concurrency: 1 },
+      silentLogger,
+    );
+    let handled = false;
+    runner.start((): Promise<void> => {
+      handled = true;
+
+      return Promise.resolve();
+    });
+
+    let reported: Job[] = [];
+    for (const started = Date.now(); reported.length === 0 && Date.now() - started < 10_000;) {
+      reported = await results.getJobs(['wait']);
+      await new Promise((resolve): void => {
+        setTimeout(resolve, 50);
+      });
+    }
+    await runner.close();
+    await Promise.all([jobs.close(), results.close(), redis.quit()]);
+
+    assert.equal(handled, false);
+    assert.deepEqual(
+      reported.map((job): unknown => job.data),
+      [
+        {
+          type: 'job_failed',
+          jobId,
+          reason: 'job stalled more than allowable limit',
+          willRetry: false,
+        },
+      ],
+    );
   },
 );

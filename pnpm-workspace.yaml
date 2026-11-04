@@ -19,3 +19,6 @@ allowBuilds:
   '@swc/core': false
   # Used by camoufox-js for its fingerprint data.
   better-sqlite3: true
+
+patchedDependencies:
+  https-proxy-agent@9.1.0: patches/https-proxy-agent@9.1.0.patch
