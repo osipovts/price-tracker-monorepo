@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
   injectWorkspacePackages: true
 
+patchedDependencies:
+  https-proxy-agent@9.1.0: e0f8c5dc8c64fae6fcf87a596775f4e836128ba67be8d9e53dd0574721b6bdef
+
 importers:
 
   .:
@@ -355,7 +358,7 @@ importers:
     dependencies:
       https-proxy-agent:
         specifier: ^9.1.0
-        version: 9.1.0
+        version: 9.1.0(patch_hash=e0f8c5dc8c64fae6fcf87a596775f4e836128ba67be8d9e53dd0574721b6bdef)
       logger:
         specifier: workspace:*
         version: link:../../packages/logger
@@ -6305,7 +6308,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  https-proxy-agent@9.1.0:
+  https-proxy-agent@9.1.0(patch_hash=e0f8c5dc8c64fae6fcf87a596775f4e836128ba67be8d9e53dd0574721b6bdef):
     dependencies:
       agent-base: 9.0.0
       debug: 4.4.3(supports-color@10.2.2)

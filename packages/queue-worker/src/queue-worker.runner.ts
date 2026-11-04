@@ -1,7 +1,9 @@
 import { Queue, Worker } from 'bullmq';
-import type { LoggerPort } from 'logger';
+import { errorMessage, type LoggerPort } from 'logger';
+import type { JobLifecycleType } from 'queue-contract';
 
 import { closeWithin } from './close-within.type.js';
+import { maxReasonLength } from './job-lifecycle.reporter.js';
 
 export interface QueueWorkerSettingsInterface {
   redisUrl: string;
@@ -82,11 +84,36 @@ export class QueueWorkerRunner<ResultType extends { type: string; jobId: string 
     });
     this.worker.on('failed', (job, error): void => {
       this.logger.warn(`Queue job ${job?.id ?? '?'} failed: ${error.message}`);
+      // Only a job that has failed for good has an end.
+      if (job?.id !== undefined && job.finishedOn !== undefined) {
+        void this.reportFailure(job.id, error.message);
+      }
     });
 
     this.logger.info(
       `Waiting for jobs on ${this.settings.jobsQueue} (redis ${this.settings.redisUrl.replace(/\/\/[^@]*@/, '//***@')})`,
     );
+  }
+
+  /**
+   * Tells that the queue has failed a job for good. The queue fails a job that stalled too often (its
+   * worker died) before the handler sees it, so no one else tells it; a failure the handler has told
+   * already is told twice, which changes nothing.
+   */
+  private async reportFailure(jobId: string, reason: string): Promise<void> {
+    if (this.results === null) return;
+
+    const message: JobLifecycleType = {
+      type: 'job_failed',
+      jobId,
+      reason: reason.slice(0, maxReasonLength),
+      willRetry: false,
+    };
+    try {
+      await this.results.add(message.type, message);
+    } catch (error: unknown) {
+      this.logger.error(`Could not report the failure of job ${jobId}: ${errorMessage(error)}`);
+    }
   }
 
   /**

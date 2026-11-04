@@ -5,7 +5,7 @@ import { GeonodeProxyListParser } from './geonode-proxy-list.parser.js';
 
 const parser = new GeonodeProxyListParser();
 
-void test('takes a proxy with each protocol it speaks, skipping the unsupported ones and the repeated', (): void => {
+void test('takes a proxy with each protocol it speaks, skipping the unsupported ones and the repeated, https as http', (): void => {
   const text = JSON.stringify({
     data: [
       { ip: '90.188.20.181', port: '1080', protocols: ['socks5'], upTime: 100 },
@@ -21,7 +21,7 @@ void test('takes a proxy with each protocol it speaks, skipping the unsupported 
 
   assert.deepEqual(
     parser.parse(text).map(({ server }): string => server),
-    ['socks5://90.188.20.181:1080', 'http://31.25.28.203:8080', 'https://31.25.28.203:8080'],
+    ['socks5://90.188.20.181:1080', 'http://31.25.28.203:8080'],
   );
 });
 

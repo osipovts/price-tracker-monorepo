@@ -1,0 +1,16 @@
+diff --git a/dist/parse-proxy-response.js b/dist/parse-proxy-response.js
+index 6ecc13a55291dd09aaaf86d78a5ef94568e1045c..181cb0274ba822bacd708c59f246172b1dade7b7 100644
+--- a/dist/parse-proxy-response.js
++++ b/dist/parse-proxy-response.js
+@@ -21,7 +21,10 @@ export function parseProxyResponse(socket) {
+             socket.removeListener('readable', read);
+         }
+         function onend() {
+-            cleanup();
++            // A TLS socket that ends before its handshake emits an error right after "end":
++            // "onerror" stays to take it, or the error goes unhandled and kills the process.
++            socket.removeListener('end', onend);
++            socket.removeListener('readable', read);
+             debug('onend');
+             reject(new Error('Proxy connection ended before receiving CONNECT response'));
+         }

@@ -4,7 +4,8 @@ import { z } from 'zod';
 
 import type { QueueMessageParser } from './queue-message.parser.js';
 
-const maxReasonLength = 200;
+/** How long a reported reason of a failure may be. */
+export const maxReasonLength = 200;
 
 /** Reports the start and the end of a job, whatever work the job does. */
 export class JobLifecycleReporter {

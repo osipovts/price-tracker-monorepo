@@ -13,7 +13,10 @@ const listSchema = z.object({
   ),
 });
 
-/** Reads the answer of the API of Geonode: a proxy is listed once with all the protocols it speaks. */
+/**
+ * Reads the answer of the API of Geonode: a proxy is listed once with all the protocols it speaks.
+ * There "https" is a plain http proxy that reaches the sites over https, not one spoken to over TLS.
+ */
 export class GeonodeProxyListParser {
   constructor(private readonly lines: ProxyListParser = new ProxyListParser()) {}
 
@@ -25,7 +28,10 @@ export class GeonodeProxyListParser {
     return this.lines.parse(
       list.data.data
         .flatMap(({ ip, port, protocols }): string[] =>
-          protocols.map((protocol): string => `${protocol}://${ip}:${String(port)}`),
+          protocols.map(
+            (protocol): string =>
+              `${protocol === 'https' ? 'http' : protocol}://${ip}:${String(port)}`,
+          ),
         )
         .join('\n'),
     );

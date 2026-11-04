@@ -46,6 +46,8 @@ RUN apt-get update && \
     echo 11 > "$headers/installVersion"
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY .npmrc* ./
+# The fixes of dependencies the lockfile refers to (pnpm patch).
+COPY patches ./patches
 # Downloads the packages of the whole lockfile into the store: the layer depends on the lockfile
 # only. pnpm has verified the lockfile when it wrote it; --trust-lockfile skips verifying it again,
 # which would request the metadata of every package from the registry.
