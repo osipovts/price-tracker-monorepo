@@ -15,7 +15,6 @@ import { useTranslation } from 'react-i18next';
 import { Link, Outlet, useNavigate } from 'react-router';
 
 import { useLogout, useMe, useResendVerification } from '../features/auth/use-me.hook.js';
-import { LegalFooter } from '../features/legal/legal-footer.component.js';
 import { BRAND_FONT } from './ayu.theme.js';
 
 /** The person of the button that opens the menu of the account. */
@@ -47,10 +46,10 @@ export function ClientShell(): ReactElement {
 
   return (
     <AppShell padding="md">
-      {/* Above the header half the room that is under it: the room under it is the one above the footer. */}
+      {/* As much room above the header as under it. */}
       <AppShell.Main pt={24}>
         <Container size="md">
-          <Group mb={48} align="center" justify="space-between" wrap="nowrap">
+          <Group mb={24} align="center" justify="space-between" wrap="nowrap">
             <Title order={4} ff={BRAND_FONT} fz={48} fw={400} lh={1}>
               <Anchor
                 component={Link}
@@ -59,6 +58,7 @@ export function ClientShell(): ReactElement {
                 fz="inherit"
                 lh="inherit"
                 underline="never"
+                title={`v${APP_VERSION}`}
               >
                 {t('shell.title')}
               </Anchor>
@@ -109,7 +109,6 @@ export function ClientShell(): ReactElement {
             </Alert>
           )}
           <Outlet />
-          <LegalFooter />
         </Container>
       </AppShell.Main>
     </AppShell>

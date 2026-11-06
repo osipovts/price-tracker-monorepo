@@ -1,4 +1,4 @@
-import { Group, Text } from '@mantine/core';
+import { Group, Text, useMatches } from '@mantine/core';
 import { useLocale } from 'frontend-shared';
 import type { ReactElement } from 'react';
 import {
@@ -12,6 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 
+import { chartHeight, chartPriceAxisWidth, chartRightMargin } from './chart-layout.type.js';
 import {
   isRow,
   labelOf,
@@ -119,10 +120,12 @@ export function PriceChart({
 }): ReactElement {
   const locale = useLocale();
   const rows = toRows(lines);
+  // A phone keeps the page in sight under the chart.
+  const height = useMatches({ base: chartHeight / 2, sm: chartHeight });
 
   return (
-    <ResponsiveContainer width="100%" height={560}>
-      <LineChart data={rows} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={rows} margin={{ top: 8, right: chartRightMargin, bottom: 0, left: 0 }}>
         <CartesianGrid
           stroke="var(--mantine-color-default-border)"
           strokeDasharray="3 3"
@@ -138,7 +141,7 @@ export function PriceChart({
         <YAxis
           stroke="var(--mantine-color-dimmed)"
           tick={{ fontSize: 12 }}
-          width={72}
+          width={chartPriceAxisWidth}
           {...priceAxis(lines)}
           tickFormatter={(value: number): string => formatPriceShort(value)}
         />

@@ -36,9 +36,13 @@ const trackedGroupId = '44444444-4444-4444-8444-444444444444';
 /**
  * The hub lists no group, and records what is sent to it. An add never ends while `pending`; it is `added` as a
  * product the user tracks from now on (201), or answered as one the user `tracked` already (200), in the group of
- * `trackedGroupId`, called Old phone.
+ * `trackedGroupId`, called Old phone. The answer comes after `delayMs`.
  */
-function stubAdding(sent: string[], answer: 'pending' | 'added' | 'tracked' = 'pending'): void {
+function stubAdding(
+  sent: string[],
+  answer: 'pending' | 'added' | 'tracked' = 'pending',
+  delayMs = 0,
+): void {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (request: Request | string | URL): Promise<Response> => {
@@ -51,6 +55,10 @@ function stubAdding(sent: string[], answer: 'pending' | 'added' | 'tracked' = 'p
 
       sent.push(JSON.stringify(await request.json()));
       if (answer === 'pending') return new Promise<Response>(() => undefined);
+
+      await new Promise<void>((resolve): void => {
+        setTimeout(resolve, delayMs);
+      });
 
       return Response.json({ groupId: trackedGroupId }, { status: answer === 'added' ? 201 : 200 });
     }),
@@ -76,12 +84,13 @@ function renderPage(strict = false): RenderResult {
 /** The form of a new product is in a window, opened from the header or from the empty list. */
 async function openForm(): Promise<void> {
   await userEvent.click(
-    await screen.findByRole('button', { name: /^(Add|Add the first product)$/ }),
+    await screen.findByRole('button', { name: /^(Track a new product|Add the first product)$/ }),
   );
 }
 
 beforeEach((): void => {
   sessionStorage.clear();
+  localStorage.clear();
   stubGroups([
     { ...group, id: '11111111-1111-4111-8111-111111111111', title: null },
     {
@@ -119,10 +128,10 @@ test('shows the best price with its marketplace and when it was read, and the la
 
   expect(await screen.findByText('Phone')).toBeInTheDocument();
   expect(screen.getByText(/^9[\s\u00a0]000[\s\u00a0]₽$/).getAttribute('title')).toMatch(
-    /^Price received 31\.10\.2026, /,
+    /^Price received 31\.10\.2026 at /,
   );
   expect(screen.getByText('dns')).toBeInTheDocument();
-  expect(screen.getByText(/^Checked 05\.10\.2026, [^.]+, ozon$/)).toBeInTheDocument();
+  expect(screen.getByText(/^Checked 05\.10\.2026 at [^.]+, ozon$/)).toBeInTheDocument();
 });
 
 test('offers the first product from an empty list, and keeps the header free of the button then', async (): Promise<void> => {
@@ -130,7 +139,7 @@ test('offers the first product from an empty list, and keeps the header free of 
   renderPage();
 
   expect(await screen.findByText('Nothing is tracked yet.')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Track a new product' })).not.toBeInTheDocument();
   expect(screen.queryByLabelText(/link/i)).not.toBeInTheDocument();
 
   await openForm();
@@ -213,6 +222,49 @@ test('tells that adding a product can take minutes once it has taken over 5 seco
   }
 });
 
+test('takes the note of a slow add away once the hub answers', async (): Promise<void> => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    // Tracked already: the form stays open after the answer.
+    stubAdding([], 'tracked', 6000);
+    renderPage();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+
+    await user.click(await screen.findByRole('button', { name: 'Add the first product' }));
+    await user.type(screen.getByLabelText(/link/i), 'https://ozon.ru/t/AbC');
+    await user.click(screen.getByRole('button', { name: 'Track' }));
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    expect(screen.getByText(/Adding a product can take a few minutes/)).toBeInTheDocument();
+
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+
+    expect(await screen.findByText(/This product is tracked already/)).toBeInTheDocument();
+    expect(screen.queryByText(/Adding a product can take a few minutes/)).not.toBeInTheDocument();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('tells in the form that the add did not reach the hub', async (): Promise<void> => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((request: Request | string | URL): Promise<Response> => {
+      if (typeof request === 'string' || request instanceof URL || request.method === 'GET')
+        return Promise.resolve(pageOf([]));
+
+      return Promise.reject(new TypeError('Failed to fetch'));
+    }),
+  );
+  renderPage();
+
+  await openForm();
+  await userEvent.type(screen.getByLabelText(/link/i), 'https://ozon.ru/t/AbC');
+  await userEvent.click(screen.getByRole('button', { name: 'Track' }));
+
+  const dialog = screen.getByRole('dialog', { name: 'Track a product' });
+  expect(await within(dialog).findByText('The hub could not be reached.')).toBeInTheDocument();
+});
+
 test('opens the form by itself and sends again the link whose add was cut short by a reload', async (): Promise<void> => {
   const sent: string[] = [];
   stubAdding(sent);
@@ -289,6 +341,40 @@ test('asks for the city of a link of a marketplace that has cities, searches it 
   expect(searched).toContain('Ирк');
 });
 
+test('offers again the city last picked for the marketplace, on the next visit too', async (): Promise<void> => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((request: Request | string | URL): Promise<Response> => {
+      if (typeof request !== 'string' && !(request instanceof URL)) {
+        if (new URL(request.url).pathname === '/marketplaces/dns/cities') {
+          return Promise.resolve(
+            Response.json({
+              items: [{ id: 'irkutsk-id', name: 'Иркутск', region: 'Иркутская область' }],
+            }),
+          );
+        }
+      }
+
+      return Promise.resolve(pageOf([]));
+    }),
+  );
+  const user = userEvent.setup();
+  const { unmount } = renderPage();
+
+  await openForm();
+  await user.type(screen.getByLabelText(/link/i), dnsLink);
+  await user.type(screen.getByLabelText('City', { selector: 'input' }), 'Ирк');
+  await user.click(await screen.findByRole('option', { name: /Иркутск/ }));
+  unmount();
+  renderPage();
+  await openForm();
+  await user.type(screen.getByLabelText(/link/i), dnsLink);
+
+  expect(screen.getByLabelText('City', { selector: 'input' })).toHaveValue(
+    'Иркутск (Иркутская область)',
+  );
+});
+
 const wildberriesLink = 'https://www.wildberries.ru/catalog/175088486/detail.aspx';
 
 test('searches the cities of the marketplace of the link, and forgets a city of another one', async (): Promise<void> => {
@@ -357,4 +443,15 @@ test('sends the link whose add was cut short once, even when the page is mounted
   await act(() => Promise.resolve());
 
   expect(sent).toHaveLength(1);
+});
+
+test('starts the list with a row to track a new product, in place of a title of the page', async (): Promise<void> => {
+  renderPage();
+
+  const row = await screen.findByRole('button', { name: 'Track a new product' });
+  expect(row).toHaveAccessibleDescription(/^Paste a link from WB, Ozon, DNS or Citilink/);
+  expect(row.compareDocumentPosition(screen.getByRole('link', { name: /Notebook/ }))).toBe(
+    Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+  expect(screen.queryByRole('heading')).not.toBeInTheDocument();
 });

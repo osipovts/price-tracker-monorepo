@@ -32,12 +32,22 @@ export const runTurns = [0, 1] as const;
 
 type RunKindType = (typeof runKinds)[number];
 
+/** The day and the month in the order of the language, the month in three letters: "01 янв", "Jan 01". */
+function shortDayOf(point: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short' })
+    .formatToParts(point)
+    .map(({ type, value }): string =>
+      type === 'month' ? value.replace('.', '').slice(0, 3) : value,
+    )
+    .join('');
+}
+
 export function labelOf(start: Date, granularity: GranularityType, locale: string): string {
   const point = pointDate(start, granularity);
 
   return granularity === 'hour'
     ? point.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
-    : point.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' });
+    : shortDayOf(point, locale);
 }
 
 export function titleOf(start: Date, granularity: GranularityType, locale: string): string {

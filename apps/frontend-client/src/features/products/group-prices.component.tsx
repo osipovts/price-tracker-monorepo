@@ -26,7 +26,9 @@ export function BestPrice({
   return (
     <Text
       fw={700}
-      title={t('groups.priceReceived', { when: formatDayMoment(group.current.observedAt, locale) })}
+      title={t('groups.priceReceived', {
+        when: formatDayMoment(group.current.observedAt, t, locale),
+      })}
       style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}
       {...props}
     >

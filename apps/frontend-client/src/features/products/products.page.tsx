@@ -1,10 +1,21 @@
 import './list-row.css';
 import './waiting-glint.css';
 
-import { Box, Button, Group, Loader, Pagination, Paper, Stack, Text, Title } from '@mantine/core';
+import {
+  Box,
+  Button,
+  Center,
+  Group,
+  Loader,
+  Pagination,
+  Paper,
+  Stack,
+  Text,
+  UnstyledButton,
+} from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ErrorAlert, MarketplaceName, marketplaceName } from 'frontend-shared';
-import { type ReactElement, useState } from 'react';
+import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
@@ -62,7 +73,7 @@ function GroupRow({ group }: { group: ProductGroupType }): ReactElement {
       data-waiting={waiting ? 'true' : undefined}
     >
       <Group wrap="nowrap" gap="md">
-        <ProductThumbnail url={group.thumbnailUrl} alt={title} size={56} />
+        <ProductThumbnail url={group.thumbnailUrl} alt={title} size={thumbnailSize} />
         <Stack gap={2} flex={1} miw={0}>
           {/* A title can be a paragraph: one line of the row, the whole of it in the hint. */}
           <Text className="row-title" fw={500} truncate title={title}>
@@ -79,6 +90,48 @@ function GroupRow({ group }: { group: ProductGroupType }): ReactElement {
         {!waiting && <GroupBestPrice group={group} />}
       </Group>
     </Box>
+  );
+}
+
+/** The size of the pictures of the rows. */
+const thumbnailSize = 56;
+
+/**
+ * The first row of the list, in place of a title of the page: a ghost of a row of a group, with a frame for the
+ * picture, that opens the form of a new product.
+ */
+function AddRow({ onAdd }: { onAdd: () => void }): ReactElement {
+  const { t } = useTranslation();
+  const titleId = useId();
+  const hintId = useId();
+
+  return (
+    <UnstyledButton
+      className="list-row row-link add-row"
+      py="sm"
+      aria-labelledby={titleId}
+      aria-describedby={hintId}
+      onClick={onAdd}
+    >
+      <Group wrap="nowrap" gap="md">
+        <Center
+          className="add-row-frame"
+          w={thumbnailSize}
+          h={thumbnailSize}
+          style={{ flexShrink: 0 }}
+        >
+          <LineIcon name="plus" size={24} />
+        </Center>
+        <Stack gap={2} flex={1} miw={0}>
+          <Text id={titleId} className="row-title" fw={500} c="dimmed" truncate>
+            {t('products.addRow')}
+          </Text>
+          <Text id={hintId} size="xs" c="dimmed">
+            {t('products.addRowHint')}
+          </Text>
+        </Stack>
+      </Group>
+    </UnstyledButton>
   );
 }
 
@@ -103,19 +156,22 @@ function EmptyList({ onAdd }: { onAdd: () => void }): ReactElement {
   );
 }
 
-/** The groups of a page, and the way to the other pages when there are more. */
+/** The groups of a page under the row that adds one, and the way to the other pages when there are more. */
 function GroupList({
   data,
   page,
   onPage,
+  onAdd,
 }: {
   data: ProductGroupPageType;
   page: number;
   onPage: (page: number) => void;
+  onAdd: () => void;
 }): ReactElement {
   return (
     <>
       <Box>
+        <AddRow onAdd={onAdd} />
         {data.items.map((group): ReactElement => (
           <GroupRow key={group.id} group={group} />
         ))}
@@ -132,7 +188,6 @@ function GroupList({
 }
 
 export function ProductsPage(): ReactElement {
-  const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const groups = useProductGroups(page);
   const data = groups.data;
@@ -142,22 +197,13 @@ export function ProductsPage(): ReactElement {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between" align="center" gap="sm">
-        <Title order={2}>{t('products.title')}</Title>
-        {/* Not while the list loads: an empty one offers its own button in its place. */}
-        {data !== undefined && !empty && (
-          <Button leftSection={<LineIcon name="plus" />} onClick={open}>
-            {t('products.add')}
-          </Button>
-        )}
-      </Group>
       {groups.isError && <ErrorAlert error={groups.error} />}
       {data === undefined ? (
         !groups.isError && <Loader />
       ) : empty ? (
         <EmptyList onAdd={open} />
       ) : (
-        <GroupList data={data} page={page} onPage={setPage} />
+        <GroupList data={data} page={page} onPage={setPage} onAdd={open} />
       )}
       <AddProductModal groupId={null} opened={adding} onClose={close} />
     </Stack>

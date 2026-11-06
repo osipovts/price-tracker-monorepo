@@ -87,3 +87,15 @@ test('logs out from the menu of the account, and goes to the login page', async 
   expect(await screen.findByText('Login page')).toBeInTheDocument();
   expect(calls).toContain('POST /auth/logout');
 });
+
+test('tells the version of the app in the hint of its name, and leaves the legal links to the settings', async () => {
+  stubHub(true);
+  openShell();
+
+  expect(await screen.findByRole('link', { name: 'Нищебродская' })).toHaveAttribute(
+    'title',
+    `v${APP_VERSION}`,
+  );
+  expect(screen.queryByRole('link', { name: 'Privacy Policy' })).not.toBeInTheDocument();
+  expect(screen.queryByText(`v${APP_VERSION}`)).not.toBeInTheDocument();
+});

@@ -63,9 +63,6 @@ export function LinkedAccountsSection(): ReactElement {
     <Card withBorder>
       <Stack gap="sm">
         <Title order={4}>{t('settings.linkedAccounts')}</Title>
-        <Text size="sm" c="dimmed">
-          {t('settings.linkedHint')}
-        </Text>
         {account.isError && <ErrorAlert error={account.error} />}
         {data === undefined ? (
           !account.isError && <Loader size="sm" />
