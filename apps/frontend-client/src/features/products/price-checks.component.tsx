@@ -1,21 +1,33 @@
-import { Text } from '@mantine/core';
+import { Box, Text } from '@mantine/core';
 import { useLocale } from 'frontend-shared';
-import type { ReactElement } from 'react';
+import { Fragment, type ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { describePriceChecks, type PriceChecksInterface } from './price-checks.type.js';
 
-/** The quiet line under a name: when the price was read, and when it is read again. */
+/** The quiet line under a name: when the price was read, and when it is read again; on a phone, a line each. */
 export function PriceChecks({ checks }: { checks: PriceChecksInterface }): ReactElement | null {
   const { t } = useTranslation();
   const locale = useLocale();
-  const text = describePriceChecks(checks, t, locale, new Date());
+  const parts = describePriceChecks(checks, t, locale, new Date());
 
-  if (text === null) return null;
+  if (parts.length === 0) return null;
 
   return (
     <Text size="xs" c="dimmed">
-      {text}
+      {parts.map((part, index): ReactElement => (
+        <Fragment key={part}>
+          {index > 0 && (
+            <>
+              <Box component="span" visibleFrom="sm">
+                .{' '}
+              </Box>
+              <Box component="br" hiddenFrom="sm" />
+            </>
+          )}
+          {part}
+        </Fragment>
+      ))}
     </Text>
   );
 }
