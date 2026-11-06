@@ -81,16 +81,12 @@ interface HistoryRowInterface {
   observation: ObservationType;
 }
 
-const seriesDotSize = 10;
-/** The cross of an offer, and the height of the line of it, for the name and the price to stand level with it. */
-const crossSize = 28;
-
 /** The mark of a product in the list, the chart and the table: the colour of its line. */
 function SeriesDot({ color }: { color: string }): ReactElement {
   return (
     <Box
-      w={seriesDotSize}
-      h={seriesDotSize}
+      w={10}
+      h={10}
       bg={`var(--mantine-color-${color}-6)`}
       style={{ borderRadius: '50%', flexShrink: 0 }}
     />
@@ -260,9 +256,11 @@ function OfferNote({ product }: { product: GroupProductType }): ReactElement {
   const { t } = useTranslation();
 
   if (product.latest === null) {
+    const waiting = `${t('products.waiting')}. ${t('products.waitingHint')}`;
+
     return (
-      <Text size="xs" c="dimmed">
-        {t('products.waiting')}. {t('products.waitingHint')}
+      <Text size="xs" c="dimmed" truncate title={waiting}>
+        {waiting}
       </Text>
     );
   }
@@ -310,8 +308,8 @@ function OfferPrice({
 }
 
 /**
- * A product of the group, a row like the one of a group in the list: where it is and its newest price on the
- * first line, its checks on the second, all of it a link to it; and apart from the link, the way to stop tracking it.
+ * A product of the group in one line: where it is, its checks next to it (under it on a phone), and its newest
+ * price, all of it a link to it; and apart from the link, the way to stop tracking it.
  */
 function OfferRow({
   product,
@@ -337,20 +335,20 @@ function OfferRow({
     <Box className="list-row" py="sm" title={title}>
       <Group wrap="nowrap" gap="sm" align="flex-start">
         <Box {...link} className="row-link" flex={1} miw={0}>
-          <Group wrap="nowrap" gap="sm" mih={crossSize}>
+          <Box className="offer-line">
             <SeriesDot color={style.color} />
-            <Text className="row-title" fw={500} truncate flex={1} miw={0} {...struck}>
+            <Text className="row-title offer-name" fw={500} truncate {...struck}>
               {style.label}
             </Text>
-            <OfferPrice product={product} best={best} />
-          </Group>
-          {/* Under the name, not under the dot. */}
-          <Box pl={`calc(${String(seriesDotSize)}px + var(--mantine-spacing-sm))`}>
-            <OfferNote product={product} />
+            <Box className="offer-note">
+              <OfferNote product={product} />
+            </Box>
+            <Box className="offer-price" ml="auto">
+              <OfferPrice product={product} best={best} />
+            </Box>
           </Box>
         </Box>
         <CloseButton
-          size={crossSize}
           aria-label={t('product.delete')}
           title={t('product.delete')}
           onClick={deletion.open}

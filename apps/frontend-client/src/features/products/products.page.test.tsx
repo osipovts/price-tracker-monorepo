@@ -131,7 +131,7 @@ test('shows the best price with its marketplace and when it was read, and the la
     /^Price received 31\.10\.2026 at /,
   );
   expect(screen.getByText('dns')).toBeInTheDocument();
-  expect(screen.getByText(/^Checked 05\.10\.2026 at [^.]+, ozon$/)).toBeInTheDocument();
+  expect(screen.getByTitle('Checked')).toHaveTextContent(/^Checked05\.10\.2026 at [^,]+, ozon$/);
 });
 
 test('offers the first product from an empty list, and keeps the header free of the button then', async (): Promise<void> => {

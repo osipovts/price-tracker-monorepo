@@ -11,37 +11,33 @@ export interface PriceChecksInterface {
   nextAt: string | null;
 }
 
-/**
- * When the price was read and when it is read again, apart: "Checked today at 09:00, ozon", "Next check at
- * 12:00". The next read is within hours: its time alone. The parts not known are left out; none when neither is.
- */
+export interface PriceCheckTimesInterface {
+  /** When the price was read: "today at 09:00", with the marketplace when it is told; null when it never was. */
+  checked: string | null;
+  /** When it is read next: within hours, its time alone, or soon; null when there is none to come. */
+  next: string | null;
+}
+
+/** When the price was read and when it is read again, the words of each without what it is: the icons tell that. */
 export function describePriceChecks(
   { checkedAt, marketplace, nextAt }: PriceChecksInterface,
   t: TFunction,
   locale: string,
   now: Date,
-): string[] {
-  const parts: string[] = [];
-  if (checkedAt !== null) {
-    const when = formatDayMoment(checkedAt, t, locale, now);
-    parts.push(
-      marketplace === null
-        ? t('product.checked', { when })
-        : t('product.checkedOn', { when, marketplace }),
-    );
-  }
-  if (nextAt !== null) {
-    parts.push(
-      new Date(nextAt) <= now
-        ? t('product.nextCheckSoon')
-        : t('product.nextCheck', {
-            when: new Date(nextAt).toLocaleTimeString(locale, {
-              hour: '2-digit',
-              minute: '2-digit',
-            }),
-          }),
-    );
-  }
+): PriceCheckTimesInterface {
+  const when = checkedAt === null ? null : formatDayMoment(checkedAt, t, locale, now);
+  const checked =
+    when === null || marketplace === null ? when : t('product.checkedOn', { when, marketplace });
 
-  return parts;
+  if (nextAt === null) return { checked, next: null };
+
+  const next = new Date(nextAt);
+
+  return {
+    checked,
+    next:
+      next <= now
+        ? t('product.nextCheckSoon')
+        : next.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
+  };
 }
