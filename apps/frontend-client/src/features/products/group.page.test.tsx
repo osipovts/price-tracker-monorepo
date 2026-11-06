@@ -205,9 +205,14 @@ test('tells under each offer its last check by the day, and the next one by the 
   });
   renderPage();
 
+  // A line each on a phone, one line on a wide screen: the text is the same.
   expect(
     await screen.findByText(
-      /^Checked 05\.10\.2026 at [^.]+\. Next check at \d{1,2}:\d{2}( [AP]M)?$/,
+      (_, element): boolean =>
+        element?.tagName === 'P' &&
+        /^Checked 05\.10\.2026 at [^.]+\. Next check at \d{1,2}:\d{2}( [AP]M)?$/.test(
+          element.textContent,
+        ),
     ),
   ).toBeInTheDocument();
 });

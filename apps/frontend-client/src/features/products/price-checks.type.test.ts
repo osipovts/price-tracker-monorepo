@@ -7,7 +7,7 @@ const now = new Date(2026, 10, 3, 15, 30);
 const at = (day: number, hour: number, minute: number): string =>
   new Date(2026, 10, day, hour, minute).toISOString();
 
-test('tells the last read by the day and the time, and the next one by the time alone', () => {
+test('tells the last read by the day and the time, and the next one by the time alone, each apart', () => {
   const { t } = createI18n('ru');
 
   expect(
@@ -17,7 +17,7 @@ test('tells the last read by the day and the time, and the next one by the time 
       'ru',
       now,
     ),
-  ).toBe('Проверено вчера в 23:05. Следующая проверка в 01:40');
+  ).toEqual(['Проверено вчера в 23:05', 'Следующая проверка в 01:40']);
 });
 
 test('names the marketplace of the last read when it is given', () => {
@@ -30,7 +30,7 @@ test('names the marketplace of the last read when it is given', () => {
       'ru',
       now,
     ),
-  ).toBe('Проверено 01.11.2026 в 09:00, ozon');
+  ).toEqual(['Проверено 01.11.2026 в 09:00, ozon']);
 });
 
 test('says soon of a next read whose time has passed', () => {
@@ -43,7 +43,7 @@ test('says soon of a next read whose time has passed', () => {
       'en',
       now,
     ),
-  ).toMatch(/^Checked today at [^.]+\. Next check soon$/);
+  ).toEqual([expect.stringMatching(/^Checked today at /), 'Next check soon']);
 });
 
 test('leaves out what is not known, and is nothing when nothing is', () => {
@@ -51,8 +51,8 @@ test('leaves out what is not known, and is nothing when nothing is', () => {
 
   expect(
     describePriceChecks({ checkedAt: null, marketplace: null, nextAt: at(3, 16, 0) }, t, 'ru', now),
-  ).toBe('Следующая проверка в 16:00');
+  ).toEqual(['Следующая проверка в 16:00']);
   expect(
     describePriceChecks({ checkedAt: null, marketplace: null, nextAt: null }, t, 'ru', now),
-  ).toBeNull();
+  ).toEqual([]);
 });
