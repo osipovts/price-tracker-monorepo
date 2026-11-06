@@ -19,7 +19,12 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import {
+  useDisclosure,
+  useElementSize,
+  useLocalStorage,
+  type UseStorageOptions,
+} from '@mantine/hooks';
 import { ApiError, ErrorAlert, MarketplaceName, marketplaceName, useLocale } from 'frontend-shared';
 import { type ReactElement, type SyntheticEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +32,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 
 import { LineIcon } from './action-icons.component.js';
 import { AddProductModal } from './add-product-modal.component.js';
+import { chartPointsFitting } from './chart-layout.type.js';
 import { DeleteGroup } from './delete-group.component.js';
 import { DeleteProduct } from './delete-product.component.js';
 import { BestPrice } from './group-prices.component.js';
@@ -47,14 +53,26 @@ import {
 } from './use-product-groups.hook.js';
 import { type ObservationType, usePriceHistories } from './use-products.hook.js';
 
-/** How many points the chart shows of each granularity: the hours of two days, the days of a month, the weeks of a year. */
-const bucketsShown: Record<GranularityType, number> = { hour: 48, day: 30, week: 52 };
+/** A point of the chart is an hour, a day or a week. */
 const granularityLabels = {
-  hour: 'group.hours',
-  day: 'group.days',
-  week: 'group.year',
+  hour: 'group.byHour',
+  day: 'group.byDay',
+  week: 'group.byWeek',
 } as const satisfies Record<GranularityType, string>;
 const tablePageSize = 20;
+
+/** A point a day, before any scale is picked. */
+const defaultGranularity: GranularityType = 'day';
+/** The scale the person picked last is kept by the browser. */
+const granularityStorage: UseStorageOptions<GranularityType> & { defaultValue: GranularityType } = {
+  key: 'chartGranularity',
+  defaultValue: defaultGranularity,
+  // Read at once, not after the first paint: the chart would be drawn twice.
+  getInitialValueInEffect: false,
+  serialize: (granularity: GranularityType): string => granularity,
+  deserialize: (stored: string | undefined): GranularityType =>
+    granularities.find((granularity): boolean => granularity === stored) ?? defaultGranularity,
+};
 
 type GroupProductType = ProductGroupDetailType['products'][number];
 
@@ -63,12 +81,16 @@ interface HistoryRowInterface {
   observation: ObservationType;
 }
 
+const seriesDotSize = 10;
+/** The cross of an offer, and the height of the line of it, for the name and the price to stand level with it. */
+const crossSize = 28;
+
 /** The mark of a product in the list, the chart and the table: the colour of its line. */
 function SeriesDot({ color }: { color: string }): ReactElement {
   return (
     <Box
-      w={10}
-      h={10}
+      w={seriesDotSize}
+      h={seriesDotSize}
       bg={`var(--mantine-color-${color}-6)`}
       style={{ borderRadius: '50%', flexShrink: 0 }}
     />
@@ -288,8 +310,8 @@ function OfferPrice({
 }
 
 /**
- * A product of the group, a row like the one of a group in the list: where it is, its checks and its newest
- * price, all of it a link to it; and apart from the link, the way to stop tracking it.
+ * A product of the group, a row like the one of a group in the list: where it is and its newest price on the
+ * first line, its checks on the second, all of it a link to it; and apart from the link, the way to stop tracking it.
  */
 function OfferRow({
   product,
@@ -313,20 +335,22 @@ function OfferRow({
 
   return (
     <Box className="list-row" py="sm" title={title}>
-      <Group wrap="nowrap" gap="sm">
+      <Group wrap="nowrap" gap="sm" align="flex-start">
         <Box {...link} className="row-link" flex={1} miw={0}>
-          <Group wrap="nowrap" gap="sm">
+          <Group wrap="nowrap" gap="sm" mih={crossSize}>
             <SeriesDot color={style.color} />
-            <Stack gap={0} flex={1} miw={0}>
-              <Text className="row-title" fw={500} truncate {...struck}>
-                {style.label}
-              </Text>
-              <OfferNote product={product} />
-            </Stack>
+            <Text className="row-title" fw={500} truncate flex={1} miw={0} {...struck}>
+              {style.label}
+            </Text>
             <OfferPrice product={product} best={best} />
           </Group>
+          {/* Under the name, not under the dot. */}
+          <Box pl={`calc(${String(seriesDotSize)}px + var(--mantine-spacing-sm))`}>
+            <OfferNote product={product} />
+          </Box>
         </Box>
         <CloseButton
+          size={crossSize}
           aria-label={t('product.delete')}
           title={t('product.delete')}
           onClick={deletion.open}
@@ -469,21 +493,19 @@ function PriceHistory({
   histories: Array<ObservationType[] | undefined>;
 }): ReactElement {
   const { t } = useTranslation();
-  const [granularity, setGranularity] = useState<GranularityType>('day');
+  const [granularity, setGranularity] = useLocalStorage<GranularityType>(granularityStorage);
   const [tableShown, table] = useDisclosure(false);
+  // As many points as the width keeps apart, the same number on any wide screen.
+  const chart = useElementSize();
+  const pointCount = chartPointsFitting(chart.width);
   const lines = useMemo((): ChartLineInterface[] => {
     const now = new Date();
 
     return styles.map((style, index): ChartLineInterface => ({
       ...style,
-      buckets: buildPriceSeries(
-        toPoints(histories[index] ?? []),
-        granularity,
-        bucketsShown[granularity],
-        now,
-      ),
+      buckets: buildPriceSeries(toPoints(histories[index] ?? []), granularity, pointCount, now),
     }));
-  }, [styles, histories, granularity]);
+  }, [styles, histories, granularity, pointCount]);
   const rows = products
     .flatMap((product, index): HistoryRowInterface[] =>
       (histories[index] ?? []).map((observation): HistoryRowInterface => ({
@@ -506,7 +528,7 @@ function PriceHistory({
             value={granularity}
             data={granularities.map((value): { value: string; label: string } => ({
               value,
-              label: t(granularityLabels[value], { count: bucketsShown[value] }),
+              label: t(granularityLabels[value]),
             }))}
             onChange={(value): void => {
               const chosen = granularities.find((candidate): boolean => candidate === value);
@@ -517,7 +539,7 @@ function PriceHistory({
         {rows.length === 0 ? (
           <Text c="dimmed">{t('product.noHistory')}</Text>
         ) : (
-          <Paper withBorder radius="md" p={{ base: 'xs', sm: 'md' }}>
+          <Paper ref={chart.ref} withBorder radius="md" p={{ base: 'xs', sm: 'md' }}>
             <PriceChart granularity={granularity} lines={lines} />
           </Paper>
         )}

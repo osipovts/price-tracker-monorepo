@@ -179,12 +179,12 @@ test('changes the password with the current one', async (): Promise<void> => {
 test('shows the password and the providers linked, and unlinks one of them', async (): Promise<void> => {
   openSettings();
 
-  expect(await screen.findByRole('heading', { name: 'Linked accounts' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Sign-in methods' })).toBeInTheDocument();
   expect(await screen.findByText('Google')).toBeInTheDocument();
   expect(screen.getByText('GitHub')).toBeInTheDocument();
   // The password is a row like the others: its name and the day the account was created.
   const section = (
-    await screen.findByRole('heading', { name: 'Linked accounts' })
+    await screen.findByRole('heading', { name: 'Sign-in methods' })
   ).closest<HTMLElement>('.mantine-Card-root');
   if (section === null) throw new Error('The section of the linked accounts is not a card');
   expect(within(section).getByText('Password')).toBeInTheDocument();
@@ -238,4 +238,14 @@ test('asks for the email again when the confirmation is closed and opened anew',
   await userEvent.click(screen.getByRole('button', { name: 'Delete account' }));
 
   expect(await screen.findByLabelText('Email of the account')).toHaveValue('');
+});
+
+test('links to the legal texts at the foot of the settings', async (): Promise<void> => {
+  openSettings();
+
+  expect(await screen.findByRole('link', { name: 'Privacy Policy' })).toHaveAttribute(
+    'href',
+    '/privacy',
+  );
+  expect(screen.getByRole('link', { name: 'Terms of Service' })).toHaveAttribute('href', '/terms');
 });

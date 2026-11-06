@@ -12,8 +12,8 @@ export interface PriceChecksInterface {
 }
 
 /**
- * When the price was read and is read again, in one line: "Checked today, 09:00, ozon. Next check
- * 12:00". The next read is within hours: its time alone. The parts not known are left out; null when neither is.
+ * When the price was read and is read again, in one line: "Checked today at 09:00, ozon. Next
+ * check at 12:00". The next read is within hours: its time alone. The parts not known are left out; null when neither is.
  */
 export function describePriceChecks(
   { checkedAt, marketplace, nextAt }: PriceChecksInterface,
@@ -23,7 +23,7 @@ export function describePriceChecks(
 ): string | null {
   const parts: string[] = [];
   if (checkedAt !== null) {
-    const when = formatDayMoment(checkedAt, locale, now);
+    const when = formatDayMoment(checkedAt, t, locale, now);
     parts.push(
       marketplace === null
         ? t('product.checked', { when })

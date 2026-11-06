@@ -1,6 +1,6 @@
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, type RenderResult, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, expect, test, vi } from 'vitest';
@@ -132,8 +132,8 @@ function stubHub({
   );
 }
 
-function renderPage(): void {
-  render(
+function renderPage(): RenderResult {
+  return render(
     <MantineProvider env="test">
       <MemoryRouter initialEntries={[`/groups/${groupId}`]}>
         <QueryClientProvider
@@ -151,6 +151,7 @@ function renderPage(): void {
 
 beforeEach((): void => {
   sessionStorage.clear();
+  localStorage.clear();
 });
 
 test('shows the title, the best price, and where to buy, the cheapest first, each row a link to its marketplace', async (): Promise<void> => {
@@ -205,7 +206,9 @@ test('tells under each offer its last check by the day, and the next one by the 
   renderPage();
 
   expect(
-    await screen.findByText(/^Checked 05\.10\.2026, [^.]+\. Next check \d{1,2}:\d{2}( [AP]M)?$/),
+    await screen.findByText(
+      /^Checked 05\.10\.2026 at [^.]+\. Next check at \d{1,2}:\d{2}( [AP]M)?$/,
+    ),
   ).toBeInTheDocument();
 });
 
@@ -273,13 +276,13 @@ test('keeps the checks under a button, and pages through them, the newest first'
   expect(screen.getAllByRole('row')).toHaveLength(6);
 });
 
-test('draws the history by hour, by day or by week over a year', async (): Promise<void> => {
+test('draws the history by hour, by day or by week, a point each', async (): Promise<void> => {
   stubHub({ history: { [ozonId]: [observation(ozonId, 1, 100_000)] } });
   renderPage();
 
-  expect(await screen.findByRole('radio', { name: '48 h' })).toBeInTheDocument();
-  expect(screen.getByRole('radio', { name: '30 days' })).toBeChecked();
-  expect(screen.getByRole('radio', { name: '1 year' })).toBeInTheDocument();
+  expect(await screen.findByRole('radio', { name: 'By hour' })).toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: 'By day' })).toBeChecked();
+  expect(screen.getByRole('radio', { name: 'By week' })).toBeInTheDocument();
 });
 
 test('renames the group from its menu', async (): Promise<void> => {
@@ -346,4 +349,15 @@ test("says so when the group is not the user's", async (): Promise<void> => {
   renderPage();
 
   expect(await screen.findByText('This group does not exist.')).toBeInTheDocument();
+});
+
+test('keeps the scale of the chart that is picked for the next visit', async (): Promise<void> => {
+  stubHub({ history: { [ozonId]: [observation(ozonId, 1, 100_000)] } });
+  const { unmount } = renderPage();
+
+  await userEvent.click(await screen.findByText('By week'));
+  unmount();
+  renderPage();
+
+  expect(await screen.findByRole('radio', { name: 'By week' })).toBeChecked();
 });

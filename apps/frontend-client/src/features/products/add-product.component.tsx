@@ -3,6 +3,7 @@ import { ErrorAlert } from 'frontend-shared';
 import { type ReactElement, type SyntheticEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { type CityChoiceInterface, readRememberedCity, rememberCity } from './city-choice.type.js';
 import { cityMarketplaceOf, type CityMarketplaceType } from './city-link.type.js';
 import { type PendingAddInterface, readPendingAdd } from './pending-add.type.js';
 import { TrackedIn } from './tracked-in.component.js';
@@ -27,13 +28,13 @@ function CityField({
 }: {
   marketplace: CityMarketplaceType;
   disabled: boolean;
-  chosen: { value: string; label: string } | null;
-  onChoose: (city: { value: string; label: string } | null) => void;
+  chosen: CityChoiceInterface | null;
+  onChoose: (city: CityChoiceInterface | null) => void;
 }): ReactElement {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const cities = useCities(marketplace, search, true);
-  const found = (cities.data ?? []).map((city): { value: string; label: string } => ({
+  const found = (cities.data ?? []).map((city): CityChoiceInterface => ({
     value: city.id,
     label: cityLabel(city),
   }));
@@ -64,6 +65,88 @@ function CityField({
   );
 }
 
+/** Whether the add has gone on for longer than `slowAddDelayMs`. */
+function useSlowAdd(pending: boolean): boolean {
+  const [slow, setSlow] = useState(false);
+
+  useEffect((): (() => void) | undefined => {
+    if (!pending) return undefined;
+
+    const timer = setTimeout((): void => {
+      setSlow(true);
+    }, slowAddDelayMs);
+
+    return (): void => {
+      clearTimeout(timer);
+      setSlow(false);
+    };
+  }, [pending]);
+
+  return slow;
+}
+
+/**
+ * A reload cut the add to the group short, not stopped it: it is resumed once, when the form opens, and the hub
+ * joins it when the same link is sent again.
+ */
+function useResumedAdd(
+  groupId: string | null,
+  resume: (pending: PendingAddInterface) => void,
+): void {
+  const resumed = useRef(false);
+
+  useEffect((): void => {
+    // Once, when the page opens: React runs the effect twice in development.
+    if (resumed.current) return;
+
+    resumed.current = true;
+    const pending = readPendingAdd();
+    if (pending?.groupId === groupId) resume(pending);
+  }, []);
+}
+
+interface LinkCityInterface {
+  url: string;
+  /** The marketplace of the link when its prices depend on the city; null for the others. */
+  marketplace: CityMarketplaceType | null;
+  city: CityChoiceInterface | null;
+  /** The city sent with the link: none for a marketplace whose prices do not depend on it. */
+  cityId: string | null;
+  changeUrl: (url: string) => void;
+  chooseCity: (city: CityChoiceInterface | null) => void;
+  clear: () => void;
+}
+
+/** The link typed and the city picked for it: a marketplace that has cities starts with the one picked last for it. */
+function useLinkCity(): LinkCityInterface {
+  const [url, setUrl] = useState('');
+  const [city, setCity] = useState<CityChoiceInterface | null>(null);
+  const marketplace = cityMarketplaceOf(url);
+
+  return {
+    url,
+    marketplace,
+    city,
+    cityId: marketplace === null ? null : (city?.value ?? null),
+    changeUrl: (next: string): void => {
+      const nextMarketplace = cityMarketplaceOf(next);
+      // A city of one marketplace is no city of another.
+      if (nextMarketplace !== marketplace) {
+        setCity(nextMarketplace === null ? null : readRememberedCity(nextMarketplace));
+      }
+      setUrl(next);
+    },
+    chooseCity: (chosen: CityChoiceInterface | null): void => {
+      setCity(chosen);
+      if (marketplace !== null) rememberCity(marketplace, chosen);
+    },
+    clear: (): void => {
+      setUrl('');
+      setCity(null);
+    },
+  };
+}
+
 /**
  * Adds a product by its link: to the group, or to a new group of its own when there is none. A product being
  * added to a group that a reload cut short is asked for again where it was started from.
@@ -77,25 +160,12 @@ export function AddProduct({
   onDone?: () => void;
 }): ReactElement {
   const { t } = useTranslation();
-  const [url, setUrl] = useState('');
-  const [city, setCity] = useState<{ value: string; label: string } | null>(null);
-  const cityMarketplace = cityMarketplaceOf(url);
+  const link = useLinkCity();
   const add = useAddProduct();
-  const [slow, setSlow] = useState(false);
-  const resumed = useRef(false);
-
-  useEffect((): (() => void) | undefined => {
-    if (!add.isPending) return undefined;
-
-    const timer = setTimeout((): void => {
-      setSlow(true);
-    }, slowAddDelayMs);
-
-    return (): void => {
-      clearTimeout(timer);
-      setSlow(false);
-    };
-  }, [add.isPending]);
+  const slow = useSlowAdd(add.isPending);
+  const done = (): void => {
+    onDone?.();
+  };
 
   // The group of a product the user tracks already: the form stays, and says where the product is.
   const [trackedIn, setTrackedIn] = useState<string | null>(null);
@@ -111,30 +181,21 @@ export function AddProduct({
           return;
         }
 
-        setUrl('');
-        setCity(null);
-        onDone?.();
+        link.clear();
+        done();
       },
     });
   };
 
   const submit = (event: SyntheticEvent): void => {
     event.preventDefault();
-    track({ url, cityId: cityMarketplace === null ? null : (city?.value ?? null), groupId });
+    track({ url: link.url, cityId: link.cityId, groupId });
   };
 
-  // A reload cut the add short, not stopped it: the hub joins it when the same link is sent again.
-  useEffect((): void => {
-    // Once, when the page opens: React runs the effect twice in development.
-    if (resumed.current) return;
-
-    resumed.current = true;
-    const pending = readPendingAdd();
-    if (pending?.groupId !== groupId) return;
-
-    setUrl(pending.url);
+  useResumedAdd(groupId, (pending): void => {
+    link.changeUrl(pending.url);
     track(pending, true);
-  }, []);
+  });
 
   return (
     <form onSubmit={submit}>
@@ -147,22 +208,19 @@ export function AddProduct({
           required
           data-autofocus
           disabled={add.isPending}
-          value={url}
+          value={link.url}
           onChange={(event): void => {
-            const next = event.currentTarget.value;
-            // A city of one marketplace is no city of another.
-            if (cityMarketplaceOf(next) !== cityMarketplace) setCity(null);
-            setUrl(next);
+            link.changeUrl(event.currentTarget.value);
             setTrackedIn(null);
           }}
         />
-        {cityMarketplace !== null && (
+        {link.marketplace !== null && (
           <CityField
-            key={cityMarketplace}
-            marketplace={cityMarketplace}
+            key={link.marketplace}
+            marketplace={link.marketplace}
             disabled={add.isPending}
-            chosen={city}
-            onChoose={setCity}
+            chosen={link.city}
+            onChoose={link.chooseCity}
           />
         )}
         {slow && (
@@ -172,13 +230,7 @@ export function AddProduct({
         )}
         {add.error !== null && <ErrorAlert error={add.error} />}
         {trackedIn !== null && (
-          <TrackedIn
-            groupId={trackedIn}
-            askedGroupId={groupId}
-            onFollow={(): void => {
-              onDone?.();
-            }}
-          />
+          <TrackedIn groupId={trackedIn} askedGroupId={groupId} onFollow={done} />
         )}
         <Group justify="flex-end">
           <Button type="submit" loading={add.isPending}>

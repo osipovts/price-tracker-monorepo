@@ -107,8 +107,10 @@ test('never marks the axis closer than a ruble', () => {
 
 test('labels a point by the moment it stands for: the end of the hour, the day, the Sunday of the week', () => {
   expect(labelOf(new Date(2026, 10, 1, 14), 'hour', 'ru')).toBe('15:00');
-  expect(labelOf(new Date(2026, 10, 1), 'day', 'ru')).toBe('01.11');
-  expect(labelOf(new Date(2026, 9, 26), 'week', 'ru')).toBe('01.11');
+  expect(labelOf(new Date(2026, 10, 1), 'day', 'ru')).toBe('01 ноя');
+  expect(labelOf(new Date(2026, 9, 26), 'week', 'ru')).toBe('01 ноя');
+  expect(labelOf(new Date(2026, 0, 1), 'day', 'ru')).toBe('01 янв');
+  expect(labelOf(new Date(2026, 0, 1), 'day', 'en')).toBe('Jan 01');
   expect(titleOf(new Date(2026, 9, 26), 'week', 'ru')).toBe('1 ноября 2026 г.');
   expect(titleOf(new Date(2026, 10, 1, 14), 'hour', 'ru')).toBe('01.11, 15:00');
 });

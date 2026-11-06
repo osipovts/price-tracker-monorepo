@@ -27,3 +27,25 @@
   outline: 2px solid var(--mantine-primary-color-filled);
   outline-offset: -2px;
 }
+
+/* The row that adds a product: a ghost of a row of a group, its picture a dashed frame that fills in under the pointer. */
+.add-row {
+  width: 100%;
+  text-align: start;
+}
+
+.add-row-frame {
+  border: 1.5px dashed var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-sm);
+  color: var(--mantine-color-dimmed);
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.add-row:hover .add-row-frame {
+  border-color: var(--mantine-primary-color-filled);
+  color: var(--mantine-primary-color-filled);
+  background-color: var(--mantine-primary-color-light);
+}

@@ -17,7 +17,7 @@ test('tells the last read by the day and the time, and the next one by the time 
       'ru',
       now,
     ),
-  ).toBe('Проверено вчера, 23:05. Следующая проверка 01:40');
+  ).toBe('Проверено вчера в 23:05. Следующая проверка в 01:40');
 });
 
 test('names the marketplace of the last read when it is given', () => {
@@ -30,7 +30,7 @@ test('names the marketplace of the last read when it is given', () => {
       'ru',
       now,
     ),
-  ).toBe('Проверено 01.11.2026, 09:00, ozon');
+  ).toBe('Проверено 01.11.2026 в 09:00, ozon');
 });
 
 test('says soon of a next read whose time has passed', () => {
@@ -43,7 +43,7 @@ test('says soon of a next read whose time has passed', () => {
       'en',
       now,
     ),
-  ).toMatch(/^Checked today, [^.]+\. Next check soon$/);
+  ).toMatch(/^Checked today at [^.]+\. Next check soon$/);
 });
 
 test('leaves out what is not known, and is nothing when nothing is', () => {
@@ -51,7 +51,7 @@ test('leaves out what is not known, and is nothing when nothing is', () => {
 
   expect(
     describePriceChecks({ checkedAt: null, marketplace: null, nextAt: at(3, 16, 0) }, t, 'ru', now),
-  ).toBe('Следующая проверка 16:00');
+  ).toBe('Следующая проверка в 16:00');
   expect(
     describePriceChecks({ checkedAt: null, marketplace: null, nextAt: null }, t, 'ru', now),
   ).toBeNull();
