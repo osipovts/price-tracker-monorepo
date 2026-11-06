@@ -7,7 +7,7 @@ const now = new Date(2026, 10, 3, 15, 30);
 const at = (day: number, hour: number, minute: number): string =>
   new Date(2026, 10, day, hour, minute).toISOString();
 
-test('tells the last read by the day and the time, and the next one by the time alone, each apart', () => {
+test('tells the last read by the day and the time, and the next one by the time alone', () => {
   const { t } = createI18n('ru');
 
   expect(
@@ -17,7 +17,7 @@ test('tells the last read by the day and the time, and the next one by the time 
       'ru',
       now,
     ),
-  ).toEqual(['Проверено вчера в 23:05', 'Следующая проверка в 01:40']);
+  ).toEqual({ checked: 'вчера в 23:05', next: '01:40' });
 });
 
 test('names the marketplace of the last read when it is given', () => {
@@ -30,29 +30,30 @@ test('names the marketplace of the last read when it is given', () => {
       'ru',
       now,
     ),
-  ).toEqual(['Проверено 01.11.2026 в 09:00, ozon']);
+  ).toEqual({ checked: '01.11.2026 в 09:00, ozon', next: null });
 });
 
 test('says soon of a next read whose time has passed', () => {
   const { t } = createI18n('en');
 
-  expect(
-    describePriceChecks(
-      { checkedAt: at(3, 9, 0), marketplace: null, nextAt: at(3, 10, 0) },
-      t,
-      'en',
-      now,
-    ),
-  ).toEqual([expect.stringMatching(/^Checked today at /), 'Next check soon']);
+  const { checked, next } = describePriceChecks(
+    { checkedAt: at(3, 9, 0), marketplace: null, nextAt: at(3, 10, 0) },
+    t,
+    'en',
+    now,
+  );
+
+  expect(checked).toMatch(/^today at /);
+  expect(next).toBe('soon');
 });
 
-test('leaves out what is not known, and is nothing when nothing is', () => {
+test('leaves out what is not known', () => {
   const { t } = createI18n('ru');
 
   expect(
     describePriceChecks({ checkedAt: null, marketplace: null, nextAt: at(3, 16, 0) }, t, 'ru', now),
-  ).toEqual(['Следующая проверка в 16:00']);
+  ).toEqual({ checked: null, next: '16:00' });
   expect(
     describePriceChecks({ checkedAt: null, marketplace: null, nextAt: null }, t, 'ru', now),
-  ).toEqual([]);
+  ).toEqual({ checked: null, next: null });
 });

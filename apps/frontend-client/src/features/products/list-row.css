@@ -49,3 +49,48 @@
   color: var(--mantine-primary-color-filled);
   background-color: var(--mantine-primary-color-light);
 }
+
+/*
+ * An offer: its dot, its name, its checks and its price in one line. On a phone the checks go under the name,
+ * and the name takes the room left by the price. 48em is the sm breakpoint of Mantine.
+ */
+.offer-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--mantine-spacing-sm);
+}
+
+.offer-name {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* The name and the price are as tall as the cross at the right of the row: the three stand on one line. */
+.offer-line .offer-name,
+.offer-line .offer-price p {
+  line-height: 28px;
+}
+
+.offer-note {
+  order: 1;
+  flex-basis: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+@media (min-width: 48em) {
+  .offer-line {
+    flex-wrap: nowrap;
+  }
+
+  /* The name and the checks give way to the price when the line is short: both cut, the price whole. */
+  .offer-name,
+  .offer-note {
+    flex: 0 1 auto;
+  }
+
+  .offer-note {
+    order: 0;
+  }
+}

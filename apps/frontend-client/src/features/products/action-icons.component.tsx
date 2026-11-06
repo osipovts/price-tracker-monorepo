@@ -9,6 +9,8 @@ const iconPaths = {
     'M18 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0',
   ].join(''),
   arrowLeft: 'M19 12H5M11 18l-6-6 6-6',
+  arrowRight: 'M5 12h14M13 6l6 6-6 6',
+  check: 'M5 12l5 5 9-10',
 } as const;
 
 export type LineIconNameType = keyof typeof iconPaths;
