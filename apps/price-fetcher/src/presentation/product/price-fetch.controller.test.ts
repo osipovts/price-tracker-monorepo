@@ -7,9 +7,22 @@ import type { PriceFetchResultType } from 'queue-contract';
 import { JobLifecycleReporter, QueueMessageParser } from 'queue-worker';
 
 import { FetchPricesUseCase } from '../../application/product/fetch-prices.use-case.js';
+import type { ProductBatchReaderPort } from '../../application/product/product-batch-reader.port.js';
 import type { ProductReaderPort } from '../../application/product/product-reader.port.js';
 import type { ReadProductResultType } from '../../domain/product/product-snapshot.interface.js';
 import { PriceFetchController } from './price-fetch.controller.js';
+
+/** Reads the products of a batch one after another, as the reader of a marketplace without batches does. */
+function oneByOne(reader: ProductReaderPort): ProductBatchReaderPort {
+  return {
+    readMany: async (references, proxy, signal): Promise<ReadProductResultType[]> => {
+      const results: ReadProductResultType[] = [];
+      for (const reference of references) results.push(await reader.read(reference, proxy, signal));
+
+      return results;
+    },
+  };
+}
 
 const jobId = '3f0c9a52-7a53-4a64-9d0d-2f2f6c1f0a11';
 const productId = '9a2d0f3c-0a44-4b6a-b8c2-7e7e2f3b1d33';
@@ -48,10 +61,11 @@ function createController(
   return new PriceFetchController(
     new FetchPricesUseCase(
       new ResolveProductReferenceUseCase([new OzonReferenceParser()]),
-      (): ProductReaderPort => ({
-        read: (reference): Promise<ReadProductResultType> =>
-          Promise.resolve(typeof result === 'function' ? result(reference.url) : result),
-      }),
+      (): ProductBatchReaderPort =>
+        oneByOne({
+          read: (reference): Promise<ReadProductResultType> =>
+            Promise.resolve(typeof result === 'function' ? result(reference.url) : result),
+        }),
     ),
     new QueueMessageParser(silentLogger),
     new JobLifecycleReporter(publish, silentLogger),
@@ -88,20 +102,24 @@ void test('reads products through the given routes and reports progress and comp
       .map((progress): number[] => [progress.processed, progress.total, progress.succeeded]),
     [
       [0, 2, 0],
-      [1, 2, 1],
+      [1, 2, 0],
       [2, 2, 1],
     ],
   );
 
+  // A link that is not of a product is told of before the products are read.
   const [first, second] = published.filter(isType('product_result'));
-  assert.deepEqual(first, {
-    type: 'product_result',
-    jobId,
-    trackedProductId: productId,
-    status: 'success',
-    attempts: [{ proxy: 'socks5://217.71.230.103:1080', result: success }],
-  });
-  assert.equal(second?.status, 'invalid_url');
+  assert.equal(first?.status, 'invalid_url');
+  assert.deepEqual(
+    { ...second, attempts: second?.attempts.map(({ proxy, result }) => ({ proxy, result })) },
+    {
+      type: 'product_result',
+      jobId,
+      trackedProductId: productId,
+      status: 'success',
+      attempts: [{ proxy: 'socks5://217.71.230.103:1080', result: success }],
+    },
+  );
 });
 
 void test('reports no proxies when every route is unsafe', async (): Promise<void> => {
@@ -271,10 +289,11 @@ void test('starts the next try on the routes that did not fail this one', async 
   const controller = new PriceFetchController(
     new FetchPricesUseCase(
       new ResolveProductReferenceUseCase([new OzonReferenceParser()]),
-      (): ProductReaderPort => ({
-        read: (_reference, endpoint): Promise<ReadProductResultType> =>
-          Promise.resolve(answers[endpoint.server] ?? success),
-      }),
+      (): ProductBatchReaderPort =>
+        oneByOne({
+          read: (_reference, endpoint): Promise<ReadProductResultType> =>
+            Promise.resolve(answers[endpoint.server] ?? success),
+        }),
     ),
     new QueueMessageParser(silentLogger),
     new JobLifecycleReporter(publish, silentLogger),

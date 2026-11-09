@@ -7,27 +7,74 @@ import { ProxyEndpointEntity } from 'proxy-endpoint';
 import type { ReadProductResultType } from '../../domain/product/product-snapshot.interface.js';
 import { MarketplaceProductReaderAdapter } from './marketplace-product-reader.adapter.js';
 
-void test('delegates reading to the reader of the reference marketplace', async (): Promise<void> => {
+const proxy = new ProxyEndpointEntity('socks5://217.71.230.1:1080');
+
+function failing(status: 'parse_error' | 'network_error'): {
+  read: () => Promise<ReadProductResultType>;
+} {
+  return { read: (): Promise<ReadProductResultType> => Promise.resolve({ status }) };
+}
+
+void test('delegates reading to the reader of the reference marketplace, one product after another', async (): Promise<void> => {
+  const read: string[] = [];
   const reader = new MarketplaceProductReaderAdapter({
     ozon: {
-      read: (): Promise<ReadProductResultType> => Promise.resolve({ status: 'parse_error' }),
+      read: (reference): Promise<ReadProductResultType> => {
+        read.push(reference.id);
+
+        return Promise.resolve({ status: 'parse_error' });
+      },
     },
-    dns: {
-      read: (): Promise<ReadProductResultType> => Promise.resolve({ status: 'network_error' }),
-    },
-    wildberries: {
-      read: (): Promise<ReadProductResultType> => Promise.resolve({ status: 'network_error' }),
-    },
-    citilink: {
-      read: (): Promise<ReadProductResultType> => Promise.resolve({ status: 'network_error' }),
-    },
+    dns: failing('network_error'),
+    wildberries: failing('network_error'),
+    citilink: failing('network_error'),
   });
 
-  const result = await reader.read(
-    new ProductReferenceEntity('ozon', '1', 'https://www.ozon.ru/product/1/'),
-    new ProxyEndpointEntity('socks5://217.71.230.1:1080'),
+  const results = await reader.readMany(
+    [
+      new ProductReferenceEntity('ozon', '1', 'https://www.ozon.ru/product/1/'),
+      new ProductReferenceEntity('ozon', '2', 'https://www.ozon.ru/product/2/'),
+    ],
+    proxy,
     new AbortController().signal,
   );
 
-  assert.equal(result.status, 'parse_error');
+  assert.deepEqual(results, [{ status: 'parse_error' }, { status: 'parse_error' }]);
+  assert.deepEqual(read, ['1', '2']);
+});
+
+void test('gives the products of a marketplace that reads several at once to its batch reader', async (): Promise<void> => {
+  const reader = new MarketplaceProductReaderAdapter(
+    {
+      ozon: failing('network_error'),
+      dns: failing('network_error'),
+      wildberries: failing('network_error'),
+      citilink: failing('network_error'),
+    },
+    {
+      wildberries: {
+        readMany: (references): Promise<ReadProductResultType[]> =>
+          Promise.resolve(references.map((): ReadProductResultType => ({ status: 'parse_error' }))),
+      },
+    },
+  );
+
+  const results = await reader.readMany(
+    [
+      new ProductReferenceEntity(
+        'wildberries',
+        '1',
+        'https://www.wildberries.ru/catalog/1/detail.aspx',
+      ),
+      new ProductReferenceEntity(
+        'wildberries',
+        '2',
+        'https://www.wildberries.ru/catalog/2/detail.aspx',
+      ),
+    ],
+    proxy,
+    new AbortController().signal,
+  );
+
+  assert.deepEqual(results, [{ status: 'parse_error' }, { status: 'parse_error' }]);
 });

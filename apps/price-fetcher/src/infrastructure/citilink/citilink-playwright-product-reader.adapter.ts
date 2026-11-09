@@ -79,12 +79,12 @@ export class CitilinkPlaywrightProductReaderAdapter implements ProductReaderPort
     if (exit.status === 'unavailable') {
       this.logger.warn(`GeoIP gave no answer through ${proxy.server}`);
 
-      return { status: 'network_error' };
+      return { status: 'network_error', stage: 'exit' };
     }
     if (exit.status === 'rejected') {
       this.logger.warn(`GeoIP did not confirm an exit in ${country} through ${proxy.server}`);
 
-      return { status: 'proxy_rejected' };
+      return { status: 'proxy_rejected', stage: 'exit' };
     }
 
     const exitIp = exit.exitIp;

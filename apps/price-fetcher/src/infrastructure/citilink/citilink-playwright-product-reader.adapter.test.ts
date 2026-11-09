@@ -175,5 +175,6 @@ void test('rejects a non-Russian exit before loading the product', async (): Pro
 
   assert.deepEqual(await reader.read(reference, proxy, new AbortController().signal), {
     status: 'proxy_rejected',
+    stage: 'exit',
   });
 });

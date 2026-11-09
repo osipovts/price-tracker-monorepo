@@ -29,6 +29,8 @@ export const priceFetchResultSchema = z.discriminatedUnion('type', [
       z.object({
         proxy: z.string().nullable(),
         result: readProductResultSchema,
+        /** How long the attempt took, the check of the route included; absent from older workers. */
+        durationMs: z.number().int().nonnegative().optional(),
       }),
     ),
   }),

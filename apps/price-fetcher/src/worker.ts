@@ -34,6 +34,8 @@ import {
 import { OzonProductParser } from './infrastructure/ozon/ozon-product.parser.js';
 import { MarketplaceProductReaderAdapter } from './infrastructure/product/marketplace-product-reader.adapter.js';
 import { GeoIpPageParser } from './infrastructure/shared/geo-ip-page.parser.js';
+import { ProxyExitChecker } from './infrastructure/shared/proxy-exit.checker.js';
+import { TlsRouteProbeAdapter } from './infrastructure/shared/tls-route-probe.adapter.js';
 import { WildberriesChallengeParser } from './infrastructure/wildberries/wildberries-challenge.parser.js';
 import { WildberriesPageParser } from './infrastructure/wildberries/wildberries-page.parser.js';
 import { WildberriesPlaywrightProductReaderAdapter } from './infrastructure/wildberries/wildberries-playwright-product-reader.adapter.js';
@@ -47,12 +49,16 @@ const env = z
     headed: z.stringbool().default(true),
     browserPath: z.string().min(1).optional(),
     jobConcurrency: z.coerce.number().int().min(1).max(5).default(1),
+    routeProbeTimeoutMs: z.coerce.number().int().min(1000).max(30_000).default(6000),
+    wildberriesBatchLimit: z.coerce.number().int().min(1).max(50).default(20),
   })
   .parse({
     redisUrl: process.env['REDIS_URL'],
     headed: process.env['HEADED'],
     browserPath: process.env['BROWSER_PATH'],
     jobConcurrency: process.env['JOB_CONCURRENCY'],
+    routeProbeTimeoutMs: process.env['ROUTE_PROBE_TIMEOUT_MS'],
+    wildberriesBatchLimit: process.env['WILDBERRIES_BATCH_LIMIT'],
   });
 
 const logger = new ConsoleLoggerAdapter(
@@ -103,6 +109,8 @@ const dnsReferences = new DnsReferenceParser();
 const wildberriesReferences = new WildberriesReferenceParser();
 const citilinkReferences = new CitilinkReferenceParser();
 const citilinkStates = new CitilinkStateParser();
+// The exit of a proxy is checked once in a while for all the jobs, not by every job again.
+const exits = new ProxyExitChecker(30 * 60_000);
 const parsers: OzonReaderParsersInterface = {
   geoIp: new GeoIpPageParser(),
   pages: new OzonPageParser(),
@@ -118,53 +126,67 @@ const controller = new PriceFetchController(
       wildberriesReferences,
       citilinkReferences,
     ]),
-    (timeoutMs): MarketplaceProductReaderAdapter =>
-      new MarketplaceProductReaderAdapter({
-        ozon: new OzonPlaywrightProductReaderAdapter(
-          browser,
-          options,
-          parsers,
-          timeoutMs,
-          logger.child('ozon'),
-        ),
-        dns: new DnsPlaywrightProductReaderAdapter(
-          browser,
-          options,
-          {
-            geoIp: parsers.geoIp,
-            pages: new DnsPageParser(),
-            products: new DnsProductParser(dnsReferences),
-            cities: new DnsCityCookieParser(),
-          },
-          timeoutMs,
-          logger.child('dns'),
-        ),
-        wildberries: new WildberriesPlaywrightProductReaderAdapter(
-          browser,
-          options,
-          {
-            geoIp: parsers.geoIp,
-            pages: new WildberriesPageParser(),
-            challenges: new WildberriesChallengeParser(),
-            products: new WildberriesProductParser(wildberriesReferences),
-          },
-          timeoutMs,
-          logger.child('wildberries'),
-        ),
-        citilink: new CitilinkPlaywrightProductReaderAdapter(
-          browser,
-          options,
-          {
-            geoIp: parsers.geoIp,
-            pages: new CitilinkPageParser(),
-            states: citilinkStates,
-            products: new CitilinkProductParser(citilinkReferences, citilinkStates),
-          },
-          timeoutMs,
-          logger.child('citilink'),
-        ),
-      }),
+    (timeoutMs): MarketplaceProductReaderAdapter => {
+      const wildberries = new WildberriesPlaywrightProductReaderAdapter(
+        browser,
+        options,
+        {
+          geoIp: parsers.geoIp,
+          pages: new WildberriesPageParser(),
+          challenges: new WildberriesChallengeParser(),
+          products: new WildberriesProductParser(wildberriesReferences),
+        },
+        timeoutMs,
+        logger.child('wildberries'),
+        exits,
+      );
+
+      return new MarketplaceProductReaderAdapter(
+        {
+          ozon: new OzonPlaywrightProductReaderAdapter(
+            browser,
+            options,
+            parsers,
+            timeoutMs,
+            logger.child('ozon'),
+            exits,
+          ),
+          dns: new DnsPlaywrightProductReaderAdapter(
+            browser,
+            options,
+            {
+              geoIp: parsers.geoIp,
+              pages: new DnsPageParser(),
+              products: new DnsProductParser(dnsReferences),
+              cities: new DnsCityCookieParser(),
+            },
+            timeoutMs,
+            logger.child('dns'),
+            exits,
+          ),
+          wildberries,
+          citilink: new CitilinkPlaywrightProductReaderAdapter(
+            browser,
+            options,
+            {
+              geoIp: parsers.geoIp,
+              pages: new CitilinkPageParser(),
+              states: citilinkStates,
+              products: new CitilinkProductParser(citilinkReferences, citilinkStates),
+            },
+            timeoutMs,
+            logger.child('citilink'),
+            exits,
+          ),
+        },
+        { wildberries },
+      );
+    },
     logger.child('prices'),
+    {
+      probe: new TlsRouteProbeAdapter(env.routeProbeTimeoutMs, logger.child('routes')),
+      batchLimits: { wildberries: env.wildberriesBatchLimit },
+    },
   ),
   new QueueMessageParser(logger.child('controller')),
   new JobLifecycleReporter(publish, logger.child('controller')),

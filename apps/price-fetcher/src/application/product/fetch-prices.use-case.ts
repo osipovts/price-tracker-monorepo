@@ -1,7 +1,11 @@
 import { setTimeout } from 'node:timers/promises';
 
 import { type LoggerPort, silentLogger } from 'logger';
-import type { ProductReferenceEntity, ResolveProductReferenceUseCase } from 'product-reference';
+import type {
+  MarketplaceType,
+  ProductReferenceEntity,
+  ResolveProductReferenceUseCase,
+} from 'product-reference';
 import { ProxyEndpointEntity } from 'proxy-endpoint';
 
 import type {
@@ -9,7 +13,8 @@ import type {
   ReadProductResultType,
   TrackingResultInterface,
 } from '../../domain/product/product-snapshot.interface.js';
-import type { ProductReaderPort } from './product-reader.port.js';
+import type { ProductBatchReaderPort } from './product-batch-reader.port.js';
+import type { RouteProbePort } from './route-probe.port.js';
 
 export interface FetchPricesRouteInterface {
   /** Proxy URL, with the credentials if it has them. */
@@ -40,6 +45,13 @@ export interface FetchPricesListenerInterface {
   onProduct(result: ProductFetchResultInterface): Promise<void>;
 }
 
+export interface FetchPricesOptionsInterface {
+  /** Tells whether a route reaches the site before a browser is opened for it; without it every route is tried. */
+  probe?: RouteProbePort;
+  /** How many products of a marketplace in one city one visit of the site reads; one where none is given. */
+  batchLimits?: Readonly<Partial<Record<MarketplaceType, number>>>;
+}
+
 /** What a later try may change: a route that hangs, a check of the site that passes, a card that has not been drawn. */
 const retryableStatuses: ReadonlyArray<ProductFetchResultInterface['status']> = [
   'network_error',
@@ -47,6 +59,15 @@ const retryableStatuses: ReadonlyArray<ProductFetchResultInterface['status']> = 
   'http_error',
   'challenge_required',
   'parse_error',
+];
+
+/** The answers another route does not change. A challenge is a site decision, not a dead proxy: it is not evaded. */
+const finalStatuses: ReadonlyArray<ReadProductResultType['status']> = [
+  'success',
+  'partial',
+  'challenge_required',
+  'parse_error',
+  'http_error',
 ];
 
 /** The answers that refuse the address of the proxy, or come from the proxy itself, rather than from the page. */
@@ -70,9 +91,29 @@ function isRouteFailure(result: ReadProductResultType): boolean {
   }
 }
 
+/** A failure the reader did not place happened on the pages of the site. */
+function withStage(result: ReadProductResultType): ReadProductResultType {
+  return 'snapshot' in result || result.stage !== undefined ? result : { ...result, stage: 'page' };
+}
+
+const everyRouteReaches: RouteProbePort = {
+  reaches: (): Promise<boolean> => Promise.resolve(true),
+};
+
 interface CandidateInterface {
   route: FetchPricesRouteInterface;
   proxy: ProxyEndpointEntity;
+}
+
+interface ProductToReadInterface {
+  trackedProductId: string;
+  reference: ProductReferenceEntity;
+}
+
+/** A product of a batch and what its reading has come to so far. */
+interface ReadingInterface {
+  product: ProductToReadInterface;
+  output: TrackingResultInterface;
 }
 
 export function isRetryable(status: ProductFetchResultInterface['status']): boolean {
@@ -83,13 +124,23 @@ export function isRead(status: ProductFetchResultInterface['status'] | undefined
   return status === 'success' || status === 'partial';
 }
 
-/** Reads the prices of the products of a job through its routes and reports what happened. */
+/**
+ * Reads the prices of the products of a job through its routes and reports what happened. The products of a
+ * marketplace that reads several at once are read in batches of one city, a visit of the site for a batch.
+ */
 export class FetchPricesUseCase {
+  private readonly probe: RouteProbePort;
+  private readonly batchLimits: Readonly<Partial<Record<MarketplaceType, number>>>;
+
   constructor(
     private readonly resolveReference: ResolveProductReferenceUseCase,
-    private readonly createReader: (timeoutMs: number) => ProductReaderPort,
+    private readonly createReader: (timeoutMs: number) => ProductBatchReaderPort,
     private readonly logger: LoggerPort = silentLogger,
-  ) {}
+    options: FetchPricesOptionsInterface = {},
+  ) {
+    this.probe = options.probe ?? everyRouteReaches;
+    this.batchLimits = options.batchLimits ?? {};
+  }
 
   /**
    * Returns the routes in the order a next try of the job should take them: the job learns as it goes which of its
@@ -118,25 +169,90 @@ export class FetchPricesUseCase {
     let succeeded = processed;
     await listener.onProgress({ processed, total, succeeded });
 
+    const report = async (result: ProductFetchResultInterface): Promise<void> => {
+      await listener.onProduct(result);
+      processed += 1;
+      if (isRead(result.status)) succeeded += 1;
+      await listener.onProgress({ processed, total, succeeded });
+    };
+
+    const toRead: ProductToReadInterface[] = [];
     for (const product of job.products) {
       if (product.read === true) continue;
 
+      const reference = this.referenceOf(product);
+      if (reference === null) {
+        await report({
+          trackedProductId: product.trackedProductId,
+          status: 'invalid_url',
+          attempts: [],
+        });
+      } else {
+        toRead.push({ trackedProductId: product.trackedProductId, reference });
+      }
+    }
+
+    for (const batch of this.batchesOf(toRead)) {
       signal.throwIfAborted();
-      const result = await this.fetchProduct(
-        product,
+      const readings = await this.readBatch(
+        batch,
         candidates.map(({ proxy }): ProxyEndpointEntity => proxy),
         reader,
         signal,
       );
-      candidates = this.reordered(candidates, result.attempts);
-      await listener.onProduct(result);
+      const longest = readings.reduce<ProductAttemptInterface[]>(
+        (attempts, { output }): ProductAttemptInterface[] =>
+          output.attempts.length > attempts.length ? output.attempts : attempts,
+        [],
+      );
+      candidates = this.reordered(candidates, longest);
 
-      processed += 1;
-      if (isRead(result.status)) succeeded += 1;
-      await listener.onProgress({ processed, total, succeeded });
+      for (const { product, output } of readings) {
+        await report({
+          trackedProductId: product.trackedProductId,
+          status: output.status,
+          attempts: output.attempts,
+        });
+      }
     }
 
     return [...candidates.map(({ route }): FetchPricesRouteInterface => route), ...unsafe];
+  }
+
+  /** Null for a link that is not of a product of a known marketplace. */
+  private referenceOf(
+    product: FetchPricesJobInterface['products'][number],
+  ): ProductReferenceEntity | null {
+    try {
+      return this.resolveReference.execute(product.url).inCity(product.cityId ?? null);
+    } catch {
+      this.logger.warn(`Product ${product.trackedProductId}: unsupported URL`);
+
+      return null;
+    }
+  }
+
+  /** The products by marketplace and city, in the order of the job, cut to the batch limit of the marketplace. */
+  private batchesOf(products: readonly ProductToReadInterface[]): ProductToReadInterface[][] {
+    const groups = new Map<string, ProductToReadInterface[]>();
+    for (const product of products) {
+      const key = `${product.reference.marketplace} ${product.reference.cityId ?? ''}`;
+      groups.set(key, [...(groups.get(key) ?? []), product]);
+    }
+
+    return Array.from(groups.values()).flatMap((group): ProductToReadInterface[][] => {
+      const [first] = group;
+      const limit = Math.max(
+        first === undefined ? 1 : (this.batchLimits[first.reference.marketplace] ?? 1),
+        1,
+      );
+      const batches: ProductToReadInterface[][] = [];
+      for (let from = 0; from < group.length; from += limit) {
+        batches.push(group.slice(from, from + limit));
+      }
+
+      return batches;
+    });
   }
 
   /**
@@ -158,69 +274,91 @@ export class FetchPricesUseCase {
     return candidates.toSorted((a, b): number => rank(a) - rank(b));
   }
 
-  private async fetchProduct(
-    product: { trackedProductId: string; url: string; cityId?: string | undefined },
+  /**
+   * Tries the routes in order until the site gives each product of the batch an answer that another route cannot
+   * change; a route is tried for the products that are still open.
+   */
+  private async readBatch(
+    batch: readonly ProductToReadInterface[],
     candidates: readonly ProxyEndpointEntity[],
-    reader: ProductReaderPort,
+    reader: ProductBatchReaderPort,
     signal: AbortSignal,
-  ): Promise<ProductFetchResultInterface> {
-    let reference: ProductReferenceEntity;
-    try {
-      reference = this.resolveReference.execute(product.url).inCity(product.cityId ?? null);
-    } catch {
-      this.logger.warn(`Product ${product.trackedProductId}: unsupported URL`);
-
-      return { trackedProductId: product.trackedProductId, status: 'invalid_url', attempts: [] };
+  ): Promise<ReadingInterface[]> {
+    const readings = batch.map((product): ReadingInterface => ({
+      product,
+      output: { status: 'no_proxies', attempts: [] },
+    }));
+    for (const { trackedProductId, reference } of batch) {
+      this.logger.info(
+        `Product ${trackedProductId} (${reference.marketplace} ${reference.id}): reading`,
+      );
     }
-
-    this.logger.info(
-      `Product ${product.trackedProductId} (${reference.marketplace} ${reference.id}): reading`,
-    );
-    const result = await this.readProduct(reference, candidates, reader, signal);
-    this.logger.info(
-      `Product ${product.trackedProductId}: ${result.status} after ${String(result.attempts.length)} attempts`,
-    );
-
-    return {
-      trackedProductId: product.trackedProductId,
-      status: result.status,
-      attempts: result.attempts,
-    };
-  }
-
-  /** Tries the routes in order until the site gives an answer that another route cannot change. */
-  private async readProduct(
-    reference: ProductReferenceEntity,
-    candidates: readonly ProxyEndpointEntity[],
-    reader: ProductReaderPort,
-    signal: AbortSignal,
-  ): Promise<TrackingResultInterface> {
-    const output: TrackingResultInterface = { status: 'no_proxies', attempts: [] };
     this.logger.debug(`${String(candidates.length)} routes to try`);
 
+    let open = readings;
+    let tries = 0;
     for (const proxy of candidates) {
+      if (open.length === 0) break;
+
       signal.throwIfAborted();
-      if (output.attempts.length > 0) await setTimeout(1000, undefined, { signal });
+      if (tries > 0) await setTimeout(1000, undefined, { signal });
+      tries += 1;
 
-      const route = `Attempt ${String(output.attempts.length + 1)} via ${proxy.server}`;
-      this.logger.verbose(route);
+      const route = `Attempt ${String(tries)} via ${proxy.server}`;
+      this.logger.verbose(`${route} for ${String(open.length)} products`);
       const startedAt = performance.now();
-      const result = await reader.read(reference, proxy, signal);
-      this.logger.verbose(
-        `${route}: ${result.status} in ${String(Math.round(performance.now() - startedAt))} ms`,
+      const results = await this.attempt(
+        open.map(({ product }): ProductReferenceEntity => product.reference),
+        proxy,
+        reader,
+        signal,
       );
+      const durationMs = Math.round(performance.now() - startedAt);
 
-      output.attempts.push({ proxy: proxy.server, result });
-      output.status = result.status;
-      // A challenge is a site decision, not a dead proxy: do not rotate to evade it.
-      if (
-        ['success', 'partial', 'challenge_required', 'parse_error', 'http_error'].includes(
-          result.status,
-        )
-      )
-        break;
+      const still: ReadingInterface[] = [];
+      for (const [index, reading] of open.entries()) {
+        const result = results[index] ?? { status: 'parse_error' };
+        reading.output.attempts.push({ proxy: proxy.server, result, durationMs });
+        reading.output.status = result.status;
+        if (!finalStatuses.includes(result.status)) still.push(reading);
+      }
+      this.logger.verbose(
+        `${route}: ${results.map(({ status }): string => status).join(', ')} in ${String(durationMs)} ms`,
+      );
+      open = still;
     }
 
-    return output;
+    for (const { product, output } of readings) {
+      this.logger.info(
+        `Product ${product.trackedProductId}: ${output.status} after ${String(output.attempts.length)} attempts`,
+      );
+    }
+
+    return readings;
+  }
+
+  /** A route that does not reach the site fails at once, without a browser. */
+  private async attempt(
+    references: readonly ProductReferenceEntity[],
+    proxy: ProxyEndpointEntity,
+    reader: ProductBatchReaderPort,
+    signal: AbortSignal,
+  ): Promise<ReadProductResultType[]> {
+    const [first] = references;
+    if (first === undefined) return [];
+
+    const host = new URL(first.url).hostname;
+    const reaches = await this.probe.reaches(proxy, host, signal);
+    signal.throwIfAborted();
+    if (!reaches) {
+      this.logger.warn(`The route via ${proxy.server} did not reach ${host}`);
+
+      return references.map((): ReadProductResultType => ({
+        status: 'network_error',
+        stage: 'preflight',
+      }));
+    }
+
+    return (await reader.readMany(references, proxy, signal)).map(withStage);
   }
 }

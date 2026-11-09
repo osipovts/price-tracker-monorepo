@@ -17,6 +17,14 @@ const productSnapshotSchema = z.object({
     .optional(),
 });
 
+/**
+ * Where an attempt failed: `preflight`, the route did not reach the site before a browser was opened; `exit`, the
+ * check of the exit country of the route; `page`, the pages of the site.
+ */
+export const readStages = ['preflight', 'exit', 'page'] as const;
+
+export type ReadStageType = (typeof readStages)[number];
+
 export const readProductResultSchema = z.union([
   z.object({
     status: z.enum(['success', 'partial']),
@@ -32,5 +40,7 @@ export const readProductResultSchema = z.union([
       'http_error',
     ]),
     httpStatus: z.number().int().optional(),
+    /** Absent from older workers. */
+    stage: z.enum(readStages).optional(),
   }),
 ]);
