@@ -34,6 +34,7 @@ export const en = {
     groups: 'Groups',
     proxies: 'Proxies',
     handbooks: 'Handbooks',
+    app: 'Open the app',
   },
   dashboard: {
     title: 'Dashboard',

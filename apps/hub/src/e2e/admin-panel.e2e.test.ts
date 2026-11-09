@@ -196,6 +196,13 @@ void test('an administrator sees the groups of the users, and opens one in the a
   await view.getByText('The group of a user').waitFor();
   assert.equal(await view.getByRole('button', { name: 'Add' }).count(), 0);
   assert.equal(await view.getByRole('button', { name: 'Stop tracking' }).count(), 0);
+
+  // The app and the panel lead to each other: the menu of an administrator has the panel.
+  await view.getByRole('button', { name: 'Account' }).click();
+  await view.getByRole('menuitem', { name: 'Admin panel' }).click();
+  await view.getByText('Proxies alive').waitFor();
+  await view.getByRole('link', { name: 'Open the app' }).click();
+  await view.waitForURL('**/app/');
   await context.close();
 
   // The owner is no administrator: the view of the administrators is not theirs.

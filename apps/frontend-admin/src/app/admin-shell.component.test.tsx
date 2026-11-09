@@ -29,4 +29,5 @@ test('the name of the app is followed by the panel and the version of the releas
   for (const section of ['Dashboard', 'Jobs', 'Groups', 'Proxies', 'Handbooks']) {
     expect(screen.getByRole('link', { name: section })).toBeInTheDocument();
   }
+  expect(screen.getByRole('link', { name: 'Open the app' })).toHaveAttribute('href', '/app/');
 });

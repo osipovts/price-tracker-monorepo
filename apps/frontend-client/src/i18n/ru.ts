@@ -43,6 +43,7 @@ export const ru: DictionaryType = {
     title: 'Нищебродская',
     account: 'Аккаунт',
     settings: 'Настройки',
+    adminPanel: 'Админка',
     confirmTitle: 'Подтвердите почту',
     confirmText: 'Мы отправили ссылку на {{email}}.',
     sendAgain: 'Отправить снова',

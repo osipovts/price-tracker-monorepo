@@ -17,6 +17,9 @@ import { Link, Outlet, useNavigate } from 'react-router';
 
 import { useLogout, useMe, useResendVerification } from '../features/auth/use-me.hook.js';
 
+/** The admin panel: the hub serves it apart from the app, under its own path. */
+const adminPanelUrl = '/panel/';
+
 /** The person of the button that opens the menu of the account. */
 function UserIcon(): ReactElement {
   return (
@@ -77,6 +80,11 @@ export function ClientShell(): ReactElement {
                 <Menu.Item component={Link} to="/settings">
                   {t('shell.settings')}
                 </Menu.Item>
+                {me.data?.isAdmin === true && (
+                  <Menu.Item component="a" href={adminPanelUrl}>
+                    {t('shell.adminPanel')}
+                  </Menu.Item>
+                )}
                 <Menu.Divider />
                 <Menu.Item
                   color="red"

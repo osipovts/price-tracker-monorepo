@@ -36,6 +36,7 @@ export const ru: DictionaryType = {
     groups: 'Группы',
     proxies: 'Прокси',
     handbooks: 'Справочники',
+    app: 'Открыть приложение',
   },
   dashboard: {
     title: 'Дашборд',

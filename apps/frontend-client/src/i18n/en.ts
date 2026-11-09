@@ -41,6 +41,7 @@ export const en = {
     title: 'Нищебродская',
     account: 'Account',
     settings: 'Settings',
+    adminPanel: 'Admin panel',
     confirmTitle: 'Confirm your email',
     confirmText: 'We sent a link to {{email}}.',
     sendAgain: 'Send again',

@@ -9,6 +9,8 @@ import rootPackage from '../../package.json' with { type: 'json' };
 const hub = process.env['HUB_URL'] ?? 'http://localhost:3000';
 /** The origin the hub knows itself by (its PUBLIC_URL): in Docker the address it is reached at differs. */
 const hubOrigin = process.env['HUB_ORIGIN'] ?? hub;
+/** Where the admin panel runs in development: the menu of an administrator leads to it, under /panel/. */
+const admin = process.env['ADMIN_URL'] ?? 'http://localhost:5173';
 /** The page of Ayu Dark: the tile of the icon and the screen the installed app opens on. */
 const iconBackground = '#0b0e14';
 
@@ -54,7 +56,12 @@ export default defineConfig({
         background_color: iconBackground,
       },
       /* eslint-enable @typescript-eslint/naming-convention */
-      workbox: { globPatterns: ['**/*.{js,css,html,woff2,svg,png,ico}'] },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,woff2,svg,png,ico}'],
+        // The worker answers with the app only the pages of the app: the scope is the whole host, and the admin
+        // panel and the sign-in through a provider (/auth/...) are pages of the hub.
+        navigateFallbackAllowlist: [/^\/app\//],
+      },
     }),
   ],
   // The version of the release, which the root package.json holds: the page shows it. The constant is
@@ -65,15 +72,20 @@ export default defineConfig({
   base: '/app/',
   server: {
     port: 5174,
-    proxy: Object.fromEntries(
-      ['/auth', '/products', '/product-groups', '/marketplaces', '/admin'].map(
-        (path): [string, object] => [
-          path,
-          // The hub checks where a write comes from: the app in development says it is the hub itself.
-          { target: hub, headers: { origin: hubOrigin } },
-        ],
+    proxy: {
+      ...Object.fromEntries(
+        ['/auth', '/products', '/product-groups', '/marketplaces', '/admin'].map(
+          (path): [string, object] => [
+            path,
+            // The hub checks where a write comes from: the app in development says it is the hub itself.
+            { target: hub, headers: { origin: hubOrigin } },
+          ],
+        ),
       ),
-    ),
+      // The admin panel, as the hub serves it in production: from the same origin, so the session is the same.
+      // Vite checks the Host header, and knows itself by localhost.
+      '/panel': { target: admin, ws: true, headers: { host: `localhost:${new URL(admin).port}` } },
+    },
   },
   test: {
     environment: 'jsdom',

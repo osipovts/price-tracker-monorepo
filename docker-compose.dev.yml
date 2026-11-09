@@ -66,6 +66,8 @@ services:
       HUB_URL: http://hub:3000
       # The hub lets a write in only from its own PUBLIC_URL, not from the name it has in the network of Docker.
       HUB_ORIGIN: ${PUBLIC_URL:-http://localhost:3000}
+      # The menu of an administrator leads to the admin panel, which the app serves under /panel/ from there.
+      ADMIN_URL: http://frontend-admin:5173
     ports:
       - '127.0.0.1:${CLIENT_UI_PORT:-5174}:5174'
     depends_on:

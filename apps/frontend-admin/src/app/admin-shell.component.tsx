@@ -16,6 +16,9 @@ const sections = [
   { to: '/handbooks', label: 'shell.handbooks', end: false },
 ] as const;
 
+/** The client app: the hub serves it apart from the panel, under its own path. */
+const appUrl = '/app/';
+
 /** The name of the app in its own font, and that this is its admin panel, with the release. */
 function Brand(): ReactElement {
   const { t } = useTranslation();
@@ -71,6 +74,7 @@ export function AdminShell(): ReactElement {
           ))}
         </AppShell.Section>
         <AppShell.Section>
+          <NavLink href={appUrl} label={t('shell.app')} />
           <Stack gap="xs" p="xs">
             <Group gap="xs" hiddenFrom="md">
               <LanguageControl />
