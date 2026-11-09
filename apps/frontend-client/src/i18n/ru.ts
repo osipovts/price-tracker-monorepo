@@ -134,6 +134,10 @@ export const ru: DictionaryType = {
     byWeek: 'По неделям',
     observations: 'Все проверки ({{count}})',
     hideObservations: 'Скрыть проверки',
+    viewTitle: 'Группа пользователя',
+    viewText:
+      'Вы видите её так же, как владелец, но как администратор: здесь ничего нельзя изменить.',
+    backToPanel: 'Админка',
   },
   product: {
     openOn: 'Открыть на {{marketplace}}',

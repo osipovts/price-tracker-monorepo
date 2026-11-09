@@ -133,6 +133,9 @@ export const en = {
     byWeek: 'By week',
     observations: 'All the checks ({{count}})',
     hideObservations: 'Hide the checks',
+    viewTitle: 'The group of a user',
+    viewText: 'You see it as its owner does, as an administrator: nothing here can be changed.',
+    backToPanel: 'Admin panel',
   },
   product: {
     openOn: 'Open on {{marketplace}}',

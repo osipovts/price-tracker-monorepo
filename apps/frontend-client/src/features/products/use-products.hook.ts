@@ -21,6 +21,7 @@ import {
   loadPriceHistory,
   type PriceHistoryInterface,
 } from './price-history.type.js';
+import { type GroupViewerType, useGroupViewer } from './use-group-viewer.hook.js';
 
 type PriceHistoryPageType =
   operations['ProductsController_prices']['responses'][200]['content']['application/json'];
@@ -101,24 +102,33 @@ export function usePriceHistory(id: string): UseQueryResult<ProductHistoryType |
   });
 }
 
+/** A page of the history of a product the user tracks; an administrator reads the one of any product. */
+async function readPriceHistoryPage(
+  viewer: GroupViewerType,
+  id: string,
+  page: number,
+): Promise<PriceHistoryPageType | undefined> {
+  const params = { path: { id }, query: { page, pageSize: historyPageSize } };
+
+  return viewer === 'administrator'
+    ? ensure(await api.GET('/admin/products/{id}/prices', { params }))
+    : ensure(await api.GET('/products/{id}/prices', { params }));
+}
+
 /** The history of each of the products, in the order given; undefined for one not loaded yet. */
 export function usePriceHistories(
   ids: readonly string[],
 ): Array<UseQueryResult<ProductHistoryType | undefined>> {
   const client = useQueryClient();
+  const viewer = useGroupViewer();
 
   return useQueries({
     queries: ids.map((id) => ({
-      queryKey: ['price-history', id],
+      queryKey: ['price-history', id, viewer],
       queryFn: (): Promise<ProductHistoryType | undefined> =>
         loadPriceHistory(
-          async (page) =>
-            ensure(
-              await api.GET('/products/{id}/prices', {
-                params: { path: { id }, query: { page, pageSize: historyPageSize } },
-              }),
-            ),
-          client.getQueryData<ProductHistoryType>(['price-history', id]),
+          (page) => readPriceHistoryPage(viewer, id, page),
+          client.getQueryData<ProductHistoryType>(['price-history', id, viewer]),
         ),
       refetchInterval: 60_000,
     })),

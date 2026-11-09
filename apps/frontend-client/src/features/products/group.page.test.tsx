@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { GroupPage } from './group.page.js';
+import { AdminGroupPage, GroupPage } from './group.page.js';
 
 const groupId = '11111111-1111-4111-8111-111111111111';
 const ozonId = '22222222-2222-4222-8222-222222222222';
@@ -63,9 +63,11 @@ function stubHub({
   vi.stubGlobal(
     'fetch',
     vi.fn(async (request: Request): Promise<Response> => {
-      const { pathname } = new URL(request.url);
+      const url = new URL(request.url);
+      // An administrator reads the same group and prices under /admin.
+      const pathname = url.pathname.replace(/^\/admin/, '');
       requests.push(
-        `${request.method} ${pathname}${request.body === null ? '' : ` ${JSON.stringify(await request.json())}`}`,
+        `${request.method} ${url.pathname}${request.body === null ? '' : ` ${JSON.stringify(await request.json())}`}`,
       );
 
       if (request.method === 'DELETE') return new Response(null, { status: 204 });
@@ -132,15 +134,16 @@ function stubHub({
   );
 }
 
-function renderPage(): RenderResult {
+function renderPage(path = `/groups/${groupId}`): RenderResult {
   return render(
     <MantineProvider env="test">
-      <MemoryRouter initialEntries={[`/groups/${groupId}`]}>
+      <MemoryRouter initialEntries={[path]}>
         <QueryClientProvider
           client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
         >
           <Routes>
             <Route path="groups/:id" element={<GroupPage />} />
+            <Route path="view/groups/:id" element={<AdminGroupPage />} />
             <Route path="/" element={<p>home</p>} />
           </Routes>
         </QueryClientProvider>
@@ -358,4 +361,24 @@ test('keeps the scale of the chart that is picked for the next visit', async ():
   renderPage();
 
   expect(await screen.findByRole('radio', { name: 'By week' })).toBeChecked();
+});
+
+test('an administrator sees the group of a user from the admin endpoints, with nothing to change', async (): Promise<void> => {
+  const requests: string[] = [];
+  stubHub({ requests });
+  renderPage(`/view/groups/${groupId}`);
+
+  await screen.findByRole('heading', { name: 'Notebook' });
+  expect(screen.getByText('The group of a user')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Admin panel' })).toHaveAttribute(
+    'href',
+    '/panel/groups',
+  );
+  expect(screen.queryByRole('button', { name: 'Actions with the group' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Stop tracking' })).not.toBeInTheDocument();
+  await waitFor((): void => {
+    expect(requests).toContain(`GET /admin/products/${ozonId}/prices`);
+  });
+  expect(requests.filter((request) => request.startsWith('GET /product'))).toEqual([]);
 });

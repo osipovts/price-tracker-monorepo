@@ -9,6 +9,7 @@ import { ensure } from 'frontend-shared';
 
 import { api } from '../../shared/api/api.client.js';
 import type { operations } from '../../shared/api/schema.js';
+import { useGroupViewer } from './use-group-viewer.hook.js';
 
 export type ProductGroupPageType =
   operations['ProductGroupsController_list']['responses'][200]['content']['application/json'];
@@ -53,11 +54,16 @@ export function useProductGroups(page: number): UseQueryResult<ProductGroupPageT
   });
 }
 
+/** The group of the user; an administrator sees the group of any user. */
 export function useProductGroup(id: string): UseQueryResult<ProductGroupDetailType | undefined> {
+  const viewer = useGroupViewer();
+
   return useQuery({
-    queryKey: ['product-groups', 'detail', id],
+    queryKey: ['product-groups', 'detail', id, viewer],
     queryFn: async (): Promise<ProductGroupDetailType | undefined> =>
-      ensure(await api.GET('/product-groups/{id}', { params: { path: { id } } })),
+      viewer === 'administrator'
+        ? ensure(await api.GET('/admin/product-groups/{id}', { params: { path: { id } } }))
+        : ensure(await api.GET('/product-groups/{id}', { params: { path: { id } } })),
     refetchInterval: (query): number | false =>
       query.state.data?.products.some((product) => product.latest === null) === true
         ? firstPricePollMs
