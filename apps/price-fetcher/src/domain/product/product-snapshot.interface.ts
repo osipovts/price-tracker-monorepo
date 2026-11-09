@@ -31,8 +31,10 @@ export type ReadProductResultType =
 export interface ProductAttemptInterface {
   proxy: string | null;
   result: ReadProductResultType;
-  /** How long the attempt took, the check of the route included. */
+  /** How long the attempt took, the check of the route included; the visit of the batch as a whole. */
   durationMs: number;
+  /** The visit of the route was made for another product of the batch too, and is told of with it. */
+  shared: boolean;
 }
 
 export interface TrackingResultInterface {

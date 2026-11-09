@@ -318,7 +318,13 @@ export class FetchPricesUseCase {
       const still: ReadingInterface[] = [];
       for (const [index, reading] of open.entries()) {
         const result = results[index] ?? { status: 'parse_error' };
-        reading.output.attempts.push({ proxy: proxy.server, result, durationMs });
+        // The first product of the visit tells of it; the others share it.
+        reading.output.attempts.push({
+          proxy: proxy.server,
+          result,
+          durationMs,
+          shared: index > 0,
+        });
         reading.output.status = result.status;
         if (!finalStatuses.includes(result.status)) still.push(reading);
       }

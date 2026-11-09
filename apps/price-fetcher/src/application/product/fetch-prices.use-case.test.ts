@@ -333,4 +333,9 @@ void test('tries the next route only for the products of a batch the last one le
     results.map(({ status, attempts }): string => `${status} ${String(attempts.length)}`),
     ['parse_error 1', 'parse_error 2'],
   );
+  // A visit is told of once: the second product shares the first visit, and tells of the one it had alone.
+  assert.deepEqual(
+    results.map(({ attempts }): boolean[] => attempts.map(({ shared }): boolean => shared)),
+    [[false], [true, false]],
+  );
 });

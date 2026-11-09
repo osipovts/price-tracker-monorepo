@@ -46,7 +46,16 @@ function result(productId: string, overrides: Partial<PriceResultInterface>): Pr
     jobId,
     trackedProductId: productId,
     status: 'success',
-    attempts: [{ proxy: 'socks5://217.71.230.1:1080', status: 'success', httpStatus: null }],
+    attempts: [
+      {
+        proxy: 'socks5://217.71.230.1:1080',
+        status: 'success',
+        httpStatus: null,
+        stage: null,
+        durationMs: 9000,
+        shared: false,
+      },
+    ],
     observation: {
       title: 'Notebook',
       observedAt: new Date('2026-10-24T12:00:00.000Z'),
@@ -164,7 +173,7 @@ void test('hands the picture of the product over once the price is recorded, and
   assert.deepEqual(order, ['price', 'picture https://cdn.example/a.jpg', 'price', 'picture null']);
 });
 
-void test('tells the proxies what each route came to, for the marketplace of the product', async (): Promise<void> => {
+void test('tells the proxies what each route came to, for the marketplace of the product, a visit of a batch once', async (): Promise<void> => {
   const products = new InMemoryTrackedProductRepositoryAdapter();
   const { product } = await products.add({
     marketplace: 'dns',
@@ -194,9 +203,38 @@ void test('tells the proxies what each route came to, for the marketplace of the
       status: 'http_error',
       observation: null,
       attempts: [
-        { proxy: 'socks5://217.71.230.1:1080', status: 'network_error', httpStatus: null },
-        { proxy: null, status: 'network_error', httpStatus: null },
-        { proxy: 'socks5://217.71.230.2:1080', status: 'http_error', httpStatus: 401 },
+        {
+          proxy: 'socks5://217.71.230.1:1080',
+          status: 'network_error',
+          httpStatus: null,
+          stage: 'preflight',
+          durationMs: 6000,
+          shared: false,
+        },
+        {
+          proxy: null,
+          status: 'network_error',
+          httpStatus: null,
+          stage: 'page',
+          durationMs: null,
+          shared: false,
+        },
+        {
+          proxy: 'socks5://217.71.230.3:1080',
+          status: 'network_error',
+          httpStatus: null,
+          stage: 'page',
+          durationMs: 1000,
+          shared: true,
+        },
+        {
+          proxy: 'socks5://217.71.230.2:1080',
+          status: 'http_error',
+          httpStatus: 401,
+          stage: 'page',
+          durationMs: 20000,
+          shared: false,
+        },
       ],
     }),
   );
@@ -208,6 +246,8 @@ void test('tells the proxies what each route came to, for the marketplace of the
         marketplace: 'dns',
         status: 'network_error',
         httpStatus: null,
+        stage: 'preflight',
+        durationMs: 6000,
         attemptedAt: new Date('2026-11-03T08:00:00Z'),
       },
       {
@@ -215,6 +255,8 @@ void test('tells the proxies what each route came to, for the marketplace of the
         marketplace: 'dns',
         status: 'http_error',
         httpStatus: 401,
+        stage: 'page',
+        durationMs: 20000,
         attemptedAt: new Date('2026-11-03T08:00:00Z'),
       },
     ],

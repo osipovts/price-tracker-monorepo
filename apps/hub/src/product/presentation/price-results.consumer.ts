@@ -51,11 +51,16 @@ export class PriceResultsConsumer extends ResultsConsumer<PriceFetchResultType> 
   }
 
   private toResult(message: ProductResultType): PriceResultInterface {
-    const attempts = message.attempts.map(({ proxy, result }): PriceAttemptInterface => ({
-      proxy,
-      status: result.status,
-      httpStatus: 'httpStatus' in result ? (result.httpStatus ?? null) : null,
-    }));
+    const attempts = message.attempts.map(
+      ({ proxy, result, durationMs, shared }): PriceAttemptInterface => ({
+        proxy,
+        status: result.status,
+        httpStatus: 'httpStatus' in result ? (result.httpStatus ?? null) : null,
+        stage: 'stage' in result ? (result.stage ?? null) : null,
+        durationMs: durationMs ?? null,
+        shared: shared ?? false,
+      }),
+    );
 
     for (const attempt of message.attempts) {
       if (!('snapshot' in attempt.result)) continue;

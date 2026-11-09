@@ -1948,7 +1948,8 @@
                                     "read",
                                     "unreachable",
                                     "blocked",
-                                    "misplaced"
+                                    "misplaced",
+                                    "down"
                                   ]
                                 },
                                 "lastAttemptAt": {
