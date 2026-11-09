@@ -100,10 +100,6 @@ export class AdminController {
           ...hour,
           hour: hour.hour.toISOString(),
         })),
-        recentFailures: jobs.recentFailures.map((failure) => ({
-          ...failure,
-          finishedAt: failure.finishedAt?.toISOString() ?? null,
-        })),
       },
     };
   }

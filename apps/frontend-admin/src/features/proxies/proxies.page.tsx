@@ -1,13 +1,16 @@
 import {
   Badge,
   Button,
+  Card,
+  Code,
   Group,
   Loader,
   Modal,
-  MultiSelect,
   Pagination,
   Progress,
   SegmentedControl,
+  Select,
+  SimpleGrid,
   Stack,
   Switch,
   Table,
@@ -16,27 +19,52 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core';
-import { ErrorAlert, marketplaceColor, marketplaceName, useLocale } from 'frontend-shared';
+import {
+  ErrorAlert,
+  marketplaceColor,
+  MarketplaceName,
+  marketplaceName,
+  useLocale,
+} from 'frontend-shared';
 import { type ReactElement, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { jobStatusLabel } from '../jobs/job-status-label.type.js';
+import { alarmColor } from '../../shared/alarm-color.type.js';
+import { formatMoment } from '../../shared/format.type.js';
+import { JobStatusBadge } from '../jobs/job-status.component.js';
+import { isActive, type JobRecordType } from '../jobs/use-job-records.hook.js';
 import {
+  manualSource,
+  type ProxyListSourceType,
   proxyPageSize,
   type ProxyPageType,
   proxySources,
   type ProxySourceType,
+  type ProxyStatsType,
+  proxyStatuses,
+  type ProxyStatusType,
   useAddProxy,
-  useDeleteAllProxies,
-  useDeleteProxy,
   useProxies,
-  useRefreshSources,
+  useProxyStats,
   useSetProxyDisabled,
+  useSourceRefreshes,
 } from './use-proxies.hook.js';
 
 type ProxyItemType = ProxyPageType['items'][number];
 
 type ProxyReputationType = ProxyItemType['reputations'][number];
+
+function isProxyStatus(value: string): value is ProxyStatusType {
+  return proxyStatuses.some((status): boolean => status === value);
+}
+
+function isRefreshable(source: string): source is ProxySourceType {
+  return proxySources.some((each): boolean => each === source);
+}
+
+function isListSource(source: string | null): source is ProxyListSourceType {
+  return source === manualSource || (source !== null && isRefreshable(source));
+}
 
 /** The time until which the proxy is not given for the marketplace; null when it does not rest. */
 function restingUntil(reputation: ProxyReputationType, now: number): Date | null {
@@ -96,109 +124,189 @@ function ProxyReputations({
   );
 }
 
-type ChoiceType = 'all' | 'true' | 'false';
-
-function toFilter(choice: ChoiceType): 'true' | 'false' | undefined {
-  return choice === 'all' ? undefined : choice;
-}
-
-function isChoice(value: string): value is ChoiceType {
-  return value === 'all' || value === 'true' || value === 'false';
-}
-
-function Choice({
-  label,
-  value,
-  labels,
-  onChange,
-}: {
-  label: string;
-  value: ChoiceType;
-  labels: [string, string];
-  onChange: (value: ChoiceType) => void;
-}): ReactElement {
+/** How many proxies there are, and how many a read of each marketplace may be given now. */
+function ProxyFigures({ stats }: { stats: ProxyStatsType }): ReactElement {
   const { t } = useTranslation();
 
   return (
-    <Stack gap={4}>
-      <Text size="sm">{label}</Text>
-      <SegmentedControl
-        aria-label={label}
-        value={value}
-        data={[
-          { value: 'all', label: t('common.all') },
-          { value: 'true', label: labels[0] },
-          { value: 'false', label: labels[1] },
-        ]}
-        onChange={(next): void => {
-          if (isChoice(next)) onChange(next);
-        }}
-      />
+    <SimpleGrid cols={{ base: 1, sm: 2 }}>
+      <Card withBorder>
+        <Text size="sm" c="dimmed">
+          {t('proxies.total')}
+        </Text>
+        <Title order={2}>{stats.total}</Title>
+        <Text size="xs" c="dimmed">
+          {t('proxies.totalNote', { alive: stats.alive, disabled: stats.disabled })}
+        </Text>
+      </Card>
+      <Card withBorder>
+        <Tooltip multiline w={300} label={t('proxies.usableHint')}>
+          <Text size="sm" c="dimmed" w="fit-content">
+            {t('proxies.usable')}
+          </Text>
+        </Tooltip>
+        <Group gap="lg" mt={6}>
+          {stats.usable.map(({ marketplace, count }): ReactElement => (
+            <Stack key={marketplace} gap={0}>
+              <Title order={3} {...alarmColor(count === 0, 'red')}>
+                {count}
+              </Title>
+              <MarketplaceName marketplace={marketplace} />
+            </Stack>
+          ))}
+        </Group>
+      </Card>
+    </SimpleGrid>
+  );
+}
+
+/** The last refresh of a source: how far it is while it runs, else how it ended and what it found. */
+function RefreshState({ job }: { job: JobRecordType | undefined }): ReactElement {
+  const { t } = useTranslation();
+  const locale = useLocale();
+  if (job === undefined) {
+    return (
+      <Text size="sm" c="dimmed">
+        {t('proxies.neverRefreshed')}
+      </Text>
+    );
+  }
+
+  const found = t('proxies.found', { succeeded: job.succeeded, processed: job.processed });
+
+  return (
+    <Stack gap={4} miw={200}>
+      <Group gap="xs">
+        <JobStatusBadge job={job} />
+        <Text size="xs" c="dimmed">
+          {formatMoment(job.finishedAt ?? job.startedAt ?? job.createdAt, locale)}
+        </Text>
+      </Group>
+      {isActive(job) && (
+        <Progress
+          value={job.percent}
+          size="sm"
+          animated
+          aria-label={t('proxies.refreshProgress', { source: job.subject })}
+        />
+      )}
+      <Text size="xs" c={job.status === 'failed' ? 'red' : 'dimmed'} lineClamp={2}>
+        {job.status === 'failed' && job.error !== null ? job.error : found}
+      </Text>
     </Stack>
   );
 }
 
-function RefreshSource(): ReactElement {
+/** The sources: what each gave, and its last refresh, which the button runs again. */
+function ProxySources({ stats }: { stats: ProxyStatsType | undefined }): ReactElement {
   const { t } = useTranslation();
-  const refresh = useRefreshSources();
-  const [sources, setSources] = useState<readonly ProxySourceType[]>(proxySources);
-  const running =
-    refresh.jobIds.length > 0 && refresh.status !== 'completed' && refresh.status !== 'failed';
+  const refreshes = useSourceRefreshes();
+  const known = stats?.bySource ?? [];
+  const sources = [
+    ...proxySources,
+    ...known
+      .map(({ source }): string => source)
+      .filter((source): boolean => !isRefreshable(source)),
+  ];
+  const running = (source: ProxySourceType): boolean => {
+    const job = refreshes.latest.get(source);
+
+    return refreshes.starting.includes(source) || (job !== undefined && isActive(job));
+  };
+  const idle = proxySources.filter((source): boolean => !running(source));
 
   return (
-    <Stack gap={4}>
-      <Group align="flex-end">
-        <MultiSelect
-          label={t('proxies.sources')}
-          data={[...proxySources]}
-          value={[...sources]}
-          disabled={refresh.isStarting || running}
-          onChange={(values): void => {
-            setSources(proxySources.filter((source): boolean => values.includes(source)));
-          }}
-        />
+    <Card withBorder>
+      <Group justify="space-between" mb="sm">
+        <Title order={4}>{t('proxies.sources')}</Title>
         <Button
-          disabled={sources.length === 0}
-          loading={refresh.isStarting || running}
+          size="xs"
+          disabled={idle.length === 0}
           onClick={(): void => {
-            refresh.start(sources);
+            refreshes.start(idle);
           }}
         >
-          {t('proxies.refreshSource')}
+          {t('proxies.refreshAll')}
         </Button>
-        {refresh.status !== null && <Badge>{jobStatusLabel(refresh.status, t)}</Badge>}
       </Group>
-      {running && refresh.percent !== null && (
-        <Progress.Root size="xl" aria-label={t('proxies.refreshProgress')}>
-          <Progress.Section value={refresh.percent}>
-            <Progress.Label>{`${String(refresh.percent)}%`}</Progress.Label>
-          </Progress.Section>
-        </Progress.Root>
-      )}
-      {refresh.error !== null && <ErrorAlert error={refresh.error} />}
-    </Stack>
+      {refreshes.error !== null && <ErrorAlert error={refreshes.error} />}
+      <Table.ScrollContainer minWidth={700}>
+        <Table verticalSpacing="sm" aria-label={t('proxies.sources')}>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>{t('proxies.source')}</Table.Th>
+              <Table.Th>{t('proxies.total')}</Table.Th>
+              <Table.Th>{t('proxies.alive')}</Table.Th>
+              <Table.Th>{t('proxies.disabled')}</Table.Th>
+              <Table.Th>{t('proxies.lastRefresh')}</Table.Th>
+              <Table.Th />
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {sources.map((source): ReactElement => {
+              const counts = known.find((each): boolean => each.source === source);
+
+              return (
+                <Table.Tr key={source}>
+                  <Table.Td>
+                    <Text size="sm" fw={500}>
+                      {source === manualSource ? t('proxies.manual') : source}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>{counts?.total ?? 0}</Table.Td>
+                  <Table.Td>{counts?.alive ?? 0}</Table.Td>
+                  <Table.Td>{counts?.disabled ?? 0}</Table.Td>
+                  <Table.Td>
+                    {isRefreshable(source) ? (
+                      <RefreshState job={refreshes.latest.get(source)} />
+                    ) : (
+                      '-'
+                    )}
+                  </Table.Td>
+                  <Table.Td>
+                    {isRefreshable(source) && (
+                      <Button
+                        size="xs"
+                        variant="light"
+                        aria-label={`${t('proxies.refresh')} ${source}`}
+                        loading={running(source)}
+                        onClick={(): void => {
+                          refreshes.start([source]);
+                        }}
+                      >
+                        {t('proxies.refresh')}
+                      </Button>
+                    )}
+                  </Table.Td>
+                </Table.Tr>
+              );
+            })}
+          </Table.Tbody>
+        </Table>
+      </Table.ScrollContainer>
+    </Card>
   );
 }
 
-/** One proxy of the list, with the switch that turns it off and the button that deletes it. */
+/** One proxy of the list, with the switch that turns it off. */
 function ProxyRow({
   proxy,
   switching,
   onSwitch,
-  onDelete,
 }: {
   proxy: ProxyItemType;
   switching: boolean;
   onSwitch: (disabled: boolean) => void;
-  onDelete: () => void;
 }): ReactElement {
   const { t } = useTranslation();
   const locale = useLocale();
 
   return (
     <Table.Tr>
-      <Table.Td>{proxy.server}</Table.Td>
-      <Table.Td>{proxy.source}</Table.Td>
+      <Table.Td>
+        <Code>{proxy.server}</Code>
+      </Table.Td>
+      <Table.Td>{proxy.source === manualSource ? t('proxies.manual') : proxy.source}</Table.Td>
       <Table.Td>{proxy.country ?? '-'}</Table.Td>
       <Table.Td>
         <Tooltip
@@ -206,15 +314,15 @@ function ProxyRow({
           w={260}
           label={proxy.alive ? t('proxies.aliveHint') : t('proxies.deadHint')}
         >
-          <Badge color={proxy.alive ? 'green' : 'red'}>
-            {proxy.alive ? t('proxies.alive') : t('proxies.dead')}
+          <Badge color={proxy.alive ? 'green' : 'red'} variant="light">
+            {proxy.alive ? t('proxies.aliveBadge') : t('proxies.dead')}
           </Badge>
         </Tooltip>
       </Table.Td>
-      <Table.Td>
+      <Table.Td style={{ whiteSpace: 'nowrap' }}>
         {proxy.latencyMs === null ? '-' : t('proxies.milliseconds', { value: proxy.latencyMs })}
       </Table.Td>
-      <Table.Td>
+      <Table.Td style={{ whiteSpace: 'nowrap' }}>
         {t('proxies.successOf', {
           percent: Math.round(proxy.successRate * 100),
           checks: proxy.checksTotal,
@@ -223,7 +331,9 @@ function ProxyRow({
       <Table.Td>
         <ProxyReputations reputations={proxy.reputations} />
       </Table.Td>
-      <Table.Td>{new Date(proxy.lastCheckedAt).toLocaleString(locale)}</Table.Td>
+      <Table.Td style={{ whiteSpace: 'nowrap' }}>
+        {formatMoment(proxy.lastCheckedAt, locale)}
+      </Table.Td>
       <Table.Td>
         <Switch
           aria-label={t('proxies.enabledOf', { server: proxy.server })}
@@ -233,11 +343,6 @@ function ProxyRow({
             onSwitch(!event.currentTarget.checked);
           }}
         />
-      </Table.Td>
-      <Table.Td>
-        <Button size="xs" color="red" variant="light" onClick={onDelete}>
-          {t('proxies.delete')}
-        </Button>
       </Table.Td>
     </Table.Tr>
   );
@@ -291,196 +396,133 @@ function AddProxyDialog({
   );
 }
 
-/** Asks to confirm, then runs `confirm`; the dialog closes when it succeeds. */
-function ConfirmDialog({
-  opened,
-  title,
-  text,
-  action,
-  error,
-  pending,
-  onConfirm,
-  onClose,
-}: {
-  opened: boolean;
-  title: string;
-  text: string;
-  action: string;
-  error: Error | null;
-  pending: boolean;
-  onConfirm: () => void;
-  onClose: () => void;
-}): ReactElement {
-  return (
-    <Modal opened={opened} title={title} onClose={onClose}>
-      <Stack>
-        <Text>{text}</Text>
-        {error !== null && <ErrorAlert error={error} />}
-        <Button color="red" loading={pending} onClick={onConfirm}>
-          {action}
-        </Button>
-      </Stack>
-    </Modal>
-  );
-}
-
-export function ProxiesPage(): ReactElement {
+/** The proxies themselves: the filters, the table and its pages. */
+function ProxyList({ sources }: { sources: readonly string[] }): ReactElement {
   const { t } = useTranslation();
-  const [alive, setAlive] = useState<ChoiceType>('all');
-  const [disabled, setDisabled] = useState<ChoiceType>('all');
+  const [status, setStatus] = useState<ProxyStatusType>('all');
+  const [source, setSource] = useState<ProxyListSourceType | null>(null);
   const [page, setPage] = useState(1);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [deletingAll, setDeletingAll] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const proxies = useProxies({
-    alive: toFilter(alive),
-    disabled: toFilter(disabled),
-    page,
-  });
+  const proxies = useProxies({ status, source, page });
   const setProxyDisabled = useSetProxyDisabled();
-  const deleteProxy = useDeleteProxy();
-  const deleteAllProxies = useDeleteAllProxies();
   const data = proxies.data;
   const lastPage = Math.max(1, Math.ceil((data?.total ?? 0) / proxyPageSize));
 
-  // The last proxy of the last page is gone: the page goes with it.
+  // A proxy turned off leaves the list of the working ones, and the last page may go with it.
   useEffect((): void => {
     if (data !== undefined && page > lastPage) setPage(lastPage);
   }, [data, page, lastPage]);
 
   return (
+    <Card withBorder>
+      <Stack>
+        <Group align="flex-end">
+          <SegmentedControl
+            aria-label={t('proxies.filterStatus')}
+            value={status}
+            data={proxyStatuses.map((each): { value: string; label: string } => ({
+              value: each,
+              label: t(`proxies.status.${each}`),
+            }))}
+            onChange={(next): void => {
+              if (isProxyStatus(next)) setStatus(next);
+              setPage(1);
+            }}
+          />
+          <Select
+            aria-label={t('proxies.filterSource')}
+            w={220}
+            value={source ?? 'all'}
+            allowDeselect={false}
+            data={[
+              { value: 'all', label: t('proxies.allSources') },
+              ...sources.map((each): { value: string; label: string } => ({
+                value: each,
+                label: each === manualSource ? t('proxies.manual') : each,
+              })),
+            ]}
+            onChange={(next): void => {
+              setSource(isListSource(next) ? next : null);
+              setPage(1);
+            }}
+          />
+        </Group>
+        {proxies.isError && <ErrorAlert error={proxies.error} />}
+        {setProxyDisabled.error !== null && <ErrorAlert error={setProxyDisabled.error} />}
+        {data === undefined ? (
+          !proxies.isError && <Loader />
+        ) : (
+          <>
+            <Table.ScrollContainer minWidth={1000}>
+              <Table verticalSpacing="xs">
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>{t('proxies.server')}</Table.Th>
+                    <Table.Th>{t('proxies.source')}</Table.Th>
+                    <Table.Th>{t('proxies.country')}</Table.Th>
+                    <Table.Th>{t('proxies.statusColumn')}</Table.Th>
+                    <Table.Th>{t('proxies.latency')}</Table.Th>
+                    <Table.Th>{t('proxies.success')}</Table.Th>
+                    <Table.Th>{t('proxies.reputation')}</Table.Th>
+                    <Table.Th>{t('proxies.checked')}</Table.Th>
+                    <Table.Th>{t('proxies.enabled')}</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {data.items.map((proxy): ReactElement => (
+                    <ProxyRow
+                      key={proxy.server}
+                      proxy={proxy}
+                      switching={setProxyDisabled.isPending}
+                      onSwitch={(off): void => {
+                        setProxyDisabled.mutate({ server: proxy.server, disabled: off });
+                      }}
+                    />
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Table.ScrollContainer>
+            {data.items.length === 0 && <Text c="dimmed">{t('proxies.noMatch')}</Text>}
+            {data.total > proxyPageSize && (
+              <Pagination total={lastPage} value={page} onChange={setPage} />
+            )}
+          </>
+        )}
+      </Stack>
+    </Card>
+  );
+}
+
+export function ProxiesPage(): ReactElement {
+  const { t } = useTranslation();
+  const [adding, setAdding] = useState(false);
+  const stats = useProxyStats();
+
+  return (
     <Stack>
       <Group justify="space-between" align="flex-start">
-        <Title order={2}>{t('proxies.title')}</Title>
-        <Group align="flex-start">
-          <Button
-            variant="light"
-            onClick={(): void => {
-              setAdding(true);
-            }}
-          >
-            {t('proxies.add')}
-          </Button>
-          <Button
-            color="red"
-            variant="light"
-            onClick={(): void => {
-              setDeletingAll(true);
-            }}
-          >
-            {t('proxies.deleteAll')}
-          </Button>
-          <RefreshSource />
-        </Group>
-      </Group>
-      <Group>
-        <Choice
-          label={t('proxies.filterAlive')}
-          value={alive}
-          labels={[t('proxies.filterAliveYes'), t('proxies.filterAliveNo')]}
-          onChange={(next): void => {
-            setAlive(next);
-            setPage(1);
+        <Stack gap={2}>
+          <Title order={2}>{t('proxies.title')}</Title>
+          <Text size="sm" c="dimmed">
+            {t('proxies.hint')}
+          </Text>
+        </Stack>
+        <Button
+          variant="light"
+          onClick={(): void => {
+            setAdding(true);
           }}
-        />
-        <Choice
-          label={t('proxies.filterOff')}
-          value={disabled}
-          labels={[t('proxies.filterOffYes'), t('proxies.filterOffNo')]}
-          onChange={(next): void => {
-            setDisabled(next);
-            setPage(1);
-          }}
-        />
+        >
+          {t('proxies.add')}
+        </Button>
       </Group>
-      {proxies.isError && <ErrorAlert error={proxies.error} />}
-      {setProxyDisabled.error !== null && <ErrorAlert error={setProxyDisabled.error} />}
-      {data === undefined ? (
-        !proxies.isError && <Loader />
-      ) : (
-        <>
-          <Table.ScrollContainer minWidth={900}>
-            <Table>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>{t('proxies.server')}</Table.Th>
-                  <Table.Th>{t('proxies.source')}</Table.Th>
-                  <Table.Th>{t('proxies.country')}</Table.Th>
-                  <Table.Th>{t('proxies.status')}</Table.Th>
-                  <Table.Th>{t('proxies.latency')}</Table.Th>
-                  <Table.Th>{t('proxies.success')}</Table.Th>
-                  <Table.Th>{t('proxies.reputation')}</Table.Th>
-                  <Table.Th>{t('proxies.checked')}</Table.Th>
-                  <Table.Th>{t('proxies.enabled')}</Table.Th>
-                  <Table.Th />
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {data.items.map((proxy): ReactElement => (
-                  <ProxyRow
-                    key={proxy.server}
-                    proxy={proxy}
-                    switching={setProxyDisabled.isPending}
-                    onSwitch={(off): void => {
-                      setProxyDisabled.mutate({ server: proxy.server, disabled: off });
-                    }}
-                    onDelete={(): void => {
-                      deleteProxy.reset();
-                      setDeleting(proxy.server);
-                    }}
-                  />
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Table.ScrollContainer>
-          {data.items.length === 0 && <Text c="dimmed">{t('proxies.noMatch')}</Text>}
-          {data.total > proxyPageSize && (
-            <Pagination total={lastPage} value={page} onChange={setPage} />
-          )}
-        </>
-      )}
+      {stats.isError && <ErrorAlert error={stats.error} />}
+      {stats.data !== undefined && <ProxyFigures stats={stats.data} />}
+      <ProxySources stats={stats.data} />
+      <ProxyList sources={[...proxySources, manualSource]} />
       <AddProxyDialog
         opened={adding}
         onClose={(): void => {
           setAdding(false);
-        }}
-      />
-      <ConfirmDialog
-        opened={deleting !== null}
-        title={t('proxies.deleteTitle')}
-        text={t('proxies.deleteText', { server: deleting ?? '' })}
-        action={t('proxies.delete')}
-        error={deleteProxy.error}
-        pending={deleteProxy.isPending}
-        onConfirm={(): void => {
-          if (deleting === null) return;
-
-          deleteProxy.mutate(deleting, {
-            onSuccess: (): void => {
-              setDeleting(null);
-            },
-          });
-        }}
-        onClose={(): void => {
-          setDeleting(null);
-        }}
-      />
-      <ConfirmDialog
-        opened={deletingAll}
-        title={t('proxies.deleteAllTitle')}
-        text={t('proxies.deleteAllText')}
-        action={t('proxies.deleteAll')}
-        error={deleteAllProxies.error}
-        pending={deleteAllProxies.isPending}
-        onConfirm={(): void => {
-          deleteAllProxies.mutate(undefined, {
-            onSuccess: (): void => {
-              setDeletingAll(false);
-            },
-          });
-        }}
-        onClose={(): void => {
-          setDeletingAll(false);
         }}
       />
     </Stack>

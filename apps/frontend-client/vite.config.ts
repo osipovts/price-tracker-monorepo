@@ -66,11 +66,13 @@ export default defineConfig({
   server: {
     port: 5174,
     proxy: Object.fromEntries(
-      ['/auth', '/products', '/product-groups', '/marketplaces', '/admin'].map((path): [string, object] => [
-        path,
-        // The hub checks where a write comes from: the app in development says it is the hub itself.
-        { target: hub, headers: { origin: hubOrigin } },
-      ]),
+      ['/auth', '/products', '/product-groups', '/marketplaces', '/admin'].map(
+        (path): [string, object] => [
+          path,
+          // The hub checks where a write comes from: the app in development says it is the hub itself.
+          { target: hub, headers: { origin: hubOrigin } },
+        ],
+      ),
     ),
   },
   test: {

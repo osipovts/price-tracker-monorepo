@@ -11,7 +11,7 @@ const now = new Date('2026-10-31T12:00:00Z');
 const clock: ClockPort = { now: (): Date => now };
 const ago = (hours: number): Date => new Date(now.getTime() - hours * hour);
 
-void test('counts the jobs of the last day by kind and status, the unfinished and the lost ones, and names the latest failures', async (): Promise<void> => {
+void test('counts the jobs of the last day by kind and status, the unfinished and the lost ones, and the ended price reads by the hour', async (): Promise<void> => {
   const jobs = new InMemoryJobRepositoryAdapter();
   const queued = (id: string, hours: number): JobEntity =>
     JobEntity.queued(
@@ -50,8 +50,4 @@ void test('counts the jobs of the last day by kind and status, the unfinished an
   // Queued 2 and 30 hours ago and still not done: lost.
   assert.deepEqual(stats.unfinished, { queued: 0, running: 1, retrying: 0, lost: 2 });
   assert.deepEqual(stats.priceJobsByHour, [{ hour: ago(2), completed: 1, failed: 0 }]);
-  assert.deepEqual(
-    stats.recentFailures.map((failure): string | null => failure.error),
-    ['redis is down', 'proxies are down'],
-  );
 });

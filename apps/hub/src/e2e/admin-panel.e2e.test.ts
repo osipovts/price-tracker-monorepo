@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { after, before, test } from 'node:test';
 
@@ -38,6 +39,7 @@ before(
       env: {
         ADMIN_EMAILS: adminEmail,
         ADMIN_UI_DIR: resolve(import.meta.dirname, '../../../frontend-admin/dist'),
+        CLIENT_UI_DIR: resolve(import.meta.dirname, '../../../frontend-client/dist'),
       },
     });
     for (const email of [adminEmail, userEmail]) {
@@ -127,17 +129,85 @@ void test('an administrator sees the dashboard, then works with the proxies', as
     return body.items.length === 1 ? body : null;
   }, 'the proxy turned off');
 
-  // Deleted, after the confirmation.
-  const row = page.getByRole('row', { name: new RegExp(servers[1] ?? '') });
-  await row.getByRole('button', { name: 'Delete' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
-  await row.waitFor({ state: 'detached' });
-  assert.equal(await database.proxy.count(), 1);
+  // A proxy is turned off, never deleted.
+  assert.equal(await page.getByRole('button', { name: /Delete/ }).count(), 0);
+  assert.equal(await database.proxy.count(), 2);
+
+  // A refresh of a source is a job the page follows; no worker takes it here, so it waits in the queue.
+  await page.getByRole('button', { name: 'Refresh proxifly' }).click();
+  await page
+    .getByRole('table', { name: 'Sources' })
+    .getByRole('row', { name: /^proxifly/ })
+    .getByText('queued')
+    .waitFor();
+
+  // The jobs tell it too.
+  await page.getByRole('link', { name: 'Jobs' }).click();
+  await page.getByRole('cell', { name: 'proxifly' }).first().waitFor();
 
   // The dashboard follows what was done.
   await page.getByRole('link', { name: 'Dashboard' }).click();
   await page.getByText('1 turned off').waitFor();
   await context.close();
+});
+
+void test('an administrator sees the groups of the users, and opens one in the app read-only', async (): Promise<void> => {
+  const jane = await database.user.findUniqueOrThrow({ where: { email: userEmail } });
+  const product = await database.trackedProduct.create({
+    data: {
+      marketplace: 'ozon',
+      externalId: '4775581891',
+      url: 'https://www.ozon.ru/product/4775581891/',
+      cityId: 'moskva',
+      cityName: 'Москва',
+    },
+  });
+  await database.productSubscription.create({
+    data: { userId: jane.id, trackedProductId: product.id },
+  });
+  const group = await database.productGroup.create({
+    data: { userId: jane.id, title: 'Phone of Jane' },
+  });
+  await database.productGroupItem.create({
+    data: { userId: jane.id, trackedProductId: product.id, groupId: group.id },
+  });
+  await database.priceObservation.create({
+    data: {
+      trackedProductId: product.id,
+      jobId: randomUUID(),
+      title: 'Phone',
+      observedAt: new Date(),
+      availability: 'in_stock',
+      prices: [{ amountMinor: 100_000, currency: 'RUB' }],
+    },
+  });
+
+  const context = await browser.newContext();
+  const page = await logIn(context, adminEmail);
+  await page.getByRole('link', { name: 'Groups' }).click();
+  const row = page.getByRole('row', { name: /Phone of Jane/ });
+  await row.getByText(userEmail).waitFor();
+
+  const [view] = await Promise.all([
+    context.waitForEvent('page'),
+    row.getByRole('link', { name: 'Open' }).click(),
+  ]);
+  await view.getByRole('heading', { name: 'Phone of Jane' }).waitFor();
+  await view.getByText('The group of a user').waitFor();
+  assert.equal(await view.getByRole('button', { name: 'Add' }).count(), 0);
+  assert.equal(await view.getByRole('button', { name: 'Stop tracking' }).count(), 0);
+  await context.close();
+
+  // The owner is no administrator: the view of the administrators is not theirs.
+  const own = await browser.newContext();
+  const path = `${hub.baseUrl}/admin/product-groups/${group.id}`;
+  assert.equal((await own.request.get(path)).status(), 401);
+  await own.request.post(`${hub.baseUrl}/auth/login`, {
+    data: { email: userEmail, password },
+    headers: { origin: hub.baseUrl },
+  });
+  assert.equal((await own.request.get(path)).status(), 403);
+  await own.close();
 });
 
 void test('the panel is shut off from frames', async (): Promise<void> => {
@@ -151,6 +221,6 @@ void test('the panel speaks the language of the browser', async (): Promise<void
   const page = await context.newPage();
   await page.goto(`${hub.baseUrl}/panel/login`);
 
-  await page.getByRole('heading', { name: 'Админка хаба' }).waitFor();
+  await page.getByRole('heading', { name: 'Админка' }).waitFor();
   await context.close();
 });

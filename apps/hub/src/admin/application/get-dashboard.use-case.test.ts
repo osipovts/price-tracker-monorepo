@@ -30,7 +30,6 @@ const jobs: JobStatsInterface = {
   lastDay: [{ kind: 'price_fetch', queued: 0, running: 0, retrying: 0, completed: 3, failed: 1 }],
   unfinished: { queued: 0, running: 1, retrying: 0, lost: 0 },
   priceJobsByHour: [],
-  recentFailures: [],
 };
 
 void test('puts the figures of every context on one page, as of now', async (): Promise<void> => {

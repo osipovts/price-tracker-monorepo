@@ -89,15 +89,6 @@ export const dashboardResponseSchema = z.strictObject({
         failed: z.number().int(),
       }),
     ),
-    recentFailures: z.array(
-      z.strictObject({
-        id: z.uuid(),
-        kind: z.string(),
-        subject: z.string(),
-        error: z.string().nullable(),
-        finishedAt: z.iso.datetime().nullable(),
-      }),
-    ),
   }),
 });
 

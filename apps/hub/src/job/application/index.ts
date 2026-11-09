@@ -8,11 +8,7 @@ export {
   type JobStatusType,
 } from '../domain/job.entity.js';
 export { GetJobActivityUseCase } from './get-job-activity.use-case.js';
-export {
-  GetJobStatsUseCase,
-  type JobFailureInterface,
-  type JobStatsInterface,
-} from './get-job-stats.use-case.js';
+export { GetJobStatsUseCase, type JobStatsInterface } from './get-job-stats.use-case.js';
 export type { RouteInterface } from './job-queue.port.js';
 export type {
   JobActivityInterface,

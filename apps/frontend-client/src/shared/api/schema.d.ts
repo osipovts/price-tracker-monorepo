@@ -4,2413 +4,2402 @@
  */
 
 export interface paths {
-  '/admin/dashboard': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The figures of the hub on one page
+         * @description How the prices are read by marketplace and by the hour, the proxies the reads may take, the jobs and the users. For administrators.
+         */
+        get: operations["AdminController_dashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * The figures of the hub on one page
-     * @description How the prices are read by marketplace and by the hour, the proxies the reads may take, the jobs and the users. For administrators.
-     */
-    get: operations['AdminController_dashboard'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/product-groups': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/product-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The product groups of every user, the newest first
+         * @description Each with the email of its owner. `GET /admin/product-groups/{id}` shows one as its owner sees it. For administrators.
+         */
+        get: operations["AdminController_groups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * The product groups of every user, the newest first
-     * @description Each with the email of its owner. `GET /admin/product-groups/{id}` shows one as its owner sees it. For administrators.
-     */
-    get: operations['AdminController_groups'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/jobs': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The jobs, the newest first, with the product a price read is of
+         * @description For administrators.
+         */
+        get: operations["AdminController_jobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * The jobs, the newest first, with the product a price read is of
-     * @description For administrators.
-     */
-    get: operations['AdminController_jobs'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/products': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Track a product by its URL, in a group
+         * @description Any link to the product page works: it is canonicalized. The users share a product and its price history, each one tracks it for themselves. A product that has no price yet gets the read of its first price queued, which `jobId` names: follow it with `GET /jobs/{jobId}`. The product goes into the group `groupId` names, else into a new group; a product the user tracks stays in its group. A user tracks a limited number of products, a group holds a limited number, and products are added at a limited rate.
+         */
+        post: operations["ProductsController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Track a product by its URL, in a group
-     * @description Any link to the product page works: it is canonicalized. The users share a product and its price history, each one tracks it for themselves. A product that has no price yet gets the read of its first price queued, which `jobId` names: follow it with `GET /jobs/{jobId}`. The product goes into the group `groupId` names, else into a new group; a product the user tracks stays in its group. A user tracks a limited number of products, a group holds a limited number, and products are added at a limited rate.
-     */
-    post: operations['ProductsController_add'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/products/{id}/prices': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/products/{id}/prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Price history of a product, the newest first */
+        get: operations["ProductsController_prices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Price history of a product, the newest first */
-    get: operations['ProductsController_prices'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/products/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Stop tracking a product
+         * @description The product is shared: it is deleted with its price history only when nobody tracks it any more.
+         */
+        delete: operations["ProductsController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Stop tracking a product
-     * @description The product is shared: it is deleted with its price history only when nobody tracks it any more.
-     */
-    delete: operations['ProductsController_remove'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/product-groups': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/product-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the product groups of the user, the newest first
+         * @description A group holds the same item tracked on several marketplaces. The cards show the best price now and the lowest and the highest one of `statsPeriod`.
+         */
+        get: operations["ProductGroupsController_list"];
+        put?: never;
+        /**
+         * Make an empty group
+         * @description A group made by adding a product (`POST /products`) is made there.
+         */
+        post: operations["ProductGroupsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * List the product groups of the user, the newest first
-     * @description A group holds the same item tracked on several marketplaces. The cards show the best price now and the lowest and the highest one of `statsPeriod`.
-     */
-    get: operations['ProductGroupsController_list'];
-    put?: never;
-    /**
-     * Make an empty group
-     * @description A group made by adding a product (`POST /products`) is made there.
-     */
-    post: operations['ProductGroupsController_create'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/product-groups/stats-period': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/product-groups/stats-period": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose the period of the lowest and the highest price on the cards
+         * @description Kept for the user, so that it is the same on every device.
+         */
+        put: operations["ProductGroupsController_chooseStatsPeriod"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /**
-     * Choose the period of the lowest and the highest price on the cards
-     * @description Kept for the user, so that it is the same on every device.
-     */
-    put: operations['ProductGroupsController_chooseStatsPeriod'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/product-groups/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/product-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A product group with its products, each with its newest price */
+        get: operations["ProductGroupsController_get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a product group and stop tracking its products
+         * @description The products are shared: each is deleted with its price history only when nobody tracks it any more.
+         */
+        delete: operations["ProductGroupsController_remove"];
+        options?: never;
+        head?: never;
+        /** Rename a product group */
+        patch: operations["ProductGroupsController_rename"];
+        trace?: never;
     };
-    /** A product group with its products, each with its newest price */
-    get: operations['ProductGroupsController_get'];
-    put?: never;
-    post?: never;
-    /**
-     * Delete a product group and stop tracking its products
-     * @description The products are shared: each is deleted with its price history only when nobody tracks it any more.
-     */
-    delete: operations['ProductGroupsController_remove'];
-    options?: never;
-    head?: never;
-    /** Rename a product group */
-    patch: operations['ProductGroupsController_rename'];
-    trace?: never;
-  };
-  '/admin/product-groups/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/product-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A product group of any user, as its owner sees it
+         * @description The same as `GET /product-groups/{id}` for the owner. For administrators.
+         */
+        get: operations["AdminProductsController_group"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * A product group of any user, as its owner sees it
-     * @description The same as `GET /product-groups/{id}` for the owner. For administrators.
-     */
-    get: operations['AdminProductsController_group'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/products/{id}/prices': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/products/{id}/prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Price history of any tracked product, the newest first
+         * @description The same as `GET /products/{id}/prices` for a user who tracks it. For administrators.
+         */
+        get: operations["AdminProductsController_prices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Price history of any tracked product, the newest first
-     * @description The same as `GET /products/{id}/prices` for a user who tracks it. For administrators.
-     */
-    get: operations['AdminProductsController_prices'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/jobs': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List jobs, the newest first */
+        get: operations["JobsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** List jobs, the newest first */
-    get: operations['JobsController_list'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/jobs/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Status and progress of a job; poll it for a progress bar
+         * @description Only the user who requested the job can read it.
+         */
+        get: operations["JobsController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Status and progress of a job; poll it for a progress bar
-     * @description Only the user who requested the job can read it.
-     */
-    get: operations['JobsController_get'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/proxies': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/proxies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List proxies, the best by their checks first
+         * @description Each proxy tells how it has done reading the marketplaces it was tried on: the workers report every attempt, and a proxy that a marketplace turned away, or that did not get through, rests for that marketplace.
+         */
+        get: operations["ProxiesController_list"];
+        put?: never;
+        /**
+         * Add a proxy by hand
+         * @description The workers are given the manual proxies before the found ones, whatever their check and exit country. A proxy that is listed already becomes manual. The address may carry `user:password@` for an HTTP(S) proxy: the credentials are kept apart, given to the workers only and never listed.
+         */
+        post: operations["ProxiesController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Turn a proxy off or on
+         * @description A proxy that is off stays in the list but is not given to the workers, and a check does not turn it on. The server goes in the query: it has slashes.
+         */
+        patch: operations["ProxiesController_setProxyDisabled"];
+        trace?: never;
     };
-    /**
-     * List proxies, the best by their checks first
-     * @description Each proxy tells how it has done reading the marketplaces it was tried on: the workers report every attempt, and a proxy that a marketplace turned away, or that did not get through, rests for that marketplace.
-     */
-    get: operations['ProxiesController_list'];
-    put?: never;
-    /**
-     * Add a proxy by hand
-     * @description The workers are given the manual proxies before the found ones, whatever their check and exit country. A proxy that is listed already becomes manual. The address may carry `user:password@` for an HTTP(S) proxy: the credentials are kept apart, given to the workers only and never listed.
-     */
-    post: operations['ProxiesController_add'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    /**
-     * Turn a proxy off or on
-     * @description A proxy that is off stays in the list but is not given to the workers, and a check does not turn it on. The server goes in the query: it has slashes.
-     */
-    patch: operations['ProxiesController_setProxyDisabled'];
-    trace?: never;
-  };
-  '/proxies/stats': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/proxies/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The proxies in figures
+         * @description How many there are, alive and turned off, by source; and how many a read of each marketplace may be given now.
+         */
+        get: operations["ProxiesController_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * The proxies in figures
-     * @description How many there are, alive and turned off, by source; and how many a read of each marketplace may be given now.
-     */
-    get: operations['ProxiesController_stats'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/proxy-sources/{source}/refresh': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/proxy-sources/{source}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue a refresh of the proxies of one source */
+        post: operations["ProxySourcesController_refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Queue a refresh of the proxies of one source */
-    post: operations['ProxySourcesController_refresh'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/marketplaces/{marketplace}/cities': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/marketplaces/{marketplace}/cities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search the cities of a marketplace whose prices depend on the city
+         * @description The cities the hub has read of the marketplace, the ones whose names begin with the query first. Empty until the first read of the handbook is done.
+         */
+        get: operations["CitiesController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Search the cities of a marketplace whose prices depend on the city
-     * @description The cities the hub has read of the marketplace, the ones whose names begin with the query first. Empty until the first read of the handbook is done.
-     */
-    get: operations['CitiesController_list'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/handbooks/{handbook}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/handbooks/{handbook}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The cities a handbook keeps, a page of them
+         * @description With the time they were read; empty, and never read, until the first read is done.
+         */
+        get: operations["HandbooksController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * The cities a handbook keeps, a page of them
-     * @description With the time they were read; empty, and never read, until the first read is done.
-     */
-    get: operations['HandbooksController_list'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/handbooks/{handbook}/refresh': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/handbooks/{handbook}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a read of a handbook
+         * @description A worker reads the handbook through the best proxies and the hub keeps it. The hub asks for it by itself when it was never read, and every week.
+         */
+        post: operations["HandbooksController_refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Queue a read of a handbook
-     * @description A worker reads the handbook through the best proxies and the hub keeps it. The hub asks for it by itself when it was never read, and every week.
-     */
-    post: operations['HandbooksController_refresh'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/account': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account of the user: the ways to log in */
+        get: operations["AccountController_account"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete the account for good
+         * @description With the products the user tracks (those nobody else tracks go with their price history), the sessions and the ways to log in. The body names the email of the account, to confirm.
+         */
+        delete: operations["AccountController_deleteAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The account of the user: the ways to log in */
-    get: operations['AccountController_account'];
-    put?: never;
-    post?: never;
-    /**
-     * Delete the account for good
-     * @description With the products the user tracks (those nobody else tracks go with their price history), the sessions and the ways to log in. The body names the email of the account, to confirm.
-     */
-    delete: operations['AccountController_deleteAccount'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/identities/{provider}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/identities/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Stop logging in through a provider
+         * @description The last way to log in cannot be taken away: delete the account instead.
+         */
+        delete: operations["AccountController_unlinkIdentity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Stop logging in through a provider
-     * @description The last way to log in cannot be taken away: delete the account instead.
-     */
-    delete: operations['AccountController_unlinkIdentity'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/register': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign up by the email and the password
+         * @description Answers the same whether the email was free or not, so that it does not tell which emails have an account, and starts no session: log in with `POST /auth/login` after it.
+         */
+        post: operations["AuthController_register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Sign up by the email and the password
-     * @description Answers the same whether the email was free or not, so that it does not tell which emails have an account, and starts no session: log in with `POST /auth/login` after it.
-     */
-    post: operations['AuthController_register'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/login': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Log in by the email and the password
+         * @description Every login is a session of its own: the token comes in an HttpOnly cookie.
+         */
+        post: operations["AuthController_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Log in by the email and the password
-     * @description Every login is a session of its own: the token comes in an HttpOnly cookie.
-     */
-    post: operations['AuthController_login'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/logout': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End the session of the cookie
+         * @description Harmless without a session or with one that has ended already.
+         */
+        post: operations["AuthController_logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * End the session of the cookie
-     * @description Harmless without a session or with one that has ended already.
-     */
-    post: operations['AuthController_logout'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/me': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The user of the session cookie */
+        get: operations["AuthController_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The user of the session cookie */
-    get: operations['AuthController_me'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/password': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change the password
+         * @description Needs the current password. Signs the user out of every other device; this session stays.
+         */
+        post: operations["AuthController_password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Change the password
-     * @description Needs the current password. Signs the user out of every other device; this session stays.
-     */
-    post: operations['AuthController_password'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/sessions': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The sessions of the user, the most recently used first */
+        get: operations["AuthSessionsController_list"];
+        put?: never;
+        post?: never;
+        /**
+         * End every session but this one
+         * @description Signs the user out everywhere else, e.g. after a device was lost.
+         */
+        delete: operations["AuthSessionsController_revokeAllOthers"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The sessions of the user, the most recently used first */
-    get: operations['AuthSessionsController_list'];
-    put?: never;
-    post?: never;
-    /**
-     * End every session but this one
-     * @description Signs the user out everywhere else, e.g. after a device was lost.
-     */
-    delete: operations['AuthSessionsController_revokeAllOthers'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/sessions/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** End one session of the user */
+        delete: operations["AuthSessionsController_revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** End one session of the user */
-    delete: operations['AuthSessionsController_revoke'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/verify-email': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Confirm the email: the link mailed to it
+         * @description Open the link of the mail in the browser the user is signed in with. It works until it expires, and opening it again is harmless. Nobody else can confirm the email, even with the mailbox: whoever signed up set the password.
+         */
+        get: operations["EmailVerificationController_verify"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Confirm the email: the link mailed to it
-     * @description Open the link of the mail in the browser the user is signed in with. It works until it expires, and opening it again is harmless. Nobody else can confirm the email, even with the mailbox: whoever signed up set the password.
-     */
-    get: operations['EmailVerificationController_verify'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/verify-email/resend': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/verify-email/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mail the link to confirm the email again
+         * @description For a user who lost it: the earlier link stops working. Only so many times a window.
+         */
+        post: operations["EmailVerificationController_resend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Mail the link to confirm the email again
-     * @description For a user who lost it: the earlier link stops working. Only so many times a window.
-     */
-    post: operations['EmailVerificationController_resend'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/oauth/providers': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/oauth/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The providers a user can log in through */
+        get: operations["OauthController_providers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The providers a user can log in through */
-    get: operations['OauthController_providers'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/oauth/{provider}/start': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/oauth/{provider}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Log in through a provider: send the browser to it
+         * @description Open it in the browser, not as an API call. Google and GitHub, when their OAuth apps are set up; the provider sends the user back to the callback, which logs them in.
+         */
+        get: operations["OauthController_start"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Log in through a provider: send the browser to it
-     * @description Open it in the browser, not as an API call. Google and GitHub, when their OAuth apps are set up; the provider sends the user back to the callback, which logs them in.
-     */
-    get: operations['OauthController_start'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/auth/oauth/{provider}/callback': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/auth/oauth/{provider}/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where the provider sends the user back to
+         * @description Logs the user in, signing them up on the first login: the session token comes in an HttpOnly cookie, and the user lands on a page of the hub.
+         */
+        get: operations["OauthController_callback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Where the provider sends the user back to
-     * @description Logs the user in, signing them up on the first login: the session token comes in an HttpOnly cookie, and the user lands on a page of the hub.
-     */
-    get: operations['OauthController_callback'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: never;
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    schemas: never;
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  AdminController_dashboard: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+    AdminController_dashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': {
-            /** Format: date-time */
-            generatedAt: string;
-            users: {
-              total: number;
-              verified: number;
-              joinedLastDay: number;
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: date-time */
+                        generatedAt: string;
+                        users: {
+                            total: number;
+                            verified: number;
+                            joinedLastDay: number;
+                        };
+                        products: {
+                            products: number;
+                            trackings: number;
+                            groups: number;
+                            staleAfterMs: number;
+                            marketplaces: {
+                                /** @enum {string} */
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink";
+                                products: number;
+                                readsLastDay: number;
+                                /** Format: date-time */
+                                lastReadAt: string | null;
+                                stale: number;
+                                unread: number;
+                            }[];
+                            readsByHour: {
+                                /** Format: date-time */
+                                hour: string;
+                                /** @enum {string} */
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink";
+                                reads: number;
+                            }[];
+                        };
+                        proxies: {
+                            total: number;
+                            alive: number;
+                            disabled: number;
+                            averageLatencyMs: number | null;
+                            /** Format: date-time */
+                            lastCheckedAt: string | null;
+                            bySource: {
+                                source: string;
+                                total: number;
+                                alive: number;
+                                disabled: number;
+                            }[];
+                            usable: {
+                                /** @enum {string} */
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink";
+                                count: number;
+                            }[];
+                        };
+                        jobs: {
+                            lastDay: {
+                                /** @enum {string} */
+                                kind: "proxy_fetch" | "price_fetch" | "handbook_fetch";
+                                queued: number;
+                                running: number;
+                                retrying: number;
+                                completed: number;
+                                failed: number;
+                            }[];
+                            unfinished: {
+                                queued: number;
+                                running: number;
+                                retrying: number;
+                                lost: number;
+                            };
+                            priceJobsByHour: {
+                                /** Format: date-time */
+                                hour: string;
+                                completed: number;
+                                failed: number;
+                            }[];
+                        };
+                    };
+                };
             };
-            products: {
-              products: number;
-              trackings: number;
-              groups: number;
-              staleAfterMs: number;
-              marketplaces: {
-                /** @enum {string} */
-                marketplace: 'ozon' | 'dns' | 'wildberries' | 'citilink';
-                products: number;
-                readsLastDay: number;
-                /** Format: date-time */
-                lastReadAt: string | null;
-                stale: number;
-                unread: number;
-              }[];
-              readsByHour: {
-                /** Format: date-time */
-                hour: string;
-                /** @enum {string} */
-                marketplace: 'ozon' | 'dns' | 'wildberries' | 'citilink';
-                reads: number;
-              }[];
+            /** @description The user is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
-            proxies: {
-              total: number;
-              alive: number;
-              disabled: number;
-              averageLatencyMs: number | null;
-              /** Format: date-time */
-              lastCheckedAt: string | null;
-              bySource: {
-                source: string;
-                total: number;
-                alive: number;
-                disabled: number;
-              }[];
-              usable: {
-                /** @enum {string} */
-                marketplace: 'ozon' | 'dns' | 'wildberries' | 'citilink';
-                count: number;
-              }[];
+        };
+    };
+    AdminController_groups: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
             };
-            jobs: {
-              lastDay: {
-                /** @enum {string} */
-                kind: 'proxy_fetch' | 'price_fetch' | 'handbook_fetch';
-                queued: number;
-                running: number;
-                retrying: number;
-                completed: number;
-                failed: number;
-              }[];
-              unfinished: {
-                queued: number;
-                running: number;
-                retrying: number;
-                lost: number;
-              };
-              priceJobsByHour: {
-                /** Format: date-time */
-                hour: string;
-                completed: number;
-                failed: number;
-              }[];
-              recentFailures: {
-                /** Format: uuid */
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            title: string | null;
+                            /** Format: uri */
+                            thumbnailUrl: string | null;
+                            ownerEmail: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            marketplaces: string[];
+                            lastCheck: {
+                                marketplace: string;
+                                /** Format: date-time */
+                                checkedAt: string;
+                            } | null;
+                            current: {
+                                marketplace: string;
+                                amountMinor: number;
+                                /** Format: date-time */
+                                observedAt: string;
+                            } | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
+                };
+            };
+            /** @description The user is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_jobs: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                kind?: "proxy_fetch" | "price_fetch" | "handbook_fetch";
+                state?: "active" | "completed" | "failed";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            kind: "proxy_fetch" | "price_fetch" | "handbook_fetch";
+                            subject: string;
+                            /** @enum {string} */
+                            status: "queued" | "running" | "retrying" | "completed" | "failed";
+                            percent: number;
+                            processed: number;
+                            total: number | null;
+                            succeeded: number;
+                            error: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            startedAt: string | null;
+                            /** Format: date-time */
+                            finishedAt: string | null;
+                            lost: boolean;
+                            product: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink";
+                                url: string;
+                                cityName: string | null;
+                                title: string | null;
+                            } | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
+                };
+            };
+            /** @description The user is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductsController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uri */
+                    url: string;
+                    cityId?: string;
+                    /** Format: uuid */
+                    groupId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The user tracked the product already */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        marketplace: string;
+                        externalId: string;
+                        url: string;
+                        cityId: string | null;
+                        cityName: string | null;
+                        lastStatus: string | null;
+                        /** Format: date-time */
+                        lastCheckedAt: string | null;
+                        /** Format: date-time */
+                        nextCheckAt: string | null;
+                        /** Format: uri */
+                        thumbnailUrl: string | null;
+                        /** Format: uuid */
+                        jobId: string | null;
+                        /** Format: uuid */
+                        groupId: string;
+                    };
+                };
+            };
+            /** @description The product is tracked now */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        marketplace: string;
+                        externalId: string;
+                        url: string;
+                        cityId: string | null;
+                        cityName: string | null;
+                        lastStatus: string | null;
+                        /** Format: date-time */
+                        lastCheckedAt: string | null;
+                        /** Format: date-time */
+                        nextCheckAt: string | null;
+                        /** Format: uri */
+                        thumbnailUrl: string | null;
+                        /** Format: uuid */
+                        jobId: string | null;
+                        /** Format: uuid */
+                        groupId: string;
+                    };
+                };
+            };
+            /** @description Unsupported marketplace or product URL, or a city the marketplace does not have */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The user tracks the most products the hub allows, or the group holds the most it may */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The group is not the user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The user adds products too fast */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProductsController_prices: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
                 id: string;
-                kind: string;
-                subject: string;
-                error: string | null;
-                /** Format: date-time */
-                finishedAt: string | null;
-              }[];
             };
-          };
+            cookie?: never;
         };
-      };
-      /** @description The user is not an administrator */
-      403: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: date-time */
+                            observedAt: string;
+                            title: string;
+                            /** @enum {string} */
+                            availability: "in_stock" | "out_of_stock" | "unknown";
+                            prices: {
+                                amountMinor: number;
+                                /** @enum {string} */
+                                currency: "RUB";
+                            }[];
+                            exitIp: string | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                        product: {
+                            /** Format: uuid */
+                            id: string;
+                            marketplace: string;
+                            externalId: string;
+                            url: string;
+                            cityId: string | null;
+                            cityName: string | null;
+                            lastStatus: string | null;
+                            /** Format: date-time */
+                            lastCheckedAt: string | null;
+                            /** Format: date-time */
+                            nextCheckAt: string | null;
+                            /** Format: uri */
+                            thumbnailUrl: string | null;
+                        };
+                    };
+                };
+            };
+            /** @description The product is not tracked */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  AdminController_groups: {
-    parameters: {
-      query?: {
-        page?: number;
-        pageSize?: number;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            items: {
-              /** Format: uuid */
-              id: string;
-              title: string | null;
-              /** Format: uri */
-              thumbnailUrl: string | null;
-              ownerEmail: string | null;
-              /** Format: date-time */
-              createdAt: string;
-              marketplaces: string[];
-              lastCheck: {
-                marketplace: string;
-                /** Format: date-time */
-                checkedAt: string;
-              } | null;
-              current: {
-                marketplace: string;
-                amountMinor: number;
-                /** Format: date-time */
-                observedAt: string;
-              } | null;
-            }[];
-            page: number;
-            pageSize: number;
-            total: number;
-          };
-        };
-      };
-      /** @description The user is not an administrator */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AdminController_jobs: {
-    parameters: {
-      query?: {
-        page?: number;
-        pageSize?: number;
-        kind?: 'proxy_fetch' | 'price_fetch' | 'handbook_fetch';
-        state?: 'active' | 'completed' | 'failed';
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            items: {
-              /** Format: uuid */
-              id: string;
-              /** @enum {string} */
-              kind: 'proxy_fetch' | 'price_fetch' | 'handbook_fetch';
-              subject: string;
-              /** @enum {string} */
-              status: 'queued' | 'running' | 'retrying' | 'completed' | 'failed';
-              percent: number;
-              processed: number;
-              total: number | null;
-              succeeded: number;
-              error: string | null;
-              /** Format: date-time */
-              createdAt: string;
-              /** Format: date-time */
-              startedAt: string | null;
-              /** Format: date-time */
-              finishedAt: string | null;
-              lost: boolean;
-              product: {
-                /** Format: uuid */
+    ProductsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
                 id: string;
-                /** @enum {string} */
-                marketplace: 'ozon' | 'dns' | 'wildberries' | 'citilink';
-                url: string;
-                cityName: string | null;
-                title: string | null;
-              } | null;
-            }[];
-            page: number;
-            pageSize: number;
-            total: number;
-          };
-        };
-      };
-      /** @description The user is not an administrator */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  ProductsController_add: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': {
-          /** Format: uri */
-          url: string;
-          cityId?: string;
-          /** Format: uuid */
-          groupId?: string;
-        };
-      };
-    };
-    responses: {
-      /** @description The user tracked the product already */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id: string;
-            marketplace: string;
-            externalId: string;
-            url: string;
-            cityId: string | null;
-            cityName: string | null;
-            lastStatus: string | null;
-            /** Format: date-time */
-            lastCheckedAt: string | null;
-            /** Format: date-time */
-            nextCheckAt: string | null;
-            /** Format: uri */
-            thumbnailUrl: string | null;
-            /** Format: uuid */
-            jobId: string | null;
-            /** Format: uuid */
-            groupId: string;
-          };
-        };
-      };
-      /** @description The product is tracked now */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id: string;
-            marketplace: string;
-            externalId: string;
-            url: string;
-            cityId: string | null;
-            cityName: string | null;
-            lastStatus: string | null;
-            /** Format: date-time */
-            lastCheckedAt: string | null;
-            /** Format: date-time */
-            nextCheckAt: string | null;
-            /** Format: uri */
-            thumbnailUrl: string | null;
-            /** Format: uuid */
-            jobId: string | null;
-            /** Format: uuid */
-            groupId: string;
-          };
-        };
-      };
-      /** @description Unsupported marketplace or product URL, or a city the marketplace does not have */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The user tracks the most products the hub allows, or the group holds the most it may */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The group is not the user's */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The user adds products too fast */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  ProductsController_prices: {
-    parameters: {
-      query?: {
-        page?: number;
-        pageSize?: number;
-      };
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            items: {
-              /** Format: uuid */
-              id: string;
-              /** Format: date-time */
-              observedAt: string;
-              title: string;
-              /** @enum {string} */
-              availability: 'in_stock' | 'out_of_stock' | 'unknown';
-              prices: {
-                amountMinor: number;
-                /** @enum {string} */
-                currency: 'RUB';
-              }[];
-              exitIp: string | null;
-            }[];
-            page: number;
-            pageSize: number;
-            total: number;
-            product: {
-              /** Format: uuid */
-              id: string;
-              marketplace: string;
-              externalId: string;
-              url: string;
-              cityId: string | null;
-              cityName: string | null;
-              lastStatus: string | null;
-              /** Format: date-time */
-              lastCheckedAt: string | null;
-              /** Format: date-time */
-              nextCheckAt: string | null;
-              /** Format: uri */
-              thumbnailUrl: string | null;
             };
-          };
+            cookie?: never;
         };
-      };
-      /** @description The product is not tracked */
-      404: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The product is not tracked */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  ProductsController_remove: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
+    ProductGroupsController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-      /** @description The product is not tracked */
-      404: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            title: string | null;
+                            /** Format: uri */
+                            thumbnailUrl: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            productCount: number;
+                            lastCheck: {
+                                marketplace: string;
+                                /** Format: date-time */
+                                checkedAt: string;
+                            } | null;
+                            current: {
+                                marketplace: string;
+                                amountMinor: number;
+                                /** Format: date-time */
+                                observedAt: string;
+                            } | null;
+                            min: {
+                                marketplace: string;
+                                amountMinor: number;
+                                /** Format: date-time */
+                                observedAt: string;
+                            } | null;
+                            max: {
+                                marketplace: string;
+                                amountMinor: number;
+                                /** Format: date-time */
+                                observedAt: string;
+                            } | null;
+                            highlighted: boolean;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                        /** @enum {string} */
+                        statsPeriod: "24h" | "7d" | "30d";
+                    };
+                };
+            };
         };
-        content?: never;
-      };
     };
-  };
-  ProductGroupsController_list: {
-    parameters: {
-      query?: {
-        page?: number;
-        pageSize?: number;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+    ProductGroupsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': {
-            items: {
-              /** Format: uuid */
-              id: string;
-              title: string | null;
-              /** Format: uri */
-              thumbnailUrl: string | null;
-              /** Format: date-time */
-              createdAt: string;
-              productCount: number;
-              lastCheck: {
-                marketplace: string;
-                /** Format: date-time */
-                checkedAt: string;
-              } | null;
-              current: {
-                marketplace: string;
-                amountMinor: number;
-                /** Format: date-time */
-                observedAt: string;
-              } | null;
-              min: {
-                marketplace: string;
-                amountMinor: number;
-                /** Format: date-time */
-                observedAt: string;
-              } | null;
-              max: {
-                marketplace: string;
-                amountMinor: number;
-                /** Format: date-time */
-                observedAt: string;
-              } | null;
-              highlighted: boolean;
-            }[];
-            page: number;
-            pageSize: number;
-            total: number;
-            /** @enum {string} */
-            statsPeriod: '24h' | '7d' | '30d';
-          };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                };
+            };
         };
-      };
-    };
-  };
-  ProductGroupsController_create: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': {
-          title?: string;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        title: string | null;
+                        /** Format: uri */
+                        thumbnailUrl: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        productCount: number;
+                        lastCheck: {
+                            marketplace: string;
+                            /** Format: date-time */
+                            checkedAt: string;
+                        } | null;
+                        current: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        min: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        max: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        highlighted: boolean;
+                    };
+                };
+            };
         };
-      };
     };
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown;
+    ProductGroupsController_chooseStatsPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id: string;
-            title: string | null;
-            /** Format: uri */
-            thumbnailUrl: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            productCount: number;
-            lastCheck: {
-              marketplace: string;
-              /** Format: date-time */
-              checkedAt: string;
-            } | null;
-            current: {
-              marketplace: string;
-              amountMinor: number;
-              /** Format: date-time */
-              observedAt: string;
-            } | null;
-            min: {
-              marketplace: string;
-              amountMinor: number;
-              /** Format: date-time */
-              observedAt: string;
-            } | null;
-            max: {
-              marketplace: string;
-              amountMinor: number;
-              /** Format: date-time */
-              observedAt: string;
-            } | null;
-            highlighted: boolean;
-          };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    statsPeriod: "24h" | "7d" | "30d";
+                };
+            };
         };
-      };
-    };
-  };
-  ProductGroupsController_chooseStatsPeriod: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': {
-          /** @enum {string} */
-          statsPeriod: '24h' | '7d' | '30d';
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-      };
     };
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  ProductGroupsController_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id: string;
-            title: string | null;
-            /** Format: uri */
-            thumbnailUrl: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            productCount: number;
-            lastCheck: {
-              marketplace: string;
-              /** Format: date-time */
-              checkedAt: string;
-            } | null;
-            current: {
-              marketplace: string;
-              amountMinor: number;
-              /** Format: date-time */
-              observedAt: string;
-            } | null;
-            min: {
-              marketplace: string;
-              amountMinor: number;
-              /** Format: date-time */
-              observedAt: string;
-            } | null;
-            max: {
-              marketplace: string;
-              amountMinor: number;
-              /** Format: date-time */
-              observedAt: string;
-            } | null;
-            highlighted: boolean;
-            /** @enum {string} */
-            statsPeriod: '24h' | '7d' | '30d';
-            products: {
-              /** Format: uuid */
-              id: string;
-              marketplace: string;
-              externalId: string;
-              url: string;
-              cityId: string | null;
-              cityName: string | null;
-              lastStatus: string | null;
-              /** Format: date-time */
-              lastCheckedAt: string | null;
-              /** Format: date-time */
-              nextCheckAt: string | null;
-              /** Format: uri */
-              thumbnailUrl: string | null;
-              latest: {
-                /** Format: uuid */
+    ProductGroupsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
                 id: string;
-                /** Format: date-time */
-                observedAt: string;
-                title: string;
-                /** @enum {string} */
-                availability: 'in_stock' | 'out_of_stock' | 'unknown';
-                prices: {
-                  amountMinor: number;
-                  /** @enum {string} */
-                  currency: 'RUB';
-                }[];
-                exitIp: string | null;
-              } | null;
-            }[];
-          };
+            };
+            cookie?: never;
         };
-      };
-      /** @description The group is not the user's */
-      404: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        title: string | null;
+                        /** Format: uri */
+                        thumbnailUrl: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        productCount: number;
+                        lastCheck: {
+                            marketplace: string;
+                            /** Format: date-time */
+                            checkedAt: string;
+                        } | null;
+                        current: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        min: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        max: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        highlighted: boolean;
+                        /** @enum {string} */
+                        statsPeriod: "24h" | "7d" | "30d";
+                        products: {
+                            /** Format: uuid */
+                            id: string;
+                            marketplace: string;
+                            externalId: string;
+                            url: string;
+                            cityId: string | null;
+                            cityName: string | null;
+                            lastStatus: string | null;
+                            /** Format: date-time */
+                            lastCheckedAt: string | null;
+                            /** Format: date-time */
+                            nextCheckAt: string | null;
+                            /** Format: uri */
+                            thumbnailUrl: string | null;
+                            latest: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: date-time */
+                                observedAt: string;
+                                title: string;
+                                /** @enum {string} */
+                                availability: "in_stock" | "out_of_stock" | "unknown";
+                                prices: {
+                                    amountMinor: number;
+                                    /** @enum {string} */
+                                    currency: "RUB";
+                                }[];
+                                exitIp: string | null;
+                            } | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description The group is not the user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
     };
-  };
-  ProductGroupsController_remove: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The group is not the user's */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  ProductGroupsController_rename: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': {
-          title: string;
-        };
-      };
-    };
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The group is not the user's */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AdminProductsController_group: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id: string;
-            title: string | null;
-            /** Format: uri */
-            thumbnailUrl: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            productCount: number;
-            lastCheck: {
-              marketplace: string;
-              /** Format: date-time */
-              checkedAt: string;
-            } | null;
-            current: {
-              marketplace: string;
-              amountMinor: number;
-              /** Format: date-time */
-              observedAt: string;
-            } | null;
-            min: {
-              marketplace: string;
-              amountMinor: number;
-              /** Format: date-time */
-              observedAt: string;
-            } | null;
-            max: {
-              marketplace: string;
-              amountMinor: number;
-              /** Format: date-time */
-              observedAt: string;
-            } | null;
-            highlighted: boolean;
-            /** @enum {string} */
-            statsPeriod: '24h' | '7d' | '30d';
-            products: {
-              /** Format: uuid */
-              id: string;
-              marketplace: string;
-              externalId: string;
-              url: string;
-              cityId: string | null;
-              cityName: string | null;
-              lastStatus: string | null;
-              /** Format: date-time */
-              lastCheckedAt: string | null;
-              /** Format: date-time */
-              nextCheckAt: string | null;
-              /** Format: uri */
-              thumbnailUrl: string | null;
-              latest: {
-                /** Format: uuid */
+    ProductGroupsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
                 id: string;
-                /** Format: date-time */
-                observedAt: string;
-                title: string;
-                /** @enum {string} */
-                availability: 'in_stock' | 'out_of_stock' | 'unknown';
-                prices: {
-                  amountMinor: number;
-                  /** @enum {string} */
-                  currency: 'RUB';
-                }[];
-                exitIp: string | null;
-              } | null;
-            }[];
-          };
-        };
-      };
-      /** @description The user is not an administrator */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The group is unknown */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AdminProductsController_prices: {
-    parameters: {
-      query?: {
-        page?: number;
-        pageSize?: number;
-      };
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            items: {
-              /** Format: uuid */
-              id: string;
-              /** Format: date-time */
-              observedAt: string;
-              title: string;
-              /** @enum {string} */
-              availability: 'in_stock' | 'out_of_stock' | 'unknown';
-              prices: {
-                amountMinor: number;
-                /** @enum {string} */
-                currency: 'RUB';
-              }[];
-              exitIp: string | null;
-            }[];
-            page: number;
-            pageSize: number;
-            total: number;
-            product: {
-              /** Format: uuid */
-              id: string;
-              marketplace: string;
-              externalId: string;
-              url: string;
-              cityId: string | null;
-              cityName: string | null;
-              lastStatus: string | null;
-              /** Format: date-time */
-              lastCheckedAt: string | null;
-              /** Format: date-time */
-              nextCheckAt: string | null;
-              /** Format: uri */
-              thumbnailUrl: string | null;
             };
-          };
+            cookie?: never;
         };
-      };
-      /** @description The user is not an administrator */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The product is not tracked */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  JobsController_list: {
-    parameters: {
-      query?: {
-        page?: number;
-        pageSize?: number;
-        kind?: 'proxy_fetch' | 'price_fetch' | 'handbook_fetch';
-        status?: 'queued' | 'running' | 'retrying' | 'completed' | 'failed';
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            items: {
-              /** Format: uuid */
-              id: string;
-              /** @enum {string} */
-              kind: 'proxy_fetch' | 'price_fetch' | 'handbook_fetch';
-              subject: string;
-              /** @enum {string} */
-              status: 'queued' | 'running' | 'retrying' | 'completed' | 'failed';
-              percent: number;
-              processed: number;
-              total: number | null;
-              succeeded: number;
-              error: string | null;
-              /** Format: date-time */
-              createdAt: string;
-              /** Format: date-time */
-              startedAt: string | null;
-              /** Format: date-time */
-              finishedAt: string | null;
-            }[];
-            page: number;
-            pageSize: number;
-            total: number;
-          };
-        };
-      };
-    };
-  };
-  JobsController_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            id: string;
-            /** @enum {string} */
-            kind: 'proxy_fetch' | 'price_fetch' | 'handbook_fetch';
-            subject: string;
-            /** @enum {string} */
-            status: 'queued' | 'running' | 'retrying' | 'completed' | 'failed';
-            percent: number;
-            processed: number;
-            total: number | null;
-            succeeded: number;
-            error: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            startedAt: string | null;
-            /** Format: date-time */
-            finishedAt: string | null;
-          };
-        };
-      };
-      /** @description The job is unknown, or is not the user's */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  ProxiesController_list: {
-    parameters: {
-      query?: {
-        page?: number;
-        pageSize?: number;
-        alive?: 'true' | 'false';
-        disabled?: 'true' | 'false';
-        country?: string;
-        source?:
-          | ('github-free-proxy-list' | 'proxifly' | 'proxyscrape' | 'geonode' | 'monosans')
-          | 'manual';
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            items: {
-              server: string;
-              source: string;
-              country: string | null;
-              exitIp: string | null;
-              alive: boolean;
-              latencyMs: number | null;
-              successRate: number;
-              checksTotal: number;
-              /** Format: date-time */
-              lastCheckedAt: string;
-              disabled: boolean;
-              reputations: {
-                /** @enum {string} */
-                marketplace: 'ozon' | 'dns' | 'wildberries' | 'citilink';
-                successes: number;
-                failures: number;
-                failureStreak: number;
-                /** @enum {string} */
-                lastOutcome: 'read' | 'unreachable' | 'blocked' | 'misplaced' | 'down';
-                /** Format: date-time */
-                lastAttemptAt: string;
-                /** Format: date-time */
-                cooldownUntil: string | null;
-              }[];
-            }[];
-            page: number;
-            pageSize: number;
-            total: number;
-          };
-        };
-      };
-    };
-  };
-  ProxiesController_add: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': {
-          /** Format: uri */
-          server: string;
-        };
-      };
-    };
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  ProxiesController_setProxyDisabled: {
-    parameters: {
-      query: {
-        server: string;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': {
-          disabled: boolean;
-        };
-      };
-    };
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The proxy is unknown */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  ProxiesController_stats: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            total: number;
-            alive: number;
-            disabled: number;
-            averageLatencyMs: number | null;
-            /** Format: date-time */
-            lastCheckedAt: string | null;
-            bySource: {
-              source: string;
-              total: number;
-              alive: number;
-              disabled: number;
-            }[];
-            usable: {
-              /** @enum {string} */
-              marketplace: 'ozon' | 'dns' | 'wildberries' | 'citilink';
-              count: number;
-            }[];
-          };
-        };
-      };
-    };
-  };
-  ProxySourcesController_refresh: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        source: 'github-free-proxy-list' | 'proxifly' | 'proxyscrape' | 'geonode' | 'monosans';
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': {
-          /** @default 200 */
-          maxCandidates?: number;
-          /** @default 10000 */
-          probeTimeoutMs?: number;
-        };
-      };
-    };
-    responses: {
-      202: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            jobId: string;
-          };
-        };
-      };
-    };
-  };
-  CitiesController_list: {
-    parameters: {
-      query?: {
-        query?: string;
-        limit?: number;
-      };
-      header?: never;
-      path: {
-        marketplace: 'ozon' | 'dns' | 'wildberries' | 'citilink';
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            items: {
-              id: string;
-              name: string;
-              region: string | null;
-            }[];
-          };
-        };
-      };
-      /** @description The prices of the marketplace do not depend on the city */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  HandbooksController_list: {
-    parameters: {
-      query?: {
-        page?: number;
-        pageSize?: number;
-        query?: string;
-      };
-      header?: never;
-      path: {
-        handbook: 'dns-cities' | 'wildberries-cities';
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            items: {
-              id: string;
-              name: string;
-              region: string | null;
-            }[];
-            page: number;
-            pageSize: number;
-            total: number;
-            /** Format: date-time */
-            fetchedAt: string | null;
-          };
-        };
-      };
-    };
-  };
-  HandbooksController_refresh: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        handbook: 'dns-cities' | 'wildberries-cities';
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      202: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            jobId: string;
-          };
-        };
-      };
-    };
-  };
-  AccountController_account: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            email: string;
-            emailVerified: boolean;
-            /** Format: date-time */
-            createdAt: string;
-            hasPassword: boolean;
-            identities: {
-              /** @enum {string} */
-              provider: 'google' | 'github';
-              /** Format: date-time */
-              linkedAt: string;
-            }[];
-          };
-        };
-      };
-    };
-  };
-  AccountController_deleteAccount: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': {
-          /** Format: email */
-          email: string;
-        };
-      };
-    };
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AccountController_unlinkIdentity: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        provider: 'google' | 'github';
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description The account is not linked to the provider */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description It is the only way to log in */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthController_register: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': {
-          /** Format: email */
-          email: string;
-          password: string;
-        };
-      };
-    };
-    responses: {
-      202: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            /** @enum {boolean} */
-            accepted: true;
-          };
-        };
-      };
-    };
-  };
-  AuthController_login: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': {
-          /** Format: email */
-          email: string;
-          password: string;
-        };
-      };
-    };
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            user: {
-              /** Format: uuid */
-              id: string;
-              email: string;
-              emailVerified: boolean;
-              isAdmin: boolean;
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
-          };
-        };
-      };
-      /** @description The email or the password is wrong */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthController_logout: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  AuthController_me: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            user: {
-              /** Format: uuid */
-              id: string;
-              email: string;
-              emailVerified: boolean;
-              isAdmin: boolean;
+            /** @description The group is not the user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
-          };
         };
-      };
-      /** @description No live session */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  AuthController_password: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    ProductGroupsController_rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                };
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The group is not the user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody: {
-      content: {
-        'application/json': {
-          currentPassword: string;
-          newPassword: string;
+    AdminProductsController_group: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
         };
-      };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        title: string | null;
+                        /** Format: uri */
+                        thumbnailUrl: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        productCount: number;
+                        lastCheck: {
+                            marketplace: string;
+                            /** Format: date-time */
+                            checkedAt: string;
+                        } | null;
+                        current: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        min: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        max: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        highlighted: boolean;
+                        /** @enum {string} */
+                        statsPeriod: "24h" | "7d" | "30d";
+                        products: {
+                            /** Format: uuid */
+                            id: string;
+                            marketplace: string;
+                            externalId: string;
+                            url: string;
+                            cityId: string | null;
+                            cityName: string | null;
+                            lastStatus: string | null;
+                            /** Format: date-time */
+                            lastCheckedAt: string | null;
+                            /** Format: date-time */
+                            nextCheckAt: string | null;
+                            /** Format: uri */
+                            thumbnailUrl: string | null;
+                            latest: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: date-time */
+                                observedAt: string;
+                                title: string;
+                                /** @enum {string} */
+                                availability: "in_stock" | "out_of_stock" | "unknown";
+                                prices: {
+                                    amountMinor: number;
+                                    /** @enum {string} */
+                                    currency: "RUB";
+                                }[];
+                                exitIp: string | null;
+                            } | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description The user is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The group is unknown */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
+    AdminProductsController_prices: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
         };
-        content?: never;
-      };
-      /** @description The current password is wrong */
-      400: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: date-time */
+                            observedAt: string;
+                            title: string;
+                            /** @enum {string} */
+                            availability: "in_stock" | "out_of_stock" | "unknown";
+                            prices: {
+                                amountMinor: number;
+                                /** @enum {string} */
+                                currency: "RUB";
+                            }[];
+                            exitIp: string | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                        product: {
+                            /** Format: uuid */
+                            id: string;
+                            marketplace: string;
+                            externalId: string;
+                            url: string;
+                            cityId: string | null;
+                            cityName: string | null;
+                            lastStatus: string | null;
+                            /** Format: date-time */
+                            lastCheckedAt: string | null;
+                            /** Format: date-time */
+                            nextCheckAt: string | null;
+                            /** Format: uri */
+                            thumbnailUrl: string | null;
+                        };
+                    };
+                };
+            };
+            /** @description The user is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The product is not tracked */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
-      /** @description No live session */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  AuthSessionsController_list: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    JobsController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                kind?: "proxy_fetch" | "price_fetch" | "handbook_fetch";
+                status?: "queued" | "running" | "retrying" | "completed" | "failed";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            kind: "proxy_fetch" | "price_fetch" | "handbook_fetch";
+                            subject: string;
+                            /** @enum {string} */
+                            status: "queued" | "running" | "retrying" | "completed" | "failed";
+                            percent: number;
+                            processed: number;
+                            total: number | null;
+                            succeeded: number;
+                            error: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            startedAt: string | null;
+                            /** Format: date-time */
+                            finishedAt: string | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+    JobsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': {
-            sessions: {
-              /** Format: uuid */
-              id: string;
-              userAgent: string | null;
-              ip: string | null;
-              /** Format: date-time */
-              createdAt: string;
-              /** Format: date-time */
-              lastSeenAt: string;
-              /** Format: date-time */
-              expiresAt: string;
-              current: boolean;
-            }[];
-          };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        /** @enum {string} */
+                        kind: "proxy_fetch" | "price_fetch" | "handbook_fetch";
+                        subject: string;
+                        /** @enum {string} */
+                        status: "queued" | "running" | "retrying" | "completed" | "failed";
+                        percent: number;
+                        processed: number;
+                        total: number | null;
+                        succeeded: number;
+                        error: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date-time */
+                        startedAt: string | null;
+                        /** Format: date-time */
+                        finishedAt: string | null;
+                    };
+                };
+            };
+            /** @description The job is unknown, or is not the user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-      };
-      /** @description No live session */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  AuthSessionsController_revokeAllOthers: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    ProxiesController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                alive?: "true" | "false";
+                disabled?: "true" | "false";
+                country?: string;
+                source?: ("github-free-proxy-list" | "proxifly" | "proxyscrape" | "geonode" | "monosans") | "manual";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            server: string;
+                            source: string;
+                            country: string | null;
+                            exitIp: string | null;
+                            alive: boolean;
+                            latencyMs: number | null;
+                            successRate: number;
+                            checksTotal: number;
+                            /** Format: date-time */
+                            lastCheckedAt: string;
+                            disabled: boolean;
+                            reputations: {
+                                /** @enum {string} */
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink";
+                                successes: number;
+                                failures: number;
+                                failureStreak: number;
+                                /** @enum {string} */
+                                lastOutcome: "read" | "unreachable" | "blocked" | "misplaced" | "down";
+                                /** Format: date-time */
+                                lastAttemptAt: string;
+                                /** Format: date-time */
+                                cooldownUntil: string | null;
+                            }[];
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+    ProxiesController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': {
-            revoked: number;
-          };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uri */
+                    server: string;
+                };
+            };
         };
-      };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-  };
-  AuthSessionsController_revoke: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
+    ProxiesController_setProxyDisabled: {
+        parameters: {
+            query: {
+                server: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    disabled: boolean;
+                };
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The proxy is unknown */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
+    ProxiesController_stats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-      /** @description The session is unknown, ended already or not the user's */
-      404: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        total: number;
+                        alive: number;
+                        disabled: number;
+                        averageLatencyMs: number | null;
+                        /** Format: date-time */
+                        lastCheckedAt: string | null;
+                        bySource: {
+                            source: string;
+                            total: number;
+                            alive: number;
+                            disabled: number;
+                        }[];
+                        usable: {
+                            /** @enum {string} */
+                            marketplace: "ozon" | "dns" | "wildberries" | "citilink";
+                            count: number;
+                        }[];
+                    };
+                };
+            };
         };
-        content?: never;
-      };
     };
-  };
-  EmailVerificationController_verify: {
-    parameters: {
-      query: {
-        token: string;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
+    ProxySourcesController_refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source: "github-free-proxy-list" | "proxifly" | "proxyscrape" | "geonode" | "monosans";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @default 200 */
+                    maxCandidates?: number;
+                    /** @default 10000 */
+                    probeTimeoutMs?: number;
+                };
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        jobId: string;
+                    };
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+    CitiesController_list: {
+        parameters: {
+            query?: {
+                query?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                marketplace: "ozon" | "dns" | "wildberries" | "citilink";
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': {
-            /** @enum {boolean} */
-            verified: true;
-          };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            id: string;
+                            name: string;
+                            region: string | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description The prices of the marketplace do not depend on the city */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-      };
-      /** @description The link is wrong, has expired, or was mailed for another user */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description No live session: where the app has a login page, a redirect to it with `?verify=<token>` */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  EmailVerificationController_resend: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      204: {
-        headers: {
-          [name: string]: unknown;
+    HandbooksController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                query?: string;
+            };
+            header?: never;
+            path: {
+                handbook: "dns-cities" | "wildberries-cities";
+            };
+            cookie?: never;
         };
-        content?: never;
-      };
-      /** @description No live session */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            id: string;
+                            name: string;
+                            region: string | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                        /** Format: date-time */
+                        fetchedAt: string | null;
+                    };
+                };
+            };
         };
-        content?: never;
-      };
-      /** @description Asked too often */
-      429: {
-        headers: {
-          [name: string]: unknown;
+    };
+    HandbooksController_refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                handbook: "dns-cities" | "wildberries-cities";
+            };
+            cookie?: never;
         };
-        content?: never;
-      };
-    };
-  };
-  OauthController_providers: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        jobId: string;
+                    };
+                };
+            };
         };
-        content: {
-          'application/json': {
-            providers: ('google' | 'github')[];
-          };
+    };
+    AccountController_account: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-      };
-    };
-  };
-  OauthController_start: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        provider: 'google' | 'github';
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        email: string;
+                        emailVerified: boolean;
+                        /** Format: date-time */
+                        createdAt: string;
+                        hasPassword: boolean;
+                        identities: {
+                            /** @enum {string} */
+                            provider: "google" | "github";
+                            /** Format: date-time */
+                            linkedAt: string;
+                        }[];
+                    };
+                };
+            };
         };
-        content?: never;
-      };
     };
-  };
-  OauthController_callback: {
-    parameters: {
-      query?: {
-        code?: string;
-        state?: string;
-        error?: string;
-      };
-      header?: never;
-      path: {
-        provider: 'google' | 'github';
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
+    AccountController_deleteAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-  };
+    AccountController_unlinkIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: "google" | "github";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The account is not linked to the provider */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description It is the only way to log in */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        accepted: true;
+                    };
+                };
+            };
+        };
+    };
+    AuthController_login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            /** Format: uuid */
+                            id: string;
+                            email: string;
+                            emailVerified: boolean;
+                            isAdmin: boolean;
+                        };
+                    };
+                };
+            };
+            /** @description The email or the password is wrong */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        user: {
+                            /** Format: uuid */
+                            id: string;
+                            email: string;
+                            emailVerified: boolean;
+                            isAdmin: boolean;
+                        };
+                    };
+                };
+            };
+            /** @description No live session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_password: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    currentPassword: string;
+                    newPassword: string;
+                };
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The current password is wrong */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No live session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthSessionsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        sessions: {
+                            /** Format: uuid */
+                            id: string;
+                            userAgent: string | null;
+                            ip: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            lastSeenAt: string;
+                            /** Format: date-time */
+                            expiresAt: string;
+                            current: boolean;
+                        }[];
+                    };
+                };
+            };
+            /** @description No live session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthSessionsController_revokeAllOthers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        revoked: number;
+                    };
+                };
+            };
+        };
+    };
+    AuthSessionsController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The session is unknown, ended already or not the user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EmailVerificationController_verify: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        verified: true;
+                    };
+                };
+            };
+            /** @description The link is wrong, has expired, or was mailed for another user */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No live session: where the app has a login page, a redirect to it with `?verify=<token>` */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    EmailVerificationController_resend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No live session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Asked too often */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OauthController_providers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        providers: ("google" | "github")[];
+                    };
+                };
+            };
+        };
+    };
+    OauthController_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: "google" | "github";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OauthController_callback: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                error?: string;
+            };
+            header?: never;
+            path: {
+                provider: "google" | "github";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
 }
