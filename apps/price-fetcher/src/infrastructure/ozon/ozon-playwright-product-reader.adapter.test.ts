@@ -181,6 +181,7 @@ void test('headless reader rejects a non-Russian exit before loading the product
 
   assert.deepEqual(await reader.read(reference, proxy, new AbortController().signal), {
     status: 'proxy_rejected',
+    stage: 'exit',
   });
 });
 

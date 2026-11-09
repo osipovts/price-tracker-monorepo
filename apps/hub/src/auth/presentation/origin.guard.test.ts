@@ -36,6 +36,7 @@ const config: AppConfigInterface = {
   priceRefreshPollMs: 60_000,
   priceProxyLagMs: 30_000,
   priceRefreshBatchSize: 200,
+  priceRefreshCohortMs: 600_000,
   proxyRefreshPauseMinutes: 10,
   proxyRefreshMaxCandidates: 200,
   proxyRefreshProbeTimeoutMs: 10000,

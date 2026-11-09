@@ -98,7 +98,6 @@ void test('a visitor signs up, and is logged in', async (): Promise<void> => {
   await page.getByRole('textbox', { name: 'Password' }).fill(password);
   await page.getByRole('button', { name: 'Sign up' }).click();
 
-  await page.getByRole('heading', { name: 'Products' }).waitFor();
   await page.getByRole('button', { name: 'Account', exact: true }).waitFor();
 
   // Nothing is tracked: the list offers the first product, whose form is in a window.
@@ -106,7 +105,7 @@ void test('a visitor signs up, and is logged in', async (): Promise<void> => {
   assert.equal(await page.locator('.mantine-Pagination-root').count(), 0);
   await page.getByRole('button', { name: 'Add the first product' }).click();
   const form = page.getByRole('dialog', { name: 'Track a product' });
-  await form.getByText('Supported marketplaces: ozon.ru, dns-shop.ru').waitFor();
+  await form.getByText('Supported: WB, Ozon, DNS, Citilink').waitFor();
 });
 
 void test('a product is added by its link, and shows its first price when a worker has read it', async (): Promise<void> => {
@@ -121,10 +120,13 @@ void test('a product is added by its link, and shows its first price when a work
 
   // The price is the best of the group, with the marketplace it is on and, in its hint, when it was read.
   await page.getByText('ozon', { exact: true }).waitFor();
-  await page.getByText(/^Checked today, [^.]+, ozon$/).waitFor();
+  await page
+    .getByTitle('Checked')
+    .filter({ hasText: /today at \d{1,2}:\d{2}( [AP]M)?, ozon$/ })
+    .waitFor();
   assert.match(
     (await page.getByText(/^1\s299\s₽$/).getAttribute('title')) ?? '',
-    /^Price received today, /,
+    /^Price received today at /,
   );
   assert.equal(await database.productGroup.count(), 1);
 
@@ -190,13 +192,20 @@ void test('the page of the group has the best price, where to buy, one chart, an
     .waitFor();
   // The row of the offer is a link to the marketplace, with its last check and the time of the next one.
   assert.equal(await page.getByTitle('Open on ozon').getAttribute('href'), productUrl);
-  await page.getByText(/^Checked today, [^.]+\. Next check \d{1,2}:\d{2}/).waitFor();
+  await page
+    .getByTitle('Checked')
+    .filter({ hasText: /today at \d{1,2}:\d{2}( [AP]M)?$/ })
+    .waitFor();
+  await page
+    .getByTitle('Next check')
+    .filter({ hasText: /\d{1,2}:\d{2}( [AP]M)?$/ })
+    .waitFor();
 
   // One chart, by day first; by hour the hours with no price read are drawn dashed.
   const charts = page.locator('.recharts-wrapper');
   await charts.first().waitFor();
   assert.equal(await charts.count(), 1);
-  await page.getByText('48 h', { exact: true }).click();
+  await page.getByText('By hour', { exact: true }).click();
   await page.waitForFunction(
     (): boolean => document.querySelectorAll('.recharts-line-curve[stroke-dasharray]').length > 0,
   );
@@ -244,10 +253,14 @@ void test('a product of another marketplace joins the group: the best price is t
     .getByText(/^1\s199\s₽$/)
     .first()
     .waitFor({ timeout: 20_000 });
-  const offers = await page
-    .getByTitle(/^Open on /)
-    .evaluateAll((links): Array<string | null> => links.map((link) => link.getAttribute('title')));
-  assert.deepEqual(offers, ['Open on dns', 'Open on ozon']);
+  // The offers are sorted once the price of the new one is in its row, which may come after the best price.
+  await page.waitForFunction((): boolean => {
+    const titles = Array.from(document.querySelectorAll('[title^="Open on "]'), (link) =>
+      link.getAttribute('title'),
+    );
+
+    return titles.join() === 'Open on dns,Open on ozon';
+  });
   assert.ok((await page.getByText(/^1\s199\s₽$/).count()) >= 2);
   assert.equal(await database.productGroup.count(), 1);
   assert.equal((await database.productGroupItem.findMany()).length, 2);
@@ -327,10 +340,10 @@ void test('the theme and the language are set on the page of the settings, and k
   assert.equal(await page.getByText('Kept in this browser').count(), 0);
 
   // The password is listed among the ways to log in, with the day the account was made.
-  await page.getByRole('heading', { name: 'Linked accounts' }).waitFor();
+  await page.getByRole('heading', { name: 'Sign-in methods' }).waitFor();
   const linked = page
     .locator('.mantine-Card-root')
-    .filter({ has: page.getByRole('heading', { name: 'Linked accounts' }) });
+    .filter({ has: page.getByRole('heading', { name: 'Sign-in methods' }) });
   await linked.getByText('Password', { exact: true }).waitFor();
   await linked.getByText(/^Created: /).waitFor();
 

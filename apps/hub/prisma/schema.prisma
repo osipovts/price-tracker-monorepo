@@ -48,7 +48,9 @@ model ProxyReputation {
   failures      Float
   /// Failures in a row since the last read.
   failureStreak Int
-  /// What the last attempt told of the proxy: read, unreachable, blocked or misplaced.
+  /// How long a visit of the marketplace through the proxy takes when it reads, averaged, in milliseconds.
+  readMs        Float?
+  /// What the last attempt told of the proxy: read, unreachable, blocked, misplaced or down.
   lastOutcome   String
   lastAttemptAt DateTime
   /// The proxy is not given for the marketplace until then.

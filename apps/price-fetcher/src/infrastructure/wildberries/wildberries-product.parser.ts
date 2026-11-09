@@ -29,14 +29,16 @@ const thumbnailFolder = 'c246x328';
 export class WildberriesProductParser {
   constructor(private readonly references: MarketplaceReferenceParserPort) {}
 
-  /** Returns null when the page is not the card of the product or the card service did not describe it. */
+  /**
+   * Returns null when the page is not the card of the product opened or the card service did not describe the
+   * product. The page of one product tells of others the card service was asked about along with it.
+   */
   parse(
     reference: ProductReferenceEntity,
     page: WildberriesPageInterface,
+    opened: ProductReferenceEntity = reference,
   ): ProductSnapshotInterface | null {
-    const product = this.isPageOf(reference, page.url)
-      ? this.readProduct(reference, page.card)
-      : null;
+    const product = this.isPageOf(opened, page.url) ? this.readProduct(reference, page.card) : null;
     if (product === null) return null;
 
     const availability = this.readAvailability(product);

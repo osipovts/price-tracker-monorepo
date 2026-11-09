@@ -1,14 +1,20 @@
 import type { MarketplaceType } from 'product-reference';
 
-import type { ProxyAttemptInterface, ProxyAttemptStatusType } from './proxy-attempt.interface.js';
+import type {
+  ProxyAttemptInterface,
+  ProxyAttemptStageType,
+  ProxyAttemptStatusType,
+} from './proxy-attempt.interface.js';
 
 /**
  * What an attempt through a proxy tells of the proxy, for the marketplace it read: `read`, the marketplace gave the
- * product card; `unreachable`, the proxy did not get through (a timeout, a refused or broken connection); `blocked`,
- * the marketplace turned the address away (a check of the site, or 401, 403, 429); `misplaced`, the proxy exits in
- * another country than the one the marketplace serves.
+ * product card; `unreachable`, the pages of the marketplace did not come through (a timeout, a refused or broken
+ * connection); `blocked`, the marketplace turned the address away (a check of the site, or 401, 403, 429);
+ * `misplaced`, the proxy exits in another country than the one the marketplace serves; `down`, the proxy itself did
+ * not let through: no tunnel to the site, no answer of the check of its exit, or it asked for credentials. A proxy
+ * that is down is down for every marketplace.
  */
-export const proxyOutcomes = ['read', 'unreachable', 'blocked', 'misplaced'] as const;
+export const proxyOutcomes = ['read', 'unreachable', 'blocked', 'misplaced', 'down'] as const;
 
 export type ProxyOutcomeType = (typeof proxyOutcomes)[number];
 
@@ -26,12 +32,25 @@ const cooldowns: Readonly<
   Record<Exclude<ProxyOutcomeType, 'read'>, { firstMs: number; maxMs: number }>
 > = {
   unreachable: { firstMs: 2 * 60_000, maxMs: 2 * 60 * 60_000 },
+  down: { firstMs: 2 * 60_000, maxMs: 2 * 60 * 60_000 },
   blocked: { firstMs: 60 * 60_000, maxMs: 24 * 60 * 60_000 },
   misplaced: { firstMs: 6 * 60 * 60_000, maxMs: 24 * 60 * 60_000 },
 };
 
-/** How many attempts the checks of a proxy weigh as, before the marketplace has said anything of it. */
-const checkPriorWeight = 2;
+/**
+ * How many attempts what is known of the marketplace weighs as for a proxy, before the marketplace has said
+ * anything of it: a proxy that is alive for a GeoIP service is far from sure to read a marketplace.
+ */
+const priorWeight = 4;
+
+/** The share of the attempts that read a marketplace, before any is known: as if one of ten had. */
+const baseRatePrior = { reads: 1, attempts: 10 };
+
+/** How much a new read weighs in the time a read takes through the proxy. */
+const readTimeWeight = 0.3;
+
+/** The stages of an attempt where only the proxy can fail: the site is not asked anything yet. */
+const proxyStages: ReadonlyArray<ProxyAttemptStageType | null> = ['preflight', 'exit'];
 
 export interface ProxyReputationInterface {
   /** Proxy URL without credentials. */
@@ -43,6 +62,8 @@ export interface ProxyReputationInterface {
   failures: number;
   /** Failures in a row since the last read. */
   failureStreak: number;
+  /** How long a visit of the marketplace through the proxy takes when it reads, averaged; null until one is timed. */
+  readMs: number | null;
   lastOutcome: ProxyOutcomeType;
   lastAttemptAt: Date;
   /** The proxy is not given for the marketplace until then; null when it does not rest. */
@@ -70,13 +91,14 @@ export class ProxyReputationEntity {
   static outcomeOf(
     status: ProxyAttemptStatusType,
     httpStatus: number | null,
+    stage: ProxyAttemptStageType | null = null,
   ): ProxyOutcomeType | null {
     switch (status) {
       case 'success':
       case 'partial':
         return 'read';
       case 'network_error':
-        return 'unreachable';
+        return proxyStages.includes(stage) ? 'down' : 'unreachable';
       case 'challenge_required':
         return 'blocked';
       case 'proxy_rejected':
@@ -84,7 +106,7 @@ export class ProxyReputationEntity {
       case 'parse_error':
         return null;
       case 'http_error':
-        if (httpStatus === proxyAuthenticationRequired) return 'unreachable';
+        if (httpStatus === proxyAuthenticationRequired) return 'down';
 
         return httpStatus !== null && blockingHttpStatuses.includes(httpStatus) ? 'blocked' : null;
     }
@@ -106,7 +128,11 @@ export class ProxyReputationEntity {
     attempt: ProxyAttemptInterface,
     previous?: ProxyReputationEntity,
   ): ProxyReputationEntity | undefined {
-    const outcome = ProxyReputationEntity.outcomeOf(attempt.status, attempt.httpStatus);
+    const outcome = ProxyReputationEntity.outcomeOf(
+      attempt.status,
+      attempt.httpStatus,
+      attempt.stage,
+    );
     if (outcome === null) return previous;
 
     const known = previous?.snapshot;
@@ -117,14 +143,28 @@ export class ProxyReputationEntity {
         : known.lastAttemptAt;
     const successes = known === undefined ? 0 : faded(known.successes, known.lastAttemptAt, at);
     const failures = known === undefined ? 0 : faded(known.failures, known.lastAttemptAt, at);
-    const base = { server: attempt.server, marketplace: attempt.marketplace, lastOutcome: outcome };
+    const readMs = known?.readMs ?? null;
+    const base = {
+      server: attempt.server,
+      marketplace: attempt.marketplace,
+      lastOutcome: outcome,
+      readMs,
+    };
 
     if (outcome === 'read') {
+      const { durationMs } = attempt;
+
       return new ProxyReputationEntity({
         ...base,
         successes: successes + 1,
         failures,
         failureStreak: 0,
+        readMs:
+          durationMs === null
+            ? readMs
+            : readMs === null
+              ? durationMs
+              : readMs + (durationMs - readMs) * readTimeWeight,
         lastAttemptAt: at,
         cooldownUntil: null,
       });
@@ -147,21 +187,47 @@ export class ProxyReputationEntity {
     });
   }
 
+  /** Down for every marketplace: the last attempt through the proxy, wherever it went, found it down, and it rests. */
+  static isDown(reputations: readonly ProxyReputationEntity[], now: Date): boolean {
+    const last = reputations.reduce<ProxyReputationEntity | undefined>(
+      (latest, reputation): ProxyReputationEntity =>
+        latest === undefined || reputation.snapshot.lastAttemptAt > latest.snapshot.lastAttemptAt
+          ? reputation
+          : latest,
+      undefined,
+    );
+
+    return last?.snapshot.lastOutcome === 'down' && last.isCooling(now);
+  }
+
+  /** The share of the attempts through the proxies that read the marketplace, the old ones faded. */
+  static baseRateOf(reputations: readonly ProxyReputationEntity[], now: Date): number {
+    let reads = baseRatePrior.reads;
+    let attempts = baseRatePrior.attempts;
+    for (const { snapshot } of reputations) {
+      const successes = faded(snapshot.successes, snapshot.lastAttemptAt, now);
+      reads += successes;
+      attempts += successes + faded(snapshot.failures, snapshot.lastAttemptAt, now);
+    }
+
+    return reads / attempts;
+  }
+
   /**
-   * The chance a proxy reads the marketplace, by a Beta distribution over its faded reads and failures. The checks of
-   * the proxy, which tell only that it is alive, give a weak prior; a proxy the marketplace has not seen yet has a
-   * wide deviation, so that it gets its turn.
+   * The chance a proxy reads the marketplace, by a Beta distribution over its faded reads and failures. Before the
+   * marketplace has said anything of the proxy, its chance is the share of the attempts that read the marketplace
+   * through any proxy, with a wide deviation, so that it gets its turn to explore.
    */
   static chanceOf(
     reputation: ProxyReputationEntity | undefined,
-    checkRate: number,
+    baseRate: number,
     now: Date,
   ): ReadChanceInterface {
     const known = reputation?.snapshot;
     const successes = known === undefined ? 0 : faded(known.successes, known.lastAttemptAt, now);
     const failures = known === undefined ? 0 : faded(known.failures, known.lastAttemptAt, now);
-    const alpha = 1 + checkPriorWeight * checkRate + successes;
-    const beta = 1 + checkPriorWeight * (1 - checkRate) + failures;
+    const alpha = priorWeight * baseRate + successes;
+    const beta = priorWeight * (1 - baseRate) + failures;
     const total = alpha + beta;
 
     return {

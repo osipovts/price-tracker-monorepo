@@ -90,6 +90,7 @@ export const ru: DictionaryType = {
       unreachable: 'не пробился',
       blocked: 'отвергнут маркетплейсом',
       misplaced: 'выходит в другой стране',
+      down: 'не пропускает: прокси лежит',
     },
     milliseconds: '{{value}} мс',
     add: 'Добавить прокси',

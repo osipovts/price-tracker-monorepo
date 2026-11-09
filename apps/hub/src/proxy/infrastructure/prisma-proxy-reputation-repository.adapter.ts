@@ -19,6 +19,7 @@ function toEntity(row: ProxyReputationRow): ProxyReputationEntity {
     successes: row.successes,
     failures: row.failures,
     failureStreak: row.failureStreak,
+    readMs: row.readMs,
     lastOutcome: outcomeSchema.parse(row.lastOutcome),
     lastAttemptAt: row.lastAttemptAt,
     cooldownUntil: row.cooldownUntil,

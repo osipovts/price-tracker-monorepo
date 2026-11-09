@@ -46,6 +46,8 @@ void test(
       marketplace: 'ozon',
       status: 'challenge_required',
       httpStatus: null,
+      stage: null,
+      durationMs: null,
       attemptedAt,
     });
     const read = ProxyReputationEntity.fromAttempt({
@@ -53,6 +55,8 @@ void test(
       marketplace: 'dns',
       status: 'success',
       httpStatus: null,
+      stage: null,
+      durationMs: null,
       attemptedAt,
     });
     assert.ok(blocked && read);

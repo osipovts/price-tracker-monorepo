@@ -1290,7 +1290,7 @@ export interface operations {
                                 failures: number;
                                 failureStreak: number;
                                 /** @enum {string} */
-                                lastOutcome: "read" | "unreachable" | "blocked" | "misplaced";
+                                lastOutcome: "read" | "unreachable" | "blocked" | "misplaced" | "down";
                                 /** Format: date-time */
                                 lastAttemptAt: string;
                                 /** Format: date-time */

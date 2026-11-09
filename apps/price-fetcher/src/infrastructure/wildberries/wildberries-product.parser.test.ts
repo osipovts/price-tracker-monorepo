@@ -120,3 +120,19 @@ void test('is null for another page, a card without the product, or no answer of
   assert.equal(parser.parse(reference, { ...base, card: '' }), null);
   assert.equal(parser.parse(reference, { ...base, card: '{"products":"none"}' }), null);
 });
+
+void test('reads another product the card service told the page of, without the pictures of the page', (): void => {
+  const other = new ProductReferenceEntity(
+    'wildberries',
+    '1',
+    'https://www.wildberries.ru/catalog/1/detail.aspx',
+  );
+  const card = cardOf([{ ...product, id: 1, name: 'Другой товар' }, product]);
+
+  const snapshot = parser.parse(other, { ...base, card }, reference);
+
+  assert.equal(snapshot?.title, 'Другой товар');
+  assert.deepEqual(snapshot.prices, [{ amountMinor: 329900, currency: 'RUB' }]);
+  assert.equal(snapshot.imageUrl, null);
+  assert.equal(parser.parse(other, { ...base, card }), null);
+});

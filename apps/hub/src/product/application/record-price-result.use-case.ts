@@ -29,6 +29,10 @@ export interface PriceAttemptInterface {
   proxy: string | null;
   status: ProxyAttemptInterface['status'];
   httpStatus: number | null;
+  stage: ProxyAttemptInterface['stage'];
+  durationMs: number | null;
+  /** The visit of the route was told of with another product of its batch: the proxies learn from it once. */
+  shared: boolean;
 }
 
 export class RecordPriceResultUseCase {
@@ -77,8 +81,21 @@ export class RecordPriceResultUseCase {
 
     try {
       await this.proxyAttempts.execute(
-        attempts.flatMap(({ proxy, status, httpStatus }): ProxyAttemptInterface[] =>
-          proxy === null ? [] : [{ server: proxy, marketplace, status, httpStatus, attemptedAt }],
+        attempts.flatMap(
+          ({ proxy, status, httpStatus, stage, durationMs, shared }): ProxyAttemptInterface[] =>
+            proxy === null || shared
+              ? []
+              : [
+                  {
+                    server: proxy,
+                    marketplace,
+                    status,
+                    httpStatus,
+                    stage,
+                    durationMs,
+                    attemptedAt,
+                  },
+                ],
         ),
       );
     } catch (error: unknown) {

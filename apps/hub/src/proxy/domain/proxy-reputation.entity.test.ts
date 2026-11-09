@@ -20,6 +20,8 @@ function attempt(
     marketplace: 'ozon',
     status,
     httpStatus,
+    stage: null,
+    durationMs: null,
     attemptedAt: new Date(startedAt.getTime() + minutes * minuteMs),
   };
 }
@@ -51,7 +53,10 @@ void test('tells the answers that are about the proxy from those that are about 
   assert.equal(ProxyReputationEntity.outcomeOf('http_error', 401), 'blocked');
   assert.equal(ProxyReputationEntity.outcomeOf('http_error', 403), 'blocked');
   assert.equal(ProxyReputationEntity.outcomeOf('http_error', 429), 'blocked');
-  assert.equal(ProxyReputationEntity.outcomeOf('http_error', 407), 'unreachable');
+  assert.equal(ProxyReputationEntity.outcomeOf('http_error', 407), 'down');
+  assert.equal(ProxyReputationEntity.outcomeOf('network_error', null, 'page'), 'unreachable');
+  assert.equal(ProxyReputationEntity.outcomeOf('network_error', null, 'preflight'), 'down');
+  assert.equal(ProxyReputationEntity.outcomeOf('network_error', null, 'exit'), 'down');
   assert.equal(ProxyReputationEntity.outcomeOf('http_error', 404), null);
   assert.equal(ProxyReputationEntity.outcomeOf('http_error', 502), null);
   assert.equal(ProxyReputationEntity.outcomeOf('parse_error', null), null);
@@ -131,23 +136,74 @@ void test('an attempt reported late counts as of the last one', (): void => {
 });
 
 void test('the chance to read rises with the reads, falls with the failures, and is the surer the more is known', (): void => {
-  const unknown = ProxyReputationEntity.chanceOf(undefined, 1, startedAt);
+  // The second argument is the share of the attempts that read the marketplace through any proxy.
+  const unknown = ProxyReputationEntity.chanceOf(undefined, 0.1, startedAt);
   const proven = ProxyReputationEntity.chanceOf(
     after(attempt('success'), attempt('success'), attempt('success')),
-    1,
+    0.1,
     startedAt,
   );
   const failing = ProxyReputationEntity.chanceOf(
     after(attempt('network_error'), attempt('network_error'), attempt('network_error')),
-    1,
+    0.1,
     startedAt,
   );
 
   assert.ok(proven.mean > unknown.mean);
   assert.ok(failing.mean < unknown.mean);
-  assert.ok(proven.deviation < unknown.deviation);
+  // The more is known, the surer: ten reads leave less doubt than three.
   assert.ok(
-    ProxyReputationEntity.chanceOf(undefined, 0.25, startedAt).mean <
-      ProxyReputationEntity.chanceOf(undefined, 1, startedAt).mean,
+    ProxyReputationEntity.chanceOf(
+      after(...Array.from({ length: 10 }, (): ProxyAttemptInterface => attempt('success'))),
+      0.1,
+      startedAt,
+    ).deviation < proven.deviation,
   );
+  assert.ok(
+    ProxyReputationEntity.chanceOf(undefined, 0.05, startedAt).mean <
+      ProxyReputationEntity.chanceOf(undefined, 0.25, startedAt).mean,
+  );
+});
+
+void test('times the reads through the proxy, a new one weighing a part of the average', (): void => {
+  const timed = (durationMs: number | null, minutes: number): ProxyAttemptInterface => ({
+    ...attempt('success', minutes),
+    durationMs,
+  });
+
+  assert.equal(after(attempt('network_error')).snapshot.readMs, null);
+  assert.equal(after(timed(10_000, 0)).snapshot.readMs, 10_000);
+  assert.equal(after(timed(10_000, 0), timed(20_000, 1)).snapshot.readMs, 13_000);
+  assert.equal(
+    after(timed(10_000, 0), timed(null, 1), attempt('network_error', 2)).snapshot.readMs,
+    10_000,
+  );
+});
+
+void test('the share of the attempts that read the marketplace starts low and follows the attempts', (): void => {
+  assert.equal(ProxyReputationEntity.baseRateOf([], startedAt), 0.1);
+
+  const rate = ProxyReputationEntity.baseRateOf(
+    [after(attempt('success'), attempt('success')), after(attempt('network_error'))],
+    startedAt,
+  );
+
+  assert.equal(rate, 3 / 13);
+});
+
+void test('a proxy is down for every marketplace while the last attempt through it found it down', (): void => {
+  const down = after({ ...attempt('network_error'), stage: 'preflight' });
+  const readElsewhere = ProxyReputationEntity.fromAttempt({
+    ...attempt('success', 1),
+    marketplace: 'dns',
+  });
+  assert.ok(readElsewhere);
+
+  assert.equal(ProxyReputationEntity.isDown([down], startedAt), true);
+  assert.equal(
+    ProxyReputationEntity.isDown([down], new Date(startedAt.getTime() + 3 * minuteMs)),
+    false,
+  );
+  assert.equal(ProxyReputationEntity.isDown([down, readElsewhere], startedAt), false);
+  assert.equal(ProxyReputationEntity.isDown([after(attempt('network_error'))], startedAt), false);
 });

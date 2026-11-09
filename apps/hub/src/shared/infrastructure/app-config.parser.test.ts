@@ -97,6 +97,7 @@ void test('reads a price again 50 minutes after its last read, looking every min
   assert.equal(config.priceRefreshAfterMs, 50 * 60_000);
   assert.equal(config.priceRefreshPollMs, 60_000);
   assert.equal(config.priceRefreshBatchSize, 200);
+  assert.equal(config.priceRefreshCohortMs, 10 * 60_000);
   assert.equal(
     parser.parse(env(['PRICE_REFRESH_AFTER_MS', '900000'])).priceRefreshAfterMs,
     900_000,

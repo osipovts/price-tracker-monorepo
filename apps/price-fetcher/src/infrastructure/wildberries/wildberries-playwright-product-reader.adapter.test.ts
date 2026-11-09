@@ -64,21 +64,25 @@ function pageAsking(...numbers: string[]): string {
 
 function cardOf(id: number, amountMinor: number): object {
   return {
-    products: [
-      {
-        id,
-        name: `Товар ${String(id)}`,
-        sizes: [{ price: { basic: amountMinor * 2, product: amountMinor }, stocks: [{ qty: 1 }] }],
-        totalQuantity: 1,
-      },
-    ],
+    id,
+    name: `Товар ${String(id)}`,
+    sizes: [{ price: { basic: amountMinor * 2, product: amountMinor }, stocks: [{ qty: 1 }] }],
+    totalQuantity: 1,
   };
 }
 
+/** The product pages the reader opened, by the number of the product. */
+let opened: string[] = [];
+beforeEach((): void => {
+  opened = [];
+});
+
+/** The card service tells of every product the page asks about; the product of the test is the one that costs more. */
 function createReader(
   html: string,
   country = 'RU',
   status = 200,
+  pageStatuses: Readonly<Record<string, number>> = {},
 ): WildberriesPlaywrightProductReaderAdapter {
   return new WildberriesPlaywrightProductReaderAdapter(
     {
@@ -87,15 +91,23 @@ function createReader(
 
         await context.route('**/*', async (route: Route): Promise<void> => {
           const url = new URL(route.request().url());
+          const page = /^\/catalog\/(\d+)\/detail\.aspx$/.exec(url.pathname)?.[1];
           if (url.hostname === 'ipinfo.io') {
             await route.fulfill({ json: { ip: '217.71.230.103', country } });
-          } else if (url.href === reference.url) {
-            await route.fulfill({ status, contentType: 'text/html; charset=utf-8', body: html });
+          } else if (page !== undefined) {
+            opened.push(page);
+            await route.fulfill({
+              status: pageStatuses[page] ?? status,
+              contentType: 'text/html; charset=utf-8',
+              body: html,
+            });
           } else if (url.pathname.endsWith('/cards/v4/detail')) {
-            const id = Number(url.searchParams.get('nm')?.split(';')[0]);
             // The price of the product is lower in Irkutsk than in the region the page asks for by itself.
             const amountMinor = url.searchParams.get('dest') === '-5827226' ? 297700 : 329900;
-            await route.fulfill({ json: cardOf(id, id === 169684889 ? amountMinor : 100) });
+            const products = (url.searchParams.get('nm') ?? '')
+              .split(';')
+              .map((nm): object => cardOf(Number(nm), nm === '169684889' ? amountMinor : 100));
+            await route.fulfill({ json: { products } });
           } else {
             await route.abort();
           }
@@ -172,5 +184,61 @@ void test('rejects a non-Russian exit before loading the product', async (): Pro
 
   assert.deepEqual(await reader.read(reference, proxy, new AbortController().signal), {
     status: 'proxy_rejected',
+    stage: 'exit',
   });
+});
+
+function productOf(id: string): ProductReferenceEntity {
+  return new ProductReferenceEntity(
+    'wildberries',
+    id,
+    `https://www.wildberries.ru/catalog/${id}/detail.aspx`,
+  );
+}
+
+void test('reads a batch of products from the card service the page of one of them asks', async (): Promise<void> => {
+  const reader = createReader(pageAsking('169684889'));
+
+  const results = await reader.readMany(
+    [reference, productOf('11'), productOf('12')],
+    proxy,
+    new AbortController().signal,
+  );
+
+  assert.deepEqual(
+    results.map((result): string => ('snapshot' in result ? result.snapshot.title : result.status)),
+    ['Товар 169684889', 'Товар 11', 'Товар 12'],
+  );
+  assert.deepEqual(opened, ['169684889']);
+  assert.equal(browser.contexts().length, 0);
+});
+
+void test('a page that is gone fails its product alone, and the next product opens its own page', async (): Promise<void> => {
+  const reader = createReader(pageAsking('11', '169684889'), 'RU', 200, { '11': 404 });
+
+  const results = await reader.readMany(
+    [productOf('11'), reference],
+    proxy,
+    new AbortController().signal,
+  );
+
+  assert.deepEqual(results[0], { status: 'http_error', httpStatus: 404 });
+  assert.equal(results[1]?.status, 'success');
+  assert.deepEqual(opened, ['11', '169684889']);
+});
+
+void test('a page the route is refused fails the whole batch through it', async (): Promise<void> => {
+  const reader = createReader(pageAsking('169684889'), 'RU', 403);
+
+  const results = await reader.readMany(
+    [reference, productOf('11')],
+    proxy,
+    new AbortController().signal,
+  );
+
+  assert.deepEqual(results, [
+    { status: 'http_error', httpStatus: 403 },
+    { status: 'http_error', httpStatus: 403 },
+  ]);
+  assert.deepEqual(opened, ['169684889']);
 });

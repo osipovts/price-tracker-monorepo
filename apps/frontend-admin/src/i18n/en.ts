@@ -88,6 +88,7 @@ export const en = {
       unreachable: 'did not get through',
       blocked: 'turned away by the marketplace',
       misplaced: 'exits in another country',
+      down: 'does not let through: the proxy is down',
     },
     milliseconds: '{{value}} ms',
     add: 'Add proxy',

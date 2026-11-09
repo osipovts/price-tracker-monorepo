@@ -80,7 +80,6 @@ void test('the login page offers both providers, and a login through one lands t
   await page.getByRole('link', { name: 'Continue with Google' }).click();
 
   await page.waitForURL(/\/app\/?$/);
-  await page.getByRole('heading', { name: 'Products' }).waitFor();
   await page.getByRole('button', { name: 'Account', exact: true }).click();
   await page.getByRole('menu').getByText('jane@example.com', { exact: true }).waitFor();
   await context.close();
@@ -124,7 +123,7 @@ void test('the settings show the account linked, refuse to unlink the only way i
   await page.waitForURL(/\/app\/?$/);
 
   await page.goto(`${hub.baseUrl}/app/settings`);
-  await page.getByRole('heading', { name: 'Linked accounts' }).waitFor();
+  await page.getByRole('heading', { name: 'Sign-in methods' }).waitFor();
   await page.getByText('The only way to log in').waitFor();
   assert.equal(await page.getByRole('button', { name: 'Unlink' }).isDisabled(), true);
 

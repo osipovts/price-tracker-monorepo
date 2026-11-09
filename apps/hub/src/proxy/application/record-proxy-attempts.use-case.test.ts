@@ -37,7 +37,15 @@ function attempt(
   status: ProxyAttemptInterface['status'],
   marketplace: ProxyAttemptInterface['marketplace'] = 'ozon',
 ): ProxyAttemptInterface {
-  return { server, marketplace, status, httpStatus: null, attemptedAt };
+  return {
+    server,
+    marketplace,
+    status,
+    httpStatus: null,
+    stage: null,
+    durationMs: null,
+    attemptedAt,
+  };
 }
 
 async function setup(random: () => number = (): number => 0.25): Promise<{
@@ -118,4 +126,73 @@ void test('the attempts through one proxy count in order', async (): Promise<voi
 
   const [reputation] = await reputations.findByServers([fast], 'ozon');
   assert.equal(reputation?.snapshot.failureStreak, 3);
+});
+
+void test('a proxy found down for one marketplace is not given for any, until it reads somewhere', async (): Promise<void> => {
+  const { record, best } = await setup();
+
+  await record.execute([{ ...attempt(slow, 'network_error', 'wildberries'), stage: 'preflight' }]);
+
+  assert.equal((await best.execute({ marketplace: 'ozon', limit: 5 })).includes(slow), false);
+
+  await record.execute([
+    { ...attempt(slow, 'success', 'dns'), attemptedAt: new Date(attemptedAt.getTime() + 500) },
+  ]);
+
+  assert.equal((await best.execute({ marketplace: 'ozon', limit: 5 })).includes(slow), true);
+  // The marketplace where it was found down lets it rest still.
+  assert.equal(
+    (await best.execute({ marketplace: 'wildberries', limit: 5 })).includes(slow),
+    false,
+  );
+});
+
+void test('a page that did not come through rests the proxy for its marketplace alone', async (): Promise<void> => {
+  const { record, best } = await setup();
+
+  await record.execute([{ ...attempt(slow, 'network_error', 'wildberries'), stage: 'page' }]);
+
+  assert.equal((await best.execute({ marketplace: 'ozon', limit: 5 })).includes(slow), true);
+  assert.equal(
+    (await best.execute({ marketplace: 'wildberries', limit: 5 })).includes(slow),
+    false,
+  );
+});
+
+void test('the proven proxy leads the list among many the marketplace has not tried, but for a few explorers', async (): Promise<void> => {
+  let seed = 7;
+  const proxies = new InMemoryProxyRepositoryAdapter();
+  const untried = Array.from(
+    { length: 30 },
+    (_, index): string => `socks5://217.71.231.${String(index + 1)}:1080`,
+  );
+  await proxies.saveMany([fast, ...untried].map(proxy));
+  const reputations = new InMemoryProxyReputationRepositoryAdapter();
+  await new RecordProxyAttemptsUseCase(proxies, reputations).execute([
+    attempt(fast, 'success'),
+    attempt(fast, 'success'),
+    attempt(fast, 'success'),
+  ]);
+  const best = new ListBestProxyServersUseCase(
+    proxies,
+    reputations,
+    { now: (): Date => new Date(attemptedAt.getTime() + 1000) },
+    (): number => {
+      // A linear congruential generator: a known sequence that looks random.
+      seed = (seed * 48271) % 2147483647;
+
+      return seed / 2147483647;
+    },
+  );
+
+  let led = 0;
+  for (let index = 0; index < 100; index += 1) {
+    const routes = await best.execute({ marketplace: 'ozon', limit: 10 });
+    assert.equal(routes.length, 10);
+    assert.ok(routes.includes(fast));
+    if (routes[0] === fast) led += 1;
+  }
+
+  // An explorer leads about one list in seven; the proven proxy leads the others.
+  assert.ok(led > 70 && led < 100, `led ${String(led)}`);
 });
