@@ -1,7 +1,7 @@
 import { errorMessage, type LoggerPort, silentLogger } from 'logger';
 import type { MarketplaceType } from 'product-reference';
 
-import type { ScheduleJobUseCase } from '../../job/application/index.js';
+import type { RouteInterface, ScheduleJobUseCase } from '../../job/application/index.js';
 import { type ClockPort, systemClock } from '../../shared/application/clock.port.js';
 import type { TrackedProductEntity } from '../domain/tracked-product.entity.js';
 import type { ChoosePriceRoutesUseCase } from './choose-price-routes.use-case.js';
@@ -17,9 +17,19 @@ const productsPerJob = 50;
 export interface PriceRefreshSettingsInterface {
   /** A price is read again once it is this old. */
   refreshAfterMs: number;
+  /**
+   * A price that would be due this much later is read with the due ones of its marketplace and city, so that they
+   * are read in one visit of the site and stay together from then on; less than half the refresh age counts.
+   */
+  cohortMs: number;
   /** How many products one run queues at most: the rest wait for the next run. */
   batchSize: number;
   timeoutMs: number;
+}
+
+/** The products read together: of one marketplace and one city. */
+function cohortOf({ snapshot }: TrackedProductEntity): string {
+  return `${snapshot.marketplace} ${snapshot.cityId ?? ''}`;
 }
 
 export interface PriceRefreshResultInterface {
@@ -30,7 +40,8 @@ export interface PriceRefreshResultInterface {
 /**
  * Queues the read of the tracked products whose price is stale, for the schedule: the products nobody
  * tracks are left alone. A product stays due until a job for it is queued, so a run that finds no route,
- * or a queue that is down, is made up for by the next one. The jobs of a marketplace are spread over its
+ * or a queue that is down, is made up for by the next one. A job reads the products of one marketplace and
+ * one city, the ones that are nearly due among them too. The jobs of a marketplace are spread over its
  * proxies and over time, so that no proxy gets many of them at once.
  */
 export class RefreshPricesUseCase {
@@ -46,14 +57,28 @@ export class RefreshPricesUseCase {
 
   async execute(): Promise<PriceRefreshResultInterface> {
     const now = this.clock.now();
-    const due = await this.products.listDueForRefresh(
-      new Date(now.getTime() - this.settings.refreshAfterMs),
+    const { refreshAfterMs, cohortMs } = this.settings;
+    const dueBefore = now.getTime() - refreshAfterMs;
+    const nearlyDue = await this.products.listDueForRefresh(
+      new Date(dueBefore + Math.min(cohortMs, refreshAfterMs / 2)),
       this.settings.batchSize,
     );
+    const isDue = ({ snapshot }: TrackedProductEntity): boolean =>
+      [snapshot.lastCheckedAt, snapshot.lastRequestedAt].every(
+        (at): boolean => at === null || at.getTime() < dueBefore,
+      );
+    const cohorts = new Set(nearlyDue.filter(isDue).map(cohortOf));
+    const due = nearlyDue.filter((product): boolean => cohorts.has(cohortOf(product)));
 
     const result = { products: 0, jobs: 0 };
-    for (const [marketplace, group] of this.byMarketplace(due)) {
-      const routes = await this.chooseRoutes.execute(marketplace);
+    const routesOf = new Map<MarketplaceType, RouteInterface[]>();
+    for (const group of this.byCohort(due)) {
+      const [first] = group;
+      if (first === undefined) continue;
+
+      const { marketplace } = first.snapshot;
+      const routes = routesOf.get(marketplace) ?? (await this.chooseRoutes.execute(marketplace));
+      routesOf.set(marketplace, routes);
       if (routes.length === 0) {
         this.logger.warn(`No route to ${marketplace}: ${String(group.length)} prices wait`);
         continue;
@@ -74,15 +99,14 @@ export class RefreshPricesUseCase {
     return result;
   }
 
-  private byMarketplace(due: TrackedProductEntity[]): Map<MarketplaceType, TrackedProductEntity[]> {
-    const groups = new Map<MarketplaceType, TrackedProductEntity[]>();
+  private byCohort(due: TrackedProductEntity[]): TrackedProductEntity[][] {
+    const groups = new Map<string, TrackedProductEntity[]>();
     for (const product of due) {
-      const group = groups.get(product.snapshot.marketplace) ?? [];
-      group.push(product);
-      groups.set(product.snapshot.marketplace, group);
+      const key = cohortOf(product);
+      groups.set(key, [...(groups.get(key) ?? []), product]);
     }
 
-    return groups;
+    return Array.from(groups.values());
   }
 
   /** Tells how many products it queued: none if the job was refused, and those are due again next time. */

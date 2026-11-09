@@ -56,6 +56,8 @@ export interface AppConfigInterface {
   priceProxyLagMs: number;
   /** How many products one run of the refresh queues at most. */
   priceRefreshBatchSize: number;
+  /** A price that would be due this much later is read with the due ones of its marketplace and city. */
+  priceRefreshCohortMs: number;
   /** The pause, in minutes, between the end of a refresh of the proxies and the start of the next; 0 turns it off. */
   proxyRefreshPauseMinutes: number;
   /** Upper bound of the candidates a refresh takes from a source. */

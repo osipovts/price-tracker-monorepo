@@ -355,6 +355,7 @@ import { ProductsController } from './presentation/products.controller.js';
           spread,
           {
             refreshAfterMs: config.priceRefreshAfterMs,
+            cohortMs: config.priceRefreshCohortMs,
             batchSize: config.priceRefreshBatchSize,
             timeoutMs: config.priceTimeoutMs,
           },

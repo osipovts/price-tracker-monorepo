@@ -60,7 +60,7 @@ function setup(
       chooseRoutes,
       new ScheduleJobUseCase(port, jobs),
       new SpreadPriceJobsUseCase(lagMs),
-      { refreshAfterMs, batchSize, timeoutMs: 30_000 },
+      { refreshAfterMs, cohortMs: 10 * 60_000, batchSize, timeoutMs: 30_000 },
       clock,
     ),
     products,
@@ -248,4 +248,67 @@ void test('names the city of a product in the job of the schedule', async (): Pr
   assert.deepEqual(requests[0]?.products, [
     { trackedProductId: product.snapshot.id, url: product.snapshot.url, cityId },
   ]);
+});
+
+async function trackIn(
+  products: InMemoryTrackedProductRepositoryAdapter,
+  marketplace: 'wildberries' | 'ozon',
+  n: number,
+  cityId: string | null,
+): Promise<string> {
+  const { product } = await products.add({
+    marketplace,
+    externalId: String(n),
+    url:
+      marketplace === 'ozon'
+        ? `https://www.ozon.ru/product/${String(n)}/`
+        : `https://www.wildberries.ru/catalog/${String(n)}/detail.aspx`,
+    cityId,
+    cityName: cityId === null ? null : 'Город',
+  });
+  await products.subscribe(jane, product.snapshot.id);
+
+  return product.snapshot.id;
+}
+
+void test('a job reads the products of one marketplace and one city', async (): Promise<void> => {
+  const { refresh, products, requests } = setup();
+  await trackIn(products, 'wildberries', 1, null);
+  await trackIn(products, 'wildberries', 2, '-1257403');
+  await trackIn(products, 'wildberries', 3, null);
+  await trackIn(products, 'ozon', 4, null);
+
+  assert.deepEqual(await refresh.execute(), { products: 4, jobs: 3 });
+  assert.deepEqual(
+    requests.map(({ products: read }): string[] =>
+      read.map(
+        ({ url, cityId }): string =>
+          `${new URL(url).hostname} ${url.replace(/\D/g, '')} ${cityId ?? ''}`,
+      ),
+    ),
+    [
+      ['www.wildberries.ru 1 ', 'www.wildberries.ru 3 '],
+      ['www.wildberries.ru 2 -1257403'],
+      ['www.ozon.ru 4 '],
+    ],
+  );
+});
+
+void test('reads with a due product the nearly due ones of its marketplace and city, and not the others', async (): Promise<void> => {
+  const { refresh, products, requests, at } = setup();
+  const due = await trackIn(products, 'wildberries', 1, null);
+  const nearly = await trackIn(products, 'wildberries', 2, null);
+  const elsewhere = await trackIn(products, 'wildberries', 3, '-1257403');
+  await products.markChecked(due, 'ok', start);
+  await products.markChecked(nearly, 'ok', new Date(start.getTime() + 8 * 60_000));
+  await products.markChecked(elsewhere, 'ok', new Date(start.getTime() + 8 * 60_000));
+
+  at(51 / 60);
+
+  assert.deepEqual(await refresh.execute(), { products: 2, jobs: 1 });
+  assert.deepEqual(
+    requests.at(-1)?.products.map(({ trackedProductId }): string => trackedProductId),
+    [due, nearly],
+  );
+  assert.deepEqual(await refresh.execute(), { products: 0, jobs: 0 });
 });

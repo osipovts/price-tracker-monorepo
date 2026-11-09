@@ -69,6 +69,11 @@ const configSchema = z.object({
   priceRefreshPollMs: z.coerce.number().int().min(1000).default(60_000),
   priceProxyLagMs: z.coerce.number().int().min(0).default(30_000),
   priceRefreshBatchSize: z.coerce.number().int().min(1).max(5000).default(200),
+  priceRefreshCohortMs: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .default(10 * 60_000),
   proxyRefreshPauseMinutes: z.coerce.number().int().min(0).default(10),
   proxyRefreshMaxCandidates: z.coerce.number().int().min(1).max(5000).default(200),
   proxyRefreshProbeTimeoutMs: z.coerce.number().int().min(1000).max(60000).default(10000),
@@ -180,6 +185,7 @@ export class AppConfigParser {
         priceRefreshPollMs: env['PRICE_REFRESH_POLL_MS'],
         priceProxyLagMs: env['PRICE_PROXY_LAG_MS'],
         priceRefreshBatchSize: env['PRICE_REFRESH_BATCH_SIZE'],
+        priceRefreshCohortMs: env['PRICE_REFRESH_COHORT_MS'],
         proxyRefreshPauseMinutes: env['PROXY_REFRESH_PAUSE_MINUTES'],
         proxyRefreshMaxCandidates: env['PROXY_REFRESH_MAX_CANDIDATES'],
         proxyRefreshProbeTimeoutMs: env['PROXY_REFRESH_PROBE_TIMEOUT_MS'],
