@@ -13,9 +13,49 @@ export interface paths {
         };
         /**
          * The figures of the hub on one page
-         * @description Users, products, proxies and jobs. For administrators.
+         * @description How the prices are read by marketplace and by the hour, the proxies the reads may take, the jobs and the users. For administrators.
          */
         get: operations["AdminController_dashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/product-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The product groups of every user, the newest first
+         * @description Each with the email of its owner. `GET /admin/product-groups/{id}` shows one as its owner sees it. For administrators.
+         */
+        get: operations["AdminController_groups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The jobs, the newest first, with the product a price read is of
+         * @description For administrators.
+         */
+        get: operations["AdminController_jobs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -147,6 +187,46 @@ export interface paths {
         patch: operations["ProductGroupsController_rename"];
         trace?: never;
     };
+    "/admin/product-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A product group of any user, as its owner sees it
+         * @description The same as `GET /product-groups/{id}` for the owner. For administrators.
+         */
+        get: operations["AdminProductsController_group"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/products/{id}/prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Price history of any tracked product, the newest first
+         * @description The same as `GET /products/{id}/prices` for a user who tracks it. For administrators.
+         */
+        get: operations["AdminProductsController_prices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/jobs": {
         parameters: {
             query?: never;
@@ -202,11 +282,7 @@ export interface paths {
          * @description The workers are given the manual proxies before the found ones, whatever their check and exit country. A proxy that is listed already becomes manual. The address may carry `user:password@` for an HTTP(S) proxy: the credentials are kept apart, given to the workers only and never listed.
          */
         post: operations["ProxiesController_add"];
-        /**
-         * Delete a proxy
-         * @description The next refresh of its source finds it again if it is still listed there: turn it off instead to keep it away.
-         */
-        delete: operations["ProxiesController_remove"];
+        delete?: never;
         options?: never;
         head?: never;
         /**
@@ -216,21 +292,21 @@ export interface paths {
         patch: operations["ProxiesController_setProxyDisabled"];
         trace?: never;
     };
-    "/proxies/all": {
+    "/proxies/stats": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * The proxies in figures
+         * @description How many there are, alive and turned off, by source; and how many a read of each marketplace may be given now.
+         */
+        get: operations["ProxiesController_stats"];
         put?: never;
         post?: never;
-        /**
-         * Delete all proxies
-         * @description The next refresh of a source finds the ones still listed there again: turn them off instead to keep them away.
-         */
-        delete: operations["ProxiesController_removeAll"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -623,6 +699,25 @@ export interface operations {
                         products: {
                             products: number;
                             trackings: number;
+                            groups: number;
+                            staleAfterMs: number;
+                            marketplaces: {
+                                /** @enum {string} */
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink";
+                                products: number;
+                                readsLastDay: number;
+                                /** Format: date-time */
+                                lastReadAt: string | null;
+                                stale: number;
+                                unread: number;
+                            }[];
+                            readsByHour: {
+                                /** Format: date-time */
+                                hour: string;
+                                /** @enum {string} */
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink";
+                                reads: number;
+                            }[];
                         };
                         proxies: {
                             total: number;
@@ -631,15 +726,40 @@ export interface operations {
                             averageLatencyMs: number | null;
                             /** Format: date-time */
                             lastCheckedAt: string | null;
+                            bySource: {
+                                source: string;
+                                total: number;
+                                alive: number;
+                                disabled: number;
+                            }[];
+                            usable: {
+                                /** @enum {string} */
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink";
+                                count: number;
+                            }[];
                         };
                         jobs: {
                             lastDay: {
+                                /** @enum {string} */
+                                kind: "proxy_fetch" | "price_fetch" | "handbook_fetch";
                                 queued: number;
                                 running: number;
                                 retrying: number;
                                 completed: number;
                                 failed: number;
+                            }[];
+                            unfinished: {
+                                queued: number;
+                                running: number;
+                                retrying: number;
+                                lost: number;
                             };
+                            priceJobsByHour: {
+                                /** Format: date-time */
+                                hour: string;
+                                completed: number;
+                                failed: number;
+                            }[];
                             recentFailures: {
                                 /** Format: uuid */
                                 id: string;
@@ -650,6 +770,126 @@ export interface operations {
                                 finishedAt: string | null;
                             }[];
                         };
+                    };
+                };
+            };
+            /** @description The user is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_groups: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            title: string | null;
+                            /** Format: uri */
+                            thumbnailUrl: string | null;
+                            ownerEmail: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            marketplaces: string[];
+                            lastCheck: {
+                                marketplace: string;
+                                /** Format: date-time */
+                                checkedAt: string;
+                            } | null;
+                            current: {
+                                marketplace: string;
+                                amountMinor: number;
+                                /** Format: date-time */
+                                observedAt: string;
+                            } | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                    };
+                };
+            };
+            /** @description The user is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_jobs: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                kind?: "proxy_fetch" | "price_fetch" | "handbook_fetch";
+                state?: "active" | "completed" | "failed";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** @enum {string} */
+                            kind: "proxy_fetch" | "price_fetch" | "handbook_fetch";
+                            subject: string;
+                            /** @enum {string} */
+                            status: "queued" | "running" | "retrying" | "completed" | "failed";
+                            percent: number;
+                            processed: number;
+                            total: number | null;
+                            succeeded: number;
+                            error: string | null;
+                            /** Format: date-time */
+                            createdAt: string;
+                            /** Format: date-time */
+                            startedAt: string | null;
+                            /** Format: date-time */
+                            finishedAt: string | null;
+                            lost: boolean;
+                            product: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink";
+                                url: string;
+                                cityName: string | null;
+                                title: string | null;
+                            } | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
                     };
                 };
             };
@@ -1155,6 +1395,180 @@ export interface operations {
             };
         };
     };
+    AdminProductsController_group: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        title: string | null;
+                        /** Format: uri */
+                        thumbnailUrl: string | null;
+                        /** Format: date-time */
+                        createdAt: string;
+                        productCount: number;
+                        lastCheck: {
+                            marketplace: string;
+                            /** Format: date-time */
+                            checkedAt: string;
+                        } | null;
+                        current: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        min: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        max: {
+                            marketplace: string;
+                            amountMinor: number;
+                            /** Format: date-time */
+                            observedAt: string;
+                        } | null;
+                        highlighted: boolean;
+                        /** @enum {string} */
+                        statsPeriod: "24h" | "7d" | "30d";
+                        products: {
+                            /** Format: uuid */
+                            id: string;
+                            marketplace: string;
+                            externalId: string;
+                            url: string;
+                            cityId: string | null;
+                            cityName: string | null;
+                            lastStatus: string | null;
+                            /** Format: date-time */
+                            lastCheckedAt: string | null;
+                            /** Format: date-time */
+                            nextCheckAt: string | null;
+                            /** Format: uri */
+                            thumbnailUrl: string | null;
+                            latest: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: date-time */
+                                observedAt: string;
+                                title: string;
+                                /** @enum {string} */
+                                availability: "in_stock" | "out_of_stock" | "unknown";
+                                prices: {
+                                    amountMinor: number;
+                                    /** @enum {string} */
+                                    currency: "RUB";
+                                }[];
+                                exitIp: string | null;
+                            } | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description The user is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The group is unknown */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminProductsController_prices: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: date-time */
+                            observedAt: string;
+                            title: string;
+                            /** @enum {string} */
+                            availability: "in_stock" | "out_of_stock" | "unknown";
+                            prices: {
+                                amountMinor: number;
+                                /** @enum {string} */
+                                currency: "RUB";
+                            }[];
+                            exitIp: string | null;
+                        }[];
+                        page: number;
+                        pageSize: number;
+                        total: number;
+                        product: {
+                            /** Format: uuid */
+                            id: string;
+                            marketplace: string;
+                            externalId: string;
+                            url: string;
+                            cityId: string | null;
+                            cityName: string | null;
+                            lastStatus: string | null;
+                            /** Format: date-time */
+                            lastCheckedAt: string | null;
+                            /** Format: date-time */
+                            nextCheckAt: string | null;
+                            /** Format: uri */
+                            thumbnailUrl: string | null;
+                        };
+                    };
+                };
+            };
+            /** @description The user is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The product is not tracked */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     JobsController_list: {
         parameters: {
             query?: {
@@ -1258,6 +1672,7 @@ export interface operations {
                 alive?: "true" | "false";
                 disabled?: "true" | "false";
                 country?: string;
+                source?: ("github-free-proxy-list" | "proxifly" | "proxyscrape" | "geonode" | "monosans") | "manual";
             };
             header?: never;
             path?: never;
@@ -1329,32 +1744,6 @@ export interface operations {
             };
         };
     };
-    ProxiesController_remove: {
-        parameters: {
-            query: {
-                server: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description The proxy is unknown */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     ProxiesController_setProxyDisabled: {
         parameters: {
             query: {
@@ -1387,7 +1776,7 @@ export interface operations {
             };
         };
     };
-    ProxiesController_removeAll: {
+    ProxiesController_stats: {
         parameters: {
             query?: never;
             header?: never;
@@ -1396,11 +1785,31 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        total: number;
+                        alive: number;
+                        disabled: number;
+                        averageLatencyMs: number | null;
+                        /** Format: date-time */
+                        lastCheckedAt: string | null;
+                        bySource: {
+                            source: string;
+                            total: number;
+                            alive: number;
+                            disabled: number;
+                        }[];
+                        usable: {
+                            /** @enum {string} */
+                            marketplace: "ozon" | "dns" | "wildberries" | "citilink";
+                            count: number;
+                        }[];
+                    };
+                };
             };
         };
     };

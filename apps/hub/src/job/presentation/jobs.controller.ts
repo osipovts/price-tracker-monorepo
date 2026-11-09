@@ -55,7 +55,7 @@ export class JobsController {
     const page = await this.listJobs.execute(
       {
         ...(query.kind === undefined ? {} : { kind: query.kind }),
-        ...(query.status === undefined ? {} : { status: query.status }),
+        ...(query.status === undefined ? {} : { statuses: [query.status] }),
       },
       query,
     );

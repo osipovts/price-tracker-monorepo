@@ -1,12 +1,13 @@
 import { marketplaces } from 'product-reference';
 import { ProxyEndpointEntity } from 'proxy-endpoint';
-import { proxyServerSchema } from 'queue-contract';
+import { proxyServerSchema, proxySourceSchema } from 'queue-contract';
 import { z } from 'zod';
 
 import {
   pageResponseSchema,
   paginationQuerySchema,
 } from '../../shared/presentation/pagination-query.type.js';
+import { manualProxySource } from '../domain/proxy.entity.js';
 import { proxyOutcomes } from '../domain/proxy-reputation.entity.js';
 
 export const proxyListQuerySchema = paginationQuerySchema.extend({
@@ -19,6 +20,8 @@ export const proxyListQuerySchema = paginationQuerySchema.extend({
     .string()
     .regex(/^[A-Z]{2}$/)
     .optional(),
+  /** Only the proxies of the source; `manual` for the ones added by hand. */
+  source: z.union([proxySourceSchema, z.literal(manualProxySource)]).optional(),
 });
 
 export type ProxyListQueryType = z.infer<typeof proxyListQuerySchema>;
@@ -59,6 +62,29 @@ export const proxyItemSchema = z.object({
 export const proxyListResponseSchema = pageResponseSchema(proxyItemSchema);
 
 export type ProxyListResponseType = z.infer<typeof proxyListResponseSchema>;
+
+export const proxyStatsResponseSchema = z.object({
+  total: z.number().int(),
+  alive: z.number().int(),
+  /** Turned off by an administrator. */
+  disabled: z.number().int(),
+  /** Of the alive ones, in milliseconds. */
+  averageLatencyMs: z.number().int().nullable(),
+  lastCheckedAt: z.iso.datetime().nullable(),
+  /** By the source, in the order of the names; `manual` for the ones added by hand. */
+  bySource: z.array(
+    z.object({
+      source: z.string(),
+      total: z.number().int(),
+      alive: z.number().int(),
+      disabled: z.number().int(),
+    }),
+  ),
+  /** The proxies a read of each marketplace may be given now: not resting for it, not down, not turned off. */
+  usable: z.array(z.object({ marketplace: z.enum(marketplaces), count: z.number().int() })),
+});
+
+export type ProxyStatsResponseType = z.infer<typeof proxyStatsResponseSchema>;
 
 export const proxyServerQuerySchema = z.object({
   /** The proxy URL as the list shows it, without credentials. */

@@ -50,3 +50,20 @@ void test('ignores events after the job has finished', (): void => {
   assert.equal(done.failed('late', false, at(4)), done);
   assert.equal(done.started(at(5)), done);
 });
+
+void test('a job not done an hour after it was queued is lost; a done one never is', (): void => {
+  const createdAt = new Date('2026-10-31T12:00:00Z');
+  const read = JobEntity.queued(
+    '3f0c9a52-7a53-4a64-9d0d-2f2f6c1f0a11',
+    'price_fetch',
+    'ozon',
+    1,
+    createdAt,
+    null,
+  );
+  const later = (minutes: number): Date => new Date(createdAt.getTime() + minutes * 60_000);
+
+  assert.equal(read.started(later(1)).isLost(later(59)), false);
+  assert.equal(read.started(later(1)).isLost(later(60)), true);
+  assert.equal(read.completed(later(2)).isLost(later(600)), false);
+});

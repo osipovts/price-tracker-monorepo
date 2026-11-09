@@ -56,3 +56,47 @@ void test(
     assert.equal((await jobs.activity('handbook_fetch', new Date(now))).active, before.active);
   },
 );
+
+void test(
+  'counts the jobs by kind, the unfinished and the lost ones, and the ended ones by the hour',
+  { skip },
+  async (): Promise<void> => {
+    const hour = 60 * minute;
+    const now = Math.floor(Date.now() / hour) * hour + 30 * minute;
+    const since = new Date(now - 24 * hour);
+    const lostBefore = new Date(now - hour);
+    const before = {
+      kinds: await jobs.countByKind(since),
+      unfinished: await jobs.countUnfinished(lostBefore),
+      hours: await jobs.countFinishedByHour('handbook_fetch', since),
+    };
+
+    await jobs.save(queued(new Date(now - 3 * hour)).completed(new Date(now - 2 * hour)));
+    await jobs.save(
+      queued(new Date(now - 3 * hour)).failed('down', false, new Date(now - 2 * hour + minute)),
+    );
+    await jobs.save(queued(new Date(now - 2 * hour)));
+    await jobs.save(queued(new Date(now - 10 * minute)).started(new Date(now - 5 * minute)));
+
+    const handbooks = (await jobs.countByKind(since)).find(({ kind }) => kind === 'handbook_fetch');
+    const handbooksBefore = before.kinds.find(({ kind }) => kind === 'handbook_fetch');
+    assert.ok(handbooks !== undefined && handbooksBefore !== undefined);
+    assert.equal(handbooks.completed - handbooksBefore.completed, 1);
+    assert.equal(handbooks.failed - handbooksBefore.failed, 1);
+    assert.equal(handbooks.queued - handbooksBefore.queued, 1);
+
+    const unfinished = await jobs.countUnfinished(lostBefore);
+    assert.equal(unfinished.lost - before.unfinished.lost, 1);
+    assert.equal(unfinished.running - before.unfinished.running, 1);
+
+    const endedAt = now - 2 * hour - 30 * minute;
+    const ofHour = (hours: typeof before.hours): { completed: number; failed: number } =>
+      hours.find((each): boolean => each.hour.getTime() === endedAt) ?? {
+        completed: 0,
+        failed: 0,
+      };
+    const hours = await jobs.countFinishedByHour('handbook_fetch', since);
+    assert.equal(ofHour(hours).completed - ofHour(before.hours).completed, 1);
+    assert.equal(ofHour(hours).failed - ofHour(before.hours).failed, 1);
+  },
+);

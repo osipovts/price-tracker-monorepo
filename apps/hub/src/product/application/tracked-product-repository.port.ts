@@ -58,6 +58,8 @@ export interface TrackedProductRepositoryPort {
   listDueForRefresh(before: Date, limit: number): Promise<TrackedProductEntity[]>;
   /** Notes that a read of the products was queued at the time, so that the schedule leaves them be for a while. */
   markRequested(productIds: string[], at: Date): Promise<void>;
+  /** Every product somebody tracks: for the figures of an administrator. */
+  listTracked(): Promise<TrackedProductEntity[]>;
   /** How many products there are, and how many times users track them. */
   stats(): Promise<{ products: number; trackings: number }>;
   /** The products of the user, tracked most recently first. */

@@ -36,8 +36,6 @@ import { CreateProductGroupUseCase } from '../application/create-product-group.u
 import type { ProductGroupViewInterface } from '../application/describe-product-groups.use-case.js';
 import { GetProductGroupUseCase } from '../application/get-product-group.use-case.js';
 import { GetProductThumbnailUrlUseCase } from '../application/get-product-thumbnail-url.use-case.js';
-import { findLastGroupCheck } from '../application/group-checks.type.js';
-import type { GroupPriceInterface } from '../application/group-price-summary.type.js';
 import { ListProductGroupsUseCase } from '../application/list-product-groups.use-case.js';
 import { RemoveProductGroupUseCase } from '../application/remove-product-group.use-case.js';
 import { RenameProductGroupUseCase } from '../application/rename-product-group.use-case.js';
@@ -58,19 +56,7 @@ import {
   statsPeriodBodySchema,
   type StatsPeriodBodyType,
 } from './product-group.type.js';
-import { toObservation, toProduct } from './product-presenter.type.js';
-
-function toPrice(
-  price: GroupPriceInterface | null,
-): { marketplace: string; amountMinor: number; observedAt: string } | null {
-  return price === null
-    ? null
-    : {
-        marketplace: price.marketplace,
-        amountMinor: price.amountMinor,
-        observedAt: price.observedAt.toISOString(),
-      };
-}
+import { toProductGroup, toProductGroupDetail } from './product-presenter.type.js';
 
 @ApiTags('product-groups')
 @Controller('product-groups')
@@ -87,25 +73,8 @@ export class ProductGroupsController {
     @Inject(APP_CONFIG) private readonly config: AppConfigInterface,
   ) {}
 
-  private async present(view: ProductGroupViewInterface): Promise<ProductGroupType> {
-    const { group, prices } = view;
-    const lastCheck = findLastGroupCheck(view.products.map(({ product }) => product.snapshot));
-
-    return {
-      id: group.snapshot.id,
-      title: view.title,
-      thumbnailUrl: await this.thumbnailUrl.execute(view.thumbnailKey),
-      createdAt: group.snapshot.createdAt.toISOString(),
-      productCount: view.products.length,
-      lastCheck:
-        lastCheck === null
-          ? null
-          : { marketplace: lastCheck.marketplace, checkedAt: lastCheck.checkedAt.toISOString() },
-      current: toPrice(prices.current),
-      min: toPrice(prices.min),
-      max: toPrice(prices.max),
-      highlighted: prices.highlighted,
-    };
+  private present(view: ProductGroupViewInterface): Promise<ProductGroupType> {
+    return toProductGroup(view, (key) => this.thumbnailUrl.execute(key));
   }
 
   @Get()
@@ -178,23 +147,11 @@ export class ProductGroupsController {
     @Param('id', { schema: productGroupIdParamSchema }) id: string,
     @Req() request: Request,
   ): Promise<ProductGroupDetailType> {
-    const { userId } = requireIdentity(request);
-    const view = await this.getGroup.execute(userId, id);
-
-    return {
-      ...(await this.present(view)),
-      statsPeriod: view.statsPeriod,
-      products: await Promise.all(
-        view.products.map(async ({ product, latest }) => ({
-          ...toProduct(
-            product,
-            await this.thumbnailUrl.execute(product.snapshot.thumbnailKey),
-            this.config.priceRefreshAfterMs,
-          ),
-          latest: latest === null ? null : toObservation(latest),
-        })),
-      ),
-    };
+    return toProductGroupDetail(
+      await this.getGroup.execute(requireIdentity(request).userId, id),
+      (key) => this.thumbnailUrl.execute(key),
+      this.config.priceRefreshAfterMs,
+    );
   }
 
   @Patch(':id')

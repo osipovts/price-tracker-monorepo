@@ -67,8 +67,8 @@ void test(
       off,
     );
 
-    assert.equal(await proxies.delete('socks5://198.51.100.1:1080'), true);
-    assert.equal(await proxies.delete('socks5://198.51.100.1:1080'), false);
+    assert.equal(await proxies.deleteMany(['socks5://198.51.100.1:1080']), 1);
+    assert.equal(await proxies.deleteMany(['socks5://198.51.100.1:1080']), 0);
   },
 );
 
@@ -144,5 +144,27 @@ void test(
       await proxies.deleteMany(['socks5://198.51.100.31:1080', 'socks5://198.51.100.99:1080']),
       1,
     );
+  },
+);
+
+void test(
+  'counts the proxies by source, and lists the ones of a source',
+  { skip },
+  async (): Promise<void> => {
+    const source = `test-${randomUUID()}`;
+    const ofSource = (n: number, alive: boolean, disabledAt: Date | null): ProxyEntity =>
+      new ProxyEntity({ ...proxy(n, disabledAt).snapshot, source, alive });
+    await proxies.saveMany([
+      ofSource(30, true, null),
+      ofSource(31, false, null),
+      ofSource(32, true, new Date('2026-10-31T11:00:00Z')),
+    ]);
+
+    const { bySource } = await proxies.stats();
+    assert.deepEqual(
+      bySource.find((stats): boolean => stats.source === source),
+      { source, total: 3, alive: 2, disabled: 1 },
+    );
+    assert.equal((await proxies.list({ source }, { page: 1, pageSize: 10 })).total, 3);
   },
 );

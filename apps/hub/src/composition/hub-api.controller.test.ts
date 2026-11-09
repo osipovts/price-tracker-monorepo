@@ -52,11 +52,11 @@ import { InMemoryPriceObservationRepositoryAdapter } from '../product/infrastruc
 import { InMemoryProductGroupPreferenceRepositoryAdapter } from '../product/infrastructure/in-memory-product-group-preference-repository.adapter.js';
 import { InMemoryProductGroupRepositoryAdapter } from '../product/infrastructure/in-memory-product-group-repository.adapter.js';
 import { InMemoryTrackedProductRepositoryAdapter } from '../product/infrastructure/in-memory-tracked-product-repository.adapter.js';
+import { AdminProductsController } from '../product/presentation/admin-products.controller.js';
 import { ProductGroupsController } from '../product/presentation/product-groups.controller.js';
 import { ProductsController } from '../product/presentation/products.controller.js';
 import { AddManualProxyUseCase } from '../proxy/application/add-manual-proxy.use-case.js';
-import { DeleteAllProxiesUseCase } from '../proxy/application/delete-all-proxies.use-case.js';
-import { DeleteProxyUseCase } from '../proxy/application/delete-proxy.use-case.js';
+import { GetProxyStatsUseCase } from '../proxy/application/get-proxy-stats.use-case.js';
 import { ListBestProxyServersUseCase } from '../proxy/application/index.js';
 import { ListProxiesUseCase } from '../proxy/application/list-proxies.use-case.js';
 import { RefreshProxySourceUseCase } from '../proxy/application/refresh-proxy-source.use-case.js';
@@ -183,6 +183,7 @@ before(async (): Promise<void> => {
       ProxySourcesController,
       ProductsController,
       ProductGroupsController,
+      AdminProductsController,
       JobsController,
       CitiesController,
       HandbooksController,
@@ -285,8 +286,18 @@ before(async (): Promise<void> => {
       },
       { provide: AddManualProxyUseCase, useValue: new AddManualProxyUseCase(proxies) },
       { provide: SetProxyDisabledUseCase, useValue: new SetProxyDisabledUseCase(proxies) },
-      { provide: DeleteProxyUseCase, useValue: new DeleteProxyUseCase(proxies) },
-      { provide: DeleteAllProxiesUseCase, useValue: new DeleteAllProxiesUseCase(proxies) },
+      {
+        provide: GetProxyStatsUseCase,
+        useValue: new GetProxyStatsUseCase(
+          proxies,
+          new ListBestProxyServersUseCase(
+            proxies,
+            new InMemoryProxyReputationRepositoryAdapter(),
+            systemClock,
+            (): number => 0.25,
+          ),
+        ),
+      },
       { provide: RequestPriceObservationUseCase, useValue: requestObservation },
       {
         provide: ListPriceHistoryUseCase,
@@ -578,6 +589,8 @@ void test('rejects bad links, unknown and malformed product ids', async (): Prom
 void test('documents the endpoints and their zod schemas in Swagger', (): void => {
   const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('Hub').build());
   assert.deepEqual(Object.keys(document.paths).toSorted(), [
+    '/admin/product-groups/{id}',
+    '/admin/products/{id}/prices',
     '/handbooks/{handbook}',
     '/handbooks/{handbook}/refresh',
     '/jobs',
@@ -590,7 +603,7 @@ void test('documents the endpoints and their zod schemas in Swagger', (): void =
     '/products/{id}',
     '/products/{id}/prices',
     '/proxies',
-    '/proxies/all',
+    '/proxies/stats',
     '/proxy-sources/{source}/refresh',
   ]);
 
@@ -609,7 +622,7 @@ void test('documents the endpoints and their zod schemas in Swagger', (): void =
     proxiesGet?.parameters
       ?.map((parameter) => ('name' in parameter ? parameter.name : '$ref'))
       .toSorted(),
-    ['alive', 'country', 'disabled', 'page', 'pageSize'],
+    ['alive', 'country', 'disabled', 'page', 'pageSize', 'source'],
   );
   assert.ok(proxiesGet.responses['200']);
 
@@ -674,11 +687,17 @@ const userRoutes: Array<[string, string]> = [
 const operatorRoutes: Array<[string, string]> = [
   ['GET', '/jobs'],
   ['GET', '/proxies'],
+  ['GET', '/proxies/stats'],
   ['PATCH', '/proxies?server=socks5%3A%2F%2F203.0.113.50%3A1080'],
-  ['DELETE', '/proxies?server=socks5%3A%2F%2F203.0.113.50%3A1080'],
   ['POST', '/proxy-sources/github-free-proxy-list/refresh'],
   ['POST', '/handbooks/dns-cities/refresh'],
   ['GET', '/handbooks/dns-cities'],
+];
+
+/** The groups and the prices of every user: for an administrator signed in, not for the key of the operator. */
+const adminRoutes: Array<[string, string]> = [
+  ['GET', '/admin/product-groups/3f0c9a52-7a53-4a64-9d0d-2f2f6c1f0a11'],
+  ['GET', '/admin/products/3f0c9a52-7a53-4a64-9d0d-2f2f6c1f0a11/prices'],
 ];
 
 async function statusOf(
@@ -689,7 +708,7 @@ async function statusOf(
 }
 
 void test('every route is closed to the anonymous', async (): Promise<void> => {
-  for (const route of [...userRoutes, ...operatorRoutes]) {
+  for (const route of [...userRoutes, ...operatorRoutes, ...adminRoutes]) {
     assert.equal(await statusOf(route, {}), 401, route.join(' '));
   }
 });
@@ -705,6 +724,19 @@ void test('the routes of the users take the cookie and no key, those of the oper
 
   for (const route of operatorRoutes) {
     // A signed-in user who is no administrator is known, and forbidden.
+    assert.equal(
+      await statusOf(route, { cookie: credentials['cookie'] ?? '' }),
+      403,
+      route.join(' '),
+    );
+  }
+
+  for (const route of adminRoutes) {
+    assert.equal(
+      await statusOf(route, { authorization: credentials['authorization'] ?? '' }),
+      401,
+      route.join(' '),
+    );
     assert.equal(
       await statusOf(route, { cookie: credentials['cookie'] ?? '' }),
       403,
@@ -759,7 +791,7 @@ void test('stops tracking a product: it goes for good with its last tracker, and
   assert.equal((await call('/products/nope', { method: 'DELETE' })).status, 400);
 });
 
-void test('an administrator turns a proxy off and on, sees the ones that are off, and deletes one', async (): Promise<void> => {
+void test('an administrator turns a proxy off and on, and sees the ones that are off', async (): Promise<void> => {
   const server = 'socks5://203.0.113.50:1080';
   await proxies.saveMany([
     new ProxyEntity({
@@ -807,13 +839,17 @@ void test('an administrator turns a proxy off and on, sees the ones that are off
   );
   assert.deepEqual(await servers('disabled=true'), []);
 
-  assert.equal((await call(`/proxies?${query}`, { method: 'DELETE' })).status, 204);
-  assert.equal((await call(`/proxies?${query}`, { method: 'DELETE' })).status, 404);
   assert.equal(
-    (await call(`/proxies?${query}`, { ...post({ disabled: true }), method: 'PATCH' })).status,
+    (
+      await call(`/proxies?server=${encodeURIComponent('socks5://203.0.113.51:1080')}`, {
+        ...post({ disabled: true }),
+        method: 'PATCH',
+      })
+    ).status,
     404,
   );
-  assert.equal((await call('/proxies?server=not-a-proxy', { method: 'DELETE' })).status, 400);
+  // A proxy is turned off, never deleted: the next refresh of its source would find it again.
+  assert.equal((await call(`/proxies?${query}`, { method: 'DELETE' })).status, 404);
   assert.equal(
     (await call(`/proxies?${query}`, { ...post({ disabled: 'yes' }), method: 'PATCH' })).status,
     400,

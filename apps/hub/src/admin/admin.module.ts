@@ -1,14 +1,20 @@
 import { Module } from '@nestjs/common';
 
 import { AccountModule } from '../account/account.module.js';
-import { GetUserStatsUseCase } from '../account/application/index.js';
-import { GetJobStatsUseCase } from '../job/application/index.js';
+import { GetAccountUseCase, GetUserStatsUseCase } from '../account/application/index.js';
+import { GetJobStatsUseCase, ListJobsUseCase } from '../job/application/index.js';
 import { JobModule } from '../job/job.module.js';
-import { GetProductStatsUseCase } from '../product/application/index.js';
+import {
+  DescribeProductsUseCase,
+  GetProductStatsUseCase,
+  ListAllProductGroupsUseCase,
+} from '../product/application/index.js';
 import { ProductModule } from '../product/product.module.js';
 import { GetProxyStatsUseCase } from '../proxy/application/index.js';
 import { ProxyModule } from '../proxy/proxy.module.js';
 import { GetDashboardUseCase } from './application/get-dashboard.use-case.js';
+import { ListJobRecordsUseCase } from './application/list-job-records.use-case.js';
+import { ListTrackedGroupsUseCase } from './application/list-tracked-groups.use-case.js';
 import { AdminController } from './presentation/admin.controller.js';
 
 @Module({
@@ -29,6 +35,22 @@ import { AdminController } from './presentation/admin.controller.js';
         GetProxyStatsUseCase,
         GetJobStatsUseCase,
       ],
+    },
+    {
+      provide: ListTrackedGroupsUseCase,
+      useFactory: (
+        groups: ListAllProductGroupsUseCase,
+        accounts: GetAccountUseCase,
+      ): ListTrackedGroupsUseCase => new ListTrackedGroupsUseCase(groups, accounts),
+      inject: [ListAllProductGroupsUseCase, GetAccountUseCase],
+    },
+    {
+      provide: ListJobRecordsUseCase,
+      useFactory: (
+        jobs: ListJobsUseCase,
+        products: DescribeProductsUseCase,
+      ): ListJobRecordsUseCase => new ListJobRecordsUseCase(jobs, products),
+      inject: [ListJobsUseCase, DescribeProductsUseCase],
     },
   ],
 })

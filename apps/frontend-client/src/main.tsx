@@ -1,13 +1,13 @@
 import '@mantine/core/styles.css';
-import './assets/fonts.css';
+import 'frontend-shared/fonts.css';
 
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ayuTheme, ayuVariables } from 'frontend-shared';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router/dom';
 
-import { ayuTheme, ayuVariables } from './app/ayu.theme.js';
 import { createAppRouter } from './app/router.js';
 import { createI18n } from './i18n/i18n.js';
 

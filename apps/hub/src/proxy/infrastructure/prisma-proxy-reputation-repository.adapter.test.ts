@@ -75,7 +75,7 @@ void test(
       ['dns', 'ozon'],
     );
 
-    await proxies.delete(server);
+    await proxies.deleteMany([server]);
     assert.deepEqual(await reputations.findByServers([server]), []);
   },
 );

@@ -8,8 +8,6 @@ import { LOGGER, type LoggerPort } from '../shared/application/logger.port.js';
 import { RATE_LIMITER, type RateLimiterPort } from '../shared/application/rate-limiter.port.js';
 import { PRISMA, PrismaModule } from '../shared/infrastructure/prisma.module.js';
 import { AddManualProxyUseCase } from './application/add-manual-proxy.use-case.js';
-import { DeleteAllProxiesUseCase } from './application/delete-all-proxies.use-case.js';
-import { DeleteProxyUseCase } from './application/delete-proxy.use-case.js';
 import { GetProxyStatsUseCase } from './application/get-proxy-stats.use-case.js';
 import { ListBestProxyServersUseCase } from './application/list-best-proxy-servers.use-case.js';
 import { ListProxiesUseCase } from './application/list-proxies.use-case.js';
@@ -113,21 +111,11 @@ import { ProxySourcesController } from './presentation/proxy-sources.controller.
     },
     {
       provide: GetProxyStatsUseCase,
-      useFactory: (proxies: ProxyRepositoryPort): GetProxyStatsUseCase =>
-        new GetProxyStatsUseCase(proxies),
-      inject: [PROXY_REPOSITORY],
-    },
-    {
-      provide: DeleteProxyUseCase,
-      useFactory: (proxies: ProxyRepositoryPort): DeleteProxyUseCase =>
-        new DeleteProxyUseCase(proxies),
-      inject: [PROXY_REPOSITORY],
-    },
-    {
-      provide: DeleteAllProxiesUseCase,
-      useFactory: (proxies: ProxyRepositoryPort): DeleteAllProxiesUseCase =>
-        new DeleteAllProxiesUseCase(proxies),
-      inject: [PROXY_REPOSITORY],
+      useFactory: (
+        proxies: ProxyRepositoryPort,
+        best: ListBestProxyServersUseCase,
+      ): GetProxyStatsUseCase => new GetProxyStatsUseCase(proxies, best),
+      inject: [PROXY_REPOSITORY, ListBestProxyServersUseCase],
     },
     {
       provide: ListBestProxyServersUseCase,

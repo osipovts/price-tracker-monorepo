@@ -7,8 +7,11 @@ import { InMemoryProductGroupRepositoryAdapter } from '../infrastructure/in-memo
 import { InMemoryTrackedProductRepositoryAdapter } from '../infrastructure/in-memory-tracked-product-repository.adapter.js';
 import { DescribeProductGroupsUseCase } from './describe-product-groups.use-case.js';
 import { GetProductGroupUseCase } from './get-product-group.use-case.js';
+import { ListPriceHistoryUseCase } from './list-price-history.use-case.js';
 import { ListProductGroupsUseCase } from './list-product-groups.use-case.js';
 import { ProductGroupNotFoundError } from './product-group-not-found.error.js';
+import { ProductNotFoundError } from './product-not-found.error.js';
+import { administratorViewer } from './product-viewer.type.js';
 import { RemoveProductGroupUseCase } from './remove-product-group.use-case.js';
 import { RenameProductGroupUseCase } from './rename-product-group.use-case.js';
 import { SetStatsPeriodUseCase } from './set-stats-period.use-case.js';
@@ -164,4 +167,25 @@ void test("deleting a group stops tracking its products and others' groups are n
     new RenameProductGroupUseCase(env.groups).execute(jane, group.snapshot.id, 'x'),
     ProductGroupNotFoundError,
   );
+});
+
+void test('an administrator sees the group and the prices of any user as the owner does; another user does not', async (): Promise<void> => {
+  const env = setup();
+  const group = await env.groups.create(jane, 'Phone');
+  const productId = await track(env, group.snapshot.id, 'ozon', 'Phone', [[1, 1000]]);
+  await new SetStatsPeriodUseCase(env.preferences).execute(jane, '7d');
+  const getGroup = new GetProductGroupUseCase(env.groups, env.preferences, env.describe);
+  const history = new ListPriceHistoryUseCase(env.products, env.observations);
+
+  const seen = await getGroup.execute(administratorViewer, group.snapshot.id);
+  assert.equal(seen.title, 'Phone');
+  // The period is the one of the owner.
+  assert.equal(seen.statsPeriod, '7d');
+  assert.equal(
+    (await history.execute(administratorViewer, productId, firstPage)).page.items.length,
+    1,
+  );
+
+  await assert.rejects(getGroup.execute(sam, group.snapshot.id), ProductGroupNotFoundError);
+  await assert.rejects(history.execute(sam, productId, firstPage), ProductNotFoundError);
 });

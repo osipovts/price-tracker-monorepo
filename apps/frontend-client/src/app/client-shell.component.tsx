@@ -10,12 +10,12 @@ import {
   Text,
   Title,
 } from '@mantine/core';
+import { BRAND_FONT } from 'frontend-shared';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Outlet, useNavigate } from 'react-router';
 
 import { useLogout, useMe, useResendVerification } from '../features/auth/use-me.hook.js';
-import { BRAND_FONT } from './ayu.theme.js';
 
 /** The person of the button that opens the menu of the account. */
 function UserIcon(): ReactElement {

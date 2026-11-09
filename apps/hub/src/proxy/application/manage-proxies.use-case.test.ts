@@ -6,8 +6,6 @@ import { ProxyEntity } from '../domain/proxy.entity.js';
 import { InMemoryProxyRepositoryAdapter } from '../infrastructure/in-memory-proxy-repository.adapter.js';
 import { InMemoryProxyReputationRepositoryAdapter } from '../infrastructure/in-memory-proxy-reputation-repository.adapter.js';
 import { AddManualProxyUseCase } from './add-manual-proxy.use-case.js';
-import { DeleteAllProxiesUseCase } from './delete-all-proxies.use-case.js';
-import { DeleteProxyUseCase } from './delete-proxy.use-case.js';
 import { ListBestProxyServersUseCase } from './list-best-proxy-servers.use-case.js';
 import { ProxyNotFoundError } from './proxy-not-found.error.js';
 import type { ProxyRepositoryPort } from './proxy-repository.port.js';
@@ -46,7 +44,6 @@ function proxy(server: string, checksAlive: number): ProxyEntity {
 async function setup(): Promise<{
   proxies: InMemoryProxyRepositoryAdapter;
   setDisabled: SetProxyDisabledUseCase;
-  remove: DeleteProxyUseCase;
   best: ListBestProxyServersUseCase;
 }> {
   const proxies = new InMemoryProxyRepositoryAdapter();
@@ -55,7 +52,6 @@ async function setup(): Promise<{
   return {
     proxies,
     setDisabled: new SetProxyDisabledUseCase(proxies),
-    remove: new DeleteProxyUseCase(proxies),
     best: bestOf(proxies),
   };
 }
@@ -81,21 +77,10 @@ void test('turning off a proxy that is turned off already changes nothing', asyn
   assert.deepEqual((await proxies.findByServers([first]))[0]?.snapshot.disabledAt, once);
 });
 
-void test('deletes a proxy, and refuses one that is unknown', async (): Promise<void> => {
-  const { proxies, remove, setDisabled } = await setup();
+void test('refuses to turn off a proxy that is unknown', async (): Promise<void> => {
+  const { setDisabled } = await setup();
 
-  await remove.execute(first);
-
-  assert.deepEqual(await proxies.findByServers([first]), []);
-  await assert.rejects(remove.execute(first), ProxyNotFoundError);
   await assert.rejects(setDisabled.execute('socks5://203.0.113.9:1080', true), ProxyNotFoundError);
-});
-
-void test('deleting all proxies leaves none for the workers', async (): Promise<void> => {
-  const { proxies, best } = await setup();
-
-  assert.equal(await new DeleteAllProxiesUseCase(proxies).execute(), 2);
-  assert.deepEqual(await best.execute({ marketplace: 'ozon', limit: 5 }), []);
 });
 
 void test('manual proxies go to the workers before the found ones, whatever their check and country', async (): Promise<void> => {

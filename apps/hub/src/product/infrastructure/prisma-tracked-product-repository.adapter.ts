@@ -134,6 +134,15 @@ export class PrismaTrackedProductRepositoryAdapter implements TrackedProductRepo
     return row === null ? null : toEntity(row);
   }
 
+  async listTracked(): Promise<TrackedProductEntity[]> {
+    const rows = await this.prisma.trackedProduct.findMany({
+      where: { subscriptions: { some: {} } },
+      orderBy: { id: 'asc' },
+    });
+
+    return rows.map(toEntity);
+  }
+
   async listDueForRefresh(before: Date, limit: number): Promise<TrackedProductEntity[]> {
     const rows = await this.prisma.trackedProduct.findMany({
       where: {
