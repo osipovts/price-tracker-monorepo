@@ -1,3 +1,7 @@
 pnpm-lock.yaml
 
 **/generated
+
+# Generated: openapi.json by the hub, the API types from it by openapi-typescript.
+apps/hub/openapi.json
+apps/*/src/shared/api/schema.d.ts

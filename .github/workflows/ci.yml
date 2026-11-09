@@ -10,13 +10,78 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+permissions:
+  contents: read
+
 env:
   REGISTRY_IMAGE: ghcr.io/${{ github.repository_owner }}/price-tracker
 
 jobs:
+  # Format, lint, types and the unit tests of every package.
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      # The version comes from "packageManager" of package.json.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The unit tests of the readers launch a real Camoufox over pages of their own.
+      - name: Read the version of camoufox-js
+        id: camoufox
+        run: echo "version=$(node -p "require('./apps/price-fetcher/node_modules/camoufox-js/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/camoufox
+          key: camoufox-${{ runner.os }}-${{ steps.camoufox.outputs.version }}
+
+      - name: Install Camoufox
+        env:
+          # camoufox-js looks up the releases of the browser over the API of GitHub.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm --filter price-fetcher exec camoufox-js fetch
+
+      - run: pnpm format:check
+
+      - run: pnpm lint
+
+      - run: pnpm -r typecheck
+
+      - run: pnpm -r test
+
+  # The hub with the built panels over a real Postgres, Redis and S3 in Docker, in a real Chromium.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter hub exec playwright install --with-deps chromium
+
+      - run: pnpm test:e2e
+
   # A pull request only proves that the images build; they are pushed from master alone.
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -25,19 +90,19 @@ jobs:
       matrix:
         app: [hub, proxy-fetcher, handbook-fetcher, price-fetcher]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
         if: github.event_name == 'push'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: .
           target: ${{ matrix.app }}-prod
@@ -47,19 +112,23 @@ jobs:
             ${{ env.REGISTRY_IMAGE }}-${{ matrix.app }}:${{ github.sha }}
             ${{ env.REGISTRY_IMAGE }}-${{ matrix.app }}:latest
           cache-from: type=gha,scope=${{ matrix.app }}
-          cache-to: type=gha,scope=${{ matrix.app }},mode=max
+          # The cache of a pull request is seen by that pull request only: it is written from master alone,
+          # so that it does not push the cache of master out.
+          cache-to: ${{ github.event_name == 'push' && format('type=gha,scope={0},mode=max', matrix.app) || '' }}
 
   # Runs on the runner of brutus, and only for a push to master: never for a pull request.
   deploy:
-    needs: build
+    needs: [check, e2e, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: [self-hosted, brutus]
+    timeout-minutes: 15
     env:
       DOCKER_HOST: unix:///run/user/1000/docker.sock
       IMAGE_TAG: ${{ github.sha }}
     steps:
+      # The compose files of the commit whose images are deployed, not of a later one.
       - name: Update the compose files
-        run: cd ~/price-tracker && git pull --ff-only
+        run: cd ~/price-tracker && git fetch origin master && git merge --ff-only ${{ github.sha }}
 
       - name: Pull the images
         run: cd ~/price-tracker && docker compose -p price-tracker -f docker-compose.yml -f docker-compose.staging.yml -f docker-compose.registry.yml pull
