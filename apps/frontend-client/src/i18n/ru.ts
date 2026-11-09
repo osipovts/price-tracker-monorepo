@@ -43,6 +43,7 @@ export const ru: DictionaryType = {
     title: 'Нищебродская',
     account: 'Аккаунт',
     settings: 'Настройки',
+    adminPanel: 'Админка',
     confirmTitle: 'Подтвердите почту',
     confirmText: 'Мы отправили ссылку на {{email}}.',
     sendAgain: 'Отправить снова',
@@ -134,6 +135,10 @@ export const ru: DictionaryType = {
     byWeek: 'По неделям',
     observations: 'Все проверки ({{count}})',
     hideObservations: 'Скрыть проверки',
+    viewTitle: 'Группа пользователя',
+    viewText:
+      'Вы видите её так же, как владелец, но как администратор: здесь ничего нельзя изменить.',
+    backToPanel: 'Админка',
   },
   product: {
     openOn: 'Открыть на {{marketplace}}',

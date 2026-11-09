@@ -7,7 +7,8 @@ import {
 import type {
   ProxyFilterInterface,
   ProxyRepositoryPort,
-  ProxyStatsInterface,
+  ProxySourceStatsInterface,
+  StoredProxyStatsInterface,
 } from '../application/proxy-repository.port.js';
 import { manualProxySource, ProxyEntity } from '../domain/proxy.entity.js';
 
@@ -82,7 +83,7 @@ export class PrismaProxyRepositoryAdapter implements ProxyRepositoryPort {
     );
   }
 
-  async stats(): Promise<ProxyStatsInterface> {
+  async stats(): Promise<StoredProxyStatsInterface> {
     const [total, alive, disabled, aggregate] = await this.prisma.$transaction([
       this.prisma.proxy.count(),
       this.prisma.proxy.count({ where: { alive: true } }),
@@ -93,6 +94,26 @@ export class PrismaProxyRepositoryAdapter implements ProxyRepositoryPort {
         _max: { lastCheckedAt: true },
       }),
     ]);
+    const [sources, disabledSources] = await Promise.all([
+      this.prisma.proxy.groupBy({ by: ['source', 'alive'], _count: { _all: true } }),
+      this.prisma.proxy.groupBy({
+        by: ['source'],
+        where: { disabledAt: { not: null } },
+        _count: { _all: true },
+      }),
+    ]);
+    const bySource = new Map<string, ProxySourceStatsInterface>();
+    const ofSource = (source: string): ProxySourceStatsInterface => {
+      const known = bySource.get(source) ?? { source, total: 0, alive: 0, disabled: 0 };
+      bySource.set(source, known);
+
+      return known;
+    };
+    for (const group of sources) {
+      ofSource(group.source).total += group._count._all;
+      if (group.alive) ofSource(group.source).alive += group._count._all;
+    }
+    for (const group of disabledSources) ofSource(group.source).disabled = group._count._all;
     const { _max: latest } = await this.prisma.proxy.aggregate({ _max: { lastCheckedAt: true } });
     const average = aggregate._avg.latencyMs;
 
@@ -102,6 +123,7 @@ export class PrismaProxyRepositoryAdapter implements ProxyRepositoryPort {
       disabled,
       averageLatencyMs: average === null ? null : Math.round(average),
       lastCheckedAt: latest.lastCheckedAt,
+      bySource: [...bySource.values()].toSorted((a, b): number => a.source.localeCompare(b.source)),
     };
   }
 
@@ -121,18 +143,6 @@ export class PrismaProxyRepositoryAdapter implements ProxyRepositoryPort {
     return count;
   }
 
-  async delete(server: string): Promise<boolean> {
-    const { count } = await this.prisma.proxy.deleteMany({ where: { server } });
-
-    return count > 0;
-  }
-
-  async deleteAll(): Promise<number> {
-    const { count } = await this.prisma.proxy.deleteMany();
-
-    return count;
-  }
-
   async list(
     filter: ProxyFilterInterface,
     pagination: PaginationInterface,
@@ -146,6 +156,7 @@ export class PrismaProxyRepositoryAdapter implements ProxyRepositoryPort {
       ...(filter.manual === undefined
         ? {}
         : { source: filter.manual ? manualProxySource : { not: manualProxySource } }),
+      ...(filter.source === undefined ? {} : { source: filter.source }),
     };
 
     const [rows, total] = await this.prisma.$transaction([

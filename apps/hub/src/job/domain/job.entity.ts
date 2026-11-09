@@ -6,6 +6,16 @@ export const jobStatuses = ['queued', 'running', 'retrying', 'completed', 'faile
 
 export type JobStatusType = (typeof jobStatuses)[number];
 
+/** The statuses of a job that is not done yet. */
+export const unfinishedJobStatuses = [
+  'queued',
+  'running',
+  'retrying',
+] as const satisfies JobStatusType[];
+
+/** A job that is still not done after this long is taken for lost: it does not hold up what waits for it. */
+export const jobLostAfterMs = 60 * 60_000;
+
 export interface JobInterface {
   id: string;
   kind: JobKindType;
@@ -69,6 +79,11 @@ export class JobEntity {
 
   get finished(): boolean {
     return this.snapshot.status === 'completed' || this.snapshot.status === 'failed';
+  }
+
+  /** Not done long after it was queued: the worker that had it is likely gone. */
+  isLost(now: Date): boolean {
+    return !this.finished && now.getTime() - this.snapshot.createdAt.getTime() >= jobLostAfterMs;
   }
 
   started(at: Date): JobEntity {

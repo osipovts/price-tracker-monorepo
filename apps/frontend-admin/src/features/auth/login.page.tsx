@@ -6,10 +6,11 @@ import {
   Group,
   PasswordInput,
   Stack,
+  Text,
   TextInput,
   Title,
 } from '@mantine/core';
-import { explainLoginRefusal } from 'frontend-shared';
+import { BRAND_FONT, explainLoginRefusal } from 'frontend-shared';
 import { type ReactElement, type SyntheticEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useNavigate } from 'react-router';
@@ -37,8 +38,13 @@ export function LoginPage(): ReactElement {
       <Card withBorder padding="xl">
         <form onSubmit={submit}>
           <Stack>
-            <Group justify="space-between">
-              <Title order={2}>{t('login.title')}</Title>
+            <Group justify="space-between" align="flex-end">
+              <Stack gap={0}>
+                <Text ff={BRAND_FONT} fz={40} lh={1.1}>
+                  {t('shell.brand')}
+                </Text>
+                <Title order={2}>{t('login.title')}</Title>
+              </Stack>
               <LanguageControl />
             </Group>
             <TextInput

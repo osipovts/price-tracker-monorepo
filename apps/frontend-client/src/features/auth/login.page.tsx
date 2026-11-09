@@ -11,12 +11,11 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
-import { explainLoginRefusal } from 'frontend-shared';
+import { BRAND_FONT, explainLoginRefusal } from 'frontend-shared';
 import { type ReactElement, type SyntheticEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useNavigate, useSearchParams } from 'react-router';
 
-import { BRAND_FONT } from '../../app/ayu.theme.js';
 import { LegalFooter } from '../legal/legal-footer.component.js';
 import { ProviderIcon } from './provider-icon.component.js';
 import { providerName } from './provider-name.type.js';

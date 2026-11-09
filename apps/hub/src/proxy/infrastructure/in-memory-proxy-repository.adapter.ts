@@ -6,7 +6,8 @@ import {
 import type {
   ProxyFilterInterface,
   ProxyRepositoryPort,
-  ProxyStatsInterface,
+  ProxySourceStatsInterface,
+  StoredProxyStatsInterface,
 } from '../application/proxy-repository.port.js';
 import { ProxyEntity } from '../domain/proxy.entity.js';
 
@@ -15,6 +16,7 @@ function matches(proxy: ProxyEntity, filter: ProxyFilterInterface): boolean {
 
   return (
     (filter.manual === undefined || proxy.isManual === filter.manual) &&
+    (filter.source === undefined || snapshot.source === filter.source) &&
     (filter.alive === undefined || snapshot.alive === filter.alive) &&
     (filter.country === undefined || snapshot.country === filter.country) &&
     (filter.disabled === undefined || (snapshot.disabledAt !== null) === filter.disabled)
@@ -68,8 +70,9 @@ export class InMemoryProxyRepositoryAdapter implements ProxyRepositoryPort {
     return Promise.resolve();
   }
 
-  stats(): Promise<ProxyStatsInterface> {
+  stats(): Promise<StoredProxyStatsInterface> {
     const all = Array.from(this.proxies.values()).map(({ snapshot }) => snapshot);
+    const sources = [...new Set(all.map((proxy): string => proxy.source))].toSorted();
     const latencies = all
       .filter((proxy): boolean => proxy.alive && proxy.latencyMs !== null)
       .map((proxy): number => proxy.latencyMs ?? 0);
@@ -86,6 +89,16 @@ export class InMemoryProxyRepositoryAdapter implements ProxyRepositoryPort {
         all.length === 0
           ? null
           : new Date(Math.max(...all.map((proxy): number => proxy.lastCheckedAt.getTime()))),
+      bySource: sources.map((source): ProxySourceStatsInterface => {
+        const own = all.filter((proxy): boolean => proxy.source === source);
+
+        return {
+          source,
+          total: own.length,
+          alive: own.filter((proxy): boolean => proxy.alive).length,
+          disabled: own.filter((proxy): boolean => proxy.disabledAt !== null).length,
+        };
+      }),
     });
   }
 
@@ -102,17 +115,6 @@ export class InMemoryProxyRepositoryAdapter implements ProxyRepositoryPort {
 
   deleteMany(servers: string[]): Promise<number> {
     return Promise.resolve(servers.filter((server): boolean => this.proxies.delete(server)).length);
-  }
-
-  delete(server: string): Promise<boolean> {
-    return Promise.resolve(this.proxies.delete(server));
-  }
-
-  deleteAll(): Promise<number> {
-    const { size } = this.proxies;
-    this.proxies.clear();
-
-    return Promise.resolve(size);
   }
 
   list(

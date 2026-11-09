@@ -2,6 +2,7 @@ import './list-row.css';
 
 import {
   ActionIcon,
+  Alert,
   Anchor,
   Box,
   Button,
@@ -46,6 +47,7 @@ import { formatPrice } from './price-format.type.js';
 import { buildPriceSeries, granularities, type GranularityType } from './price-series.type.js';
 import { ProductThumbnail } from './product-thumbnail.component.js';
 import { type SeriesStyleInterface, styleSeries } from './series-style.type.js';
+import { groupViewerContext, useGroupViewer } from './use-group-viewer.hook.js';
 import {
   type ProductGroupDetailType,
   useProductGroup,
@@ -154,6 +156,7 @@ function GroupHeader({
   const { t } = useTranslation();
   const [renaming, setRenaming] = useState(false);
   const [deleting, deletion] = useDisclosure(false);
+  const readOnly = useGroupViewer() === 'administrator';
 
   return (
     <Group wrap="nowrap" align="stretch" gap="md">
@@ -186,25 +189,27 @@ function GroupHeader({
               {title}
             </Title>
           )}
-          <Menu position="bottom-end" width={220} shadow="md">
-            <Menu.Target>
-              <ActionIcon variant="subtle" color="gray" size="lg" aria-label={t('group.actions')}>
-                <LineIcon name="dots" size={20} />
-              </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Item
-                onClick={(): void => {
-                  setRenaming(true);
-                }}
-              >
-                {t('group.rename')}
-              </Menu.Item>
-              <Menu.Item color="red" onClick={deletion.open}>
-                {t('groups.delete')}
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
+          {!readOnly && (
+            <Menu position="bottom-end" width={220} shadow="md">
+              <Menu.Target>
+                <ActionIcon variant="subtle" color="gray" size="lg" aria-label={t('group.actions')}>
+                  <LineIcon name="dots" size={20} />
+                </ActionIcon>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item
+                  onClick={(): void => {
+                    setRenaming(true);
+                  }}
+                >
+                  {t('group.rename')}
+                </Menu.Item>
+                <Menu.Item color="red" onClick={deletion.open}>
+                  {t('groups.delete')}
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          )}
         </Group>
         {/* The best price, and at the right of it, on its lower edge, the same button as the one of the list of groups. */}
         <Group justify="space-between" align="flex-end" wrap="nowrap" gap="sm" mt={4}>
@@ -214,18 +219,22 @@ function GroupHeader({
               <MarketplaceName marketplace={group.current.marketplace} size="md" />
             )}
           </Group>
-          <Button leftSection={<LineIcon name="plus" />} onClick={onAdd}>
-            {t('products.add')}
-          </Button>
+          {!readOnly && (
+            <Button leftSection={<LineIcon name="plus" />} onClick={onAdd}>
+              {t('products.add')}
+            </Button>
+          )}
         </Group>
       </Stack>
-      <DeleteGroup
-        groupId={group.id}
-        title={title}
-        opened={deleting}
-        onClose={deletion.close}
-        onDeleted={onDeleted}
-      />
+      {!readOnly && (
+        <DeleteGroup
+          groupId={group.id}
+          title={title}
+          opened={deleting}
+          onClose={deletion.close}
+          onDeleted={onDeleted}
+        />
+      )}
     </Group>
   );
 }
@@ -322,6 +331,7 @@ function OfferRow({
 }): ReactElement {
   const { t } = useTranslation();
   const [deleting, deletion] = useDisclosure(false);
+  const readOnly = useGroupViewer() === 'administrator';
   const title =
     product.latest?.title ?? `${marketplaceName(product.marketplace)} ${product.externalId}`;
   const link = linkProps(
@@ -348,18 +358,22 @@ function OfferRow({
             </Box>
           </Box>
         </Box>
-        <CloseButton
-          aria-label={t('product.delete')}
-          title={t('product.delete')}
-          onClick={deletion.open}
-        />
+        {!readOnly && (
+          <CloseButton
+            aria-label={t('product.delete')}
+            title={t('product.delete')}
+            onClick={deletion.open}
+          />
+        )}
       </Group>
-      <DeleteProduct
-        productId={product.id}
-        title={title}
-        opened={deleting}
-        onClose={deletion.close}
-      />
+      {!readOnly && (
+        <DeleteProduct
+          productId={product.id}
+          title={title}
+          opened={deleting}
+          onClose={deletion.close}
+        />
+      )}
     </Box>
   );
 }
@@ -568,6 +582,7 @@ export function GroupPage(): ReactElement {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id = '' } = useParams();
+  const readOnly = useGroupViewer() === 'administrator';
   const group = useProductGroup(id);
   const data = group.data;
   const products = useMemo((): GroupProductType[] => data?.products ?? [], [data]);
@@ -577,15 +592,14 @@ export function GroupPage(): ReactElement {
     (history): ObservationType[] | undefined => history.data?.observations,
   );
   // The form opens by itself when a reload cut short a product being added to this group.
-  const [adding, { open, close }] = useDisclosure(hasPendingAdd(id));
+  const [adding, { open, close }] = useDisclosure(!readOnly && hasPendingAdd(id));
+  const back = <BackLink />;
 
   if (group.error instanceof ApiError && group.error.status === 404) {
     return (
       <Stack>
         <Text>{t('group.notFound')}</Text>
-        <Anchor component={Link} to="/">
-          {t('common.backToProducts')}
-        </Anchor>
+        {back}
       </Stack>
     );
   }
@@ -597,12 +611,12 @@ export function GroupPage(): ReactElement {
   return (
     <Stack gap="xl">
       <Stack gap="md">
-        <Anchor component={Link} to="/" size="sm" c="dimmed" w="fit-content">
-          <Group gap={4} wrap="nowrap">
-            <LineIcon name="arrowLeft" size={14} />
-            {t('common.backToProducts')}
-          </Group>
-        </Anchor>
+        {back}
+        {readOnly && (
+          <Alert color="accent" variant="light" title={t('group.viewTitle')}>
+            {t('group.viewText')}
+          </Alert>
+        )}
         <GroupHeader
           group={data}
           title={title}
@@ -614,7 +628,41 @@ export function GroupPage(): ReactElement {
       </Stack>
       <Offers products={products} styles={styles} />
       <PriceHistory products={products} styles={styles} histories={observations} />
-      <AddProductModal groupId={data.id} opened={adding} onClose={close} />
+      {!readOnly && <AddProductModal groupId={data.id} opened={adding} onClose={close} />}
     </Stack>
+  );
+}
+
+/** The panel of the administrators: it is served apart from the app, under its own path. */
+const adminGroupsUrl = '/panel/groups';
+
+/** Back to where the group was opened from: the list of the user, or the groups of the admin panel. */
+function BackLink(): ReactElement {
+  const { t } = useTranslation();
+  const readOnly = useGroupViewer() === 'administrator';
+  const content = (
+    <Group gap={4} wrap="nowrap">
+      <LineIcon name="arrowLeft" size={14} />
+      {readOnly ? t('group.backToPanel') : t('common.backToProducts')}
+    </Group>
+  );
+
+  return readOnly ? (
+    <Anchor href={adminGroupsUrl} size="sm" c="dimmed" w="fit-content">
+      {content}
+    </Anchor>
+  ) : (
+    <Anchor component={Link} to="/" size="sm" c="dimmed" w="fit-content">
+      {content}
+    </Anchor>
+  );
+}
+
+/** A group of any user as the user sees it, for an administrator: nothing on it can be changed. */
+export function AdminGroupPage(): ReactElement {
+  return (
+    <groupViewerContext.Provider value="administrator">
+      <GroupPage />
+    </groupViewerContext.Provider>
   );
 }

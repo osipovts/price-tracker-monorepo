@@ -31,11 +31,13 @@ import { AddProductUseCase } from './application/add-product.use-case.js';
 import { ChoosePriceRoutesUseCase } from './application/choose-price-routes.use-case.js';
 import { CreateProductGroupUseCase } from './application/create-product-group.use-case.js';
 import { DescribeProductGroupsUseCase } from './application/describe-product-groups.use-case.js';
+import { DescribeProductsUseCase } from './application/describe-products.use-case.js';
 import { ExpandProductLinkUseCase } from './application/expand-product-link.use-case.js';
 import { GetProductGroupUseCase } from './application/get-product-group.use-case.js';
 import { GetProductStatsUseCase } from './application/get-product-stats.use-case.js';
 import { GetProductThumbnailUrlUseCase } from './application/get-product-thumbnail-url.use-case.js';
 import { IMAGE_DOWNLOADER, type ImageDownloaderPort } from './application/image-downloader.port.js';
+import { ListAllProductGroupsUseCase } from './application/list-all-product-groups.use-case.js';
 import { ListPriceHistoryUseCase } from './application/list-price-history.use-case.js';
 import { ListProductGroupsUseCase } from './application/list-product-groups.use-case.js';
 import type { KnownCityInterface } from './application/marketplace-cities.port.js';
@@ -76,13 +78,14 @@ import { PrismaPriceObservationRepositoryAdapter } from './infrastructure/prisma
 import { PrismaProductGroupPreferenceRepositoryAdapter } from './infrastructure/prisma-product-group-preference-repository.adapter.js';
 import { PrismaProductGroupRepositoryAdapter } from './infrastructure/prisma-product-group-repository.adapter.js';
 import { PrismaTrackedProductRepositoryAdapter } from './infrastructure/prisma-tracked-product-repository.adapter.js';
+import { AdminProductsController } from './presentation/admin-products.controller.js';
 import { PriceResultsConsumer } from './presentation/price-results.consumer.js';
 import { ProductGroupsController } from './presentation/product-groups.controller.js';
 import { ProductsController } from './presentation/products.controller.js';
 
 @Module({
   imports: [PrismaModule, JobModule, ProxyModule, HandbookModule],
-  controllers: [ProductsController, ProductGroupsController],
+  controllers: [ProductsController, ProductGroupsController, AdminProductsController],
   providers: [
     {
       provide: TRACKED_PRODUCT_REPOSITORY,
@@ -194,9 +197,12 @@ import { ProductsController } from './presentation/products.controller.js';
     },
     {
       provide: GetProductStatsUseCase,
-      useFactory: (products: TrackedProductRepositoryPort): GetProductStatsUseCase =>
-        new GetProductStatsUseCase(products),
-      inject: [TRACKED_PRODUCT_REPOSITORY],
+      useFactory: (
+        products: TrackedProductRepositoryPort,
+        groups: ProductGroupRepositoryPort,
+        observations: PriceObservationRepositoryPort,
+      ): GetProductStatsUseCase => new GetProductStatsUseCase(products, groups, observations),
+      inject: [TRACKED_PRODUCT_REPOSITORY, PRODUCT_GROUP_REPOSITORY, PRICE_OBSERVATION_REPOSITORY],
     },
     {
       provide: RemoveProductUseCase,
@@ -259,6 +265,22 @@ import { ProductsController } from './presentation/products.controller.js';
         PRODUCT_GROUP_PREFERENCE_REPOSITORY,
         DescribeProductGroupsUseCase,
       ],
+    },
+    {
+      provide: ListAllProductGroupsUseCase,
+      useFactory: (
+        groups: ProductGroupRepositoryPort,
+        describe: DescribeProductGroupsUseCase,
+      ): ListAllProductGroupsUseCase => new ListAllProductGroupsUseCase(groups, describe),
+      inject: [PRODUCT_GROUP_REPOSITORY, DescribeProductGroupsUseCase],
+    },
+    {
+      provide: DescribeProductsUseCase,
+      useFactory: (
+        products: TrackedProductRepositoryPort,
+        observations: PriceObservationRepositoryPort,
+      ): DescribeProductsUseCase => new DescribeProductsUseCase(products, observations),
+      inject: [TRACKED_PRODUCT_REPOSITORY, PRICE_OBSERVATION_REPOSITORY],
     },
     {
       provide: GetProductGroupUseCase,
@@ -424,6 +446,12 @@ import { ProductsController } from './presentation/products.controller.js';
     },
     PriceResultsConsumer,
   ],
-  exports: [GetProductStatsUseCase, RemoveUserProductsUseCase],
+  exports: [
+    GetProductStatsUseCase,
+    RemoveUserProductsUseCase,
+    ListAllProductGroupsUseCase,
+    DescribeProductsUseCase,
+    GetProductThumbnailUrlUseCase,
+  ],
 })
 export class ProductModule {}

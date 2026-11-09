@@ -33,6 +33,16 @@ export class InMemoryProductGroupRepositoryAdapter implements ProductGroupReposi
     );
   }
 
+  findById(groupId: string): Promise<ProductGroupEntity | null> {
+    return Promise.resolve(
+      this.groups.find(({ snapshot }): boolean => snapshot.id === groupId) ?? null,
+    );
+  }
+
+  listAll(pagination: PaginationInterface): Promise<PageInterface<ProductGroupEntity>> {
+    return Promise.resolve(pageOf(this.groups.toReversed(), pagination));
+  }
+
   listOwned(
     userId: string,
     pagination: PaginationInterface,

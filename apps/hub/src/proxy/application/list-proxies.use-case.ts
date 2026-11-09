@@ -11,6 +11,8 @@ export interface ProxyListFilterInterface {
   alive?: boolean;
   country?: string;
   disabled?: boolean;
+  /** `manual` for the ones added by hand. */
+  source?: string;
 }
 
 export interface ProxyListItemInterface {
@@ -34,6 +36,7 @@ export class ListProxiesUseCase {
         ...(filter.alive === undefined ? {} : { alive: filter.alive }),
         ...(filter.country === undefined ? {} : { country: filter.country }),
         ...(filter.disabled === undefined ? {} : { disabled: filter.disabled }),
+        ...(filter.source === undefined ? {} : { source: filter.source }),
       },
       pagination,
     );

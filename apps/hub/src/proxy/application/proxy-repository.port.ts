@@ -13,9 +13,19 @@ export interface ProxyFilterInterface {
   disabled?: boolean;
   /** Only the proxies added by hand (`true`), or only the found ones (`false`). */
   manual?: boolean;
+  /** Only the proxies of the source; `manual` for the ones added by hand. */
+  source?: string;
 }
 
-export interface ProxyStatsInterface {
+/** How many proxies a source gave, and how many of them are alive and turned off. */
+export interface ProxySourceStatsInterface {
+  source: string;
+  total: number;
+  alive: number;
+  disabled: number;
+}
+
+export interface StoredProxyStatsInterface {
   total: number;
   alive: number;
   /** Turned off by an administrator. */
@@ -23,10 +33,12 @@ export interface ProxyStatsInterface {
   /** Of the alive ones; null if none is alive. */
   averageLatencyMs: number | null;
   lastCheckedAt: Date | null;
+  /** By the source, in the order of the names. */
+  bySource: ProxySourceStatsInterface[];
 }
 
 export interface ProxyRepositoryPort {
-  stats(): Promise<ProxyStatsInterface>;
+  stats(): Promise<StoredProxyStatsInterface>;
   findByServers(servers: string[]): Promise<ProxyEntity[]>;
   saveMany(proxies: ProxyEntity[]): Promise<void>;
   /**
@@ -38,10 +50,6 @@ export interface ProxyRepositoryPort {
   listUnseen(since: Date, limit: number): Promise<ProxyEntity[]>;
   /** Deletes the proxies; returns how many there were. */
   deleteMany(servers: string[]): Promise<number>;
-  /** Deletes the proxy; false if there was none. */
-  delete(server: string): Promise<boolean>;
-  /** Deletes every proxy; returns how many there were. */
-  deleteAll(): Promise<number>;
   /** Best first: alive, then the success rate, then the latency. */
   list(
     filter: ProxyFilterInterface,

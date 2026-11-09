@@ -52,13 +52,15 @@
 Админка (для администраторов из `ADMIN_EMAILS`): `GET /admin/dashboard` - цифры по пользователям, товарам,
 прокси и задачам за сутки с последними неудачами.
 
-Панель администратора (`apps/frontend-admin`: React, Mantine, типы API из OpenAPI): вход, дашборд, прокси
-(список с фильтрами, включение и выключение, удаление, обновление источника). Хаб отдаёт собранную панель
-по `/panel`, если задан `ADMIN_UI_DIR`; в образе `hub-prod` она уже собрана и включена.
+Панель администратора (`apps/frontend-admin`: React, Mantine, типы API из OpenAPI): вход, дашборд, задачи,
+группы пользователей (группа открывается в клиентском приложении по `/app/view/groups/<id>` только для чтения),
+прокси (источники с ходом обновления, список с фильтрами, включение и выключение), справочники. Хаб отдаёт
+собранную панель по `/panel`, если задан `ADMIN_UI_DIR`; в образе `hub-prod` она уже собрана и включена.
 В dev-режиме Docker (`docker-compose.dev.yml`) сервис `frontend-admin` поднимает Vite на
-http://localhost:5173/panel/ (порт `ADMIN_UI_PORT`) и проксирует запросы на хаб.
+http://localhost:5173/panel/ (порт `ADMIN_UI_PORT`), проксирует запросы на хаб, а `/app/` - на Vite клиента.
 Локально без Docker: `pnpm --filter frontend-admin dev` (http://localhost:5173/panel/, запросы идут на хаб
-`HUB_URL`, по умолчанию http://localhost:3000; в хабе нужен `AUTH_ALLOWED_ORIGINS=http://localhost:5173`).
+`HUB_URL`, по умолчанию http://localhost:3000, а `/app/` на клиент `CLIENT_URL`, по умолчанию
+http://localhost:5174; в хабе нужен `AUTH_ALLOWED_ORIGINS=http://localhost:5173`).
 Политика конфиденциальности и условия использования (английский и русский, по языку интерфейса) открыты без входа: `/app/privacy` и `/app/terms`, ссылки на них в подвале каждой страницы. Это адреса для экрана согласия Google (Branding: Privacy policy и Terms of service). Вход через Google и GitHub в клиентском приложении: на странице входа кнопки «Продолжить через …» для тех провайдеров, чьи
 OAuth-приложения заданы (`GET /auth/oauth/providers`). Callback-адреса: `<PUBLIC_URL>/auth/oauth/google/callback` и
 `<PUBLIC_URL>/auth/oauth/github/callback`; у Google в OAuth consent screen нужны scopes `openid`, `email`, `profile`, у GitHub
@@ -88,7 +90,8 @@ API отдаёт `thumbnailUrl`, адрес с подписью на 1-2 час�
 Точка графика - средняя цена за час или день, в подсказке мин, макс, последняя и средняя цена периода; если за
 период цен нет, берётся последняя известная и рисуется пунктиром. Ценой считается первая из `prices`
 наблюдения. Хаб отдаёт приложение по `/app`, если задан `CLIENT_UI_DIR` (в образе `hub-prod` включено);
-в dev-Docker оно на http://localhost:5174/app/ (`CLIENT_UI_PORT`), локально `pnpm --filter frontend-client dev`.
+в dev-Docker оно на http://localhost:5174/app/ (`CLIENT_UI_PORT`), локально `pnpm --filter frontend-client dev`;
+админка, куда ведёт меню администратора, проксируется с Vite панели (`ADMIN_URL`, по умолчанию http://localhost:5173).
 
 Подтверждение почты: при регистрации на почту уходит письмо со ссылкой `GET /auth/verify-email?token=...`
 (работает сутки, повторное открытие безвредно; подтвердить почту может только вошедший владелец аккаунта: в браузере без сессии ссылка ведёт на страницу входа (`AUTH_FAILURE_REDIRECT?verify=...`), и после входа почта подтверждается сама); ещё раз выслать - `POST /auth/verify-email/resend`.

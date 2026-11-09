@@ -1,5 +1,10 @@
 /** What the other contexts may use of the proxy context. */
-export { GetProxyStatsUseCase, type ProxyStatsInterface } from './get-proxy-stats.use-case.js';
+export {
+  GetProxyStatsUseCase,
+  type ProxySourceStatsInterface,
+  type ProxyStatsInterface,
+  type UsableProxiesInterface,
+} from './get-proxy-stats.use-case.js';
 export { ListBestProxyServersUseCase } from './list-best-proxy-servers.use-case.js';
 export {
   type ProxyAttemptInterface,

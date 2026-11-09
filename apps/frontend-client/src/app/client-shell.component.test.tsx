@@ -9,7 +9,7 @@ import { ClientShell } from './client-shell.component.js';
 
 let calls: string[] = [];
 
-function stubHub(emailVerified: boolean): void {
+function stubHub(emailVerified: boolean, isAdmin = false): void {
   vi.stubGlobal(
     'fetch',
     vi.fn((request: Request): Promise<Response> => {
@@ -18,7 +18,7 @@ function stubHub(emailVerified: boolean): void {
       if (pathname === '/auth/me') {
         return Promise.resolve(
           Response.json({
-            user: { id: 'u', email: 'jane@example.com', emailVerified, isAdmin: false },
+            user: { id: 'u', email: 'jane@example.com', emailVerified, isAdmin },
           }),
         );
       }
@@ -98,4 +98,24 @@ test('tells the version of the app in the hint of its name, and leaves the legal
   );
   expect(screen.queryByRole('link', { name: 'Privacy Policy' })).not.toBeInTheDocument();
   expect(screen.queryByText(`v${APP_VERSION}`)).not.toBeInTheDocument();
+});
+
+test('leads an administrator to the admin panel from the menu of the account, and nobody else', async () => {
+  stubHub(true, true);
+  openShell();
+  await userEvent.click(await screen.findByRole('button', { name: 'Account' }));
+
+  expect(await screen.findByRole('menuitem', { name: 'Admin panel' })).toHaveAttribute(
+    'href',
+    '/panel/',
+  );
+});
+
+test('has no way to the admin panel for a user who is no administrator', async () => {
+  stubHub(true);
+  openShell();
+  await userEvent.click(await screen.findByRole('button', { name: 'Account' }));
+
+  expect(await screen.findByRole('menuitem', { name: 'Settings' })).toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: 'Admin panel' })).not.toBeInTheDocument();
 });

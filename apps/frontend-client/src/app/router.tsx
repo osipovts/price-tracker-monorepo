@@ -2,7 +2,7 @@ import { createBrowserRouter } from 'react-router';
 
 import { LoginPage } from '../features/auth/login.page.js';
 import { PrivacyPolicyPage, TermsOfServicePage } from '../features/legal/legal.page.js';
-import { GroupPage } from '../features/products/group.page.js';
+import { AdminGroupPage, GroupPage } from '../features/products/group.page.js';
 import { ProductsPage } from '../features/products/products.page.js';
 import { SettingsPage } from '../features/settings/settings.page.js';
 import { ClientShell } from './client-shell.component.js';
@@ -23,6 +23,8 @@ export function createAppRouter(basename: string): ReturnType<typeof createBrows
             children: [
               { index: true, element: <ProductsPage /> },
               { path: 'groups/:id', element: <GroupPage /> },
+              // An administrator looks at the group of a user, from the admin panel.
+              { path: 'view/groups/:id', element: <AdminGroupPage /> },
               { path: 'settings', element: <SettingsPage /> },
             ],
           },

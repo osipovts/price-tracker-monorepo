@@ -44,10 +44,13 @@ services:
       HUB_URL: http://hub:3000
       # The hub lets a write in only from its own PUBLIC_URL, not from the name it has in the network of Docker.
       HUB_ORIGIN: ${PUBLIC_URL:-http://localhost:3000}
+      # The panel opens a group of a user in the client app, which it serves under /app/ from there.
+      CLIENT_URL: http://frontend-client:5174
     ports:
       - '127.0.0.1:${ADMIN_UI_PORT:-5173}:5173'
     depends_on:
       - hub
+      - frontend-client
 
   # The client app with hot reload at http://localhost:5174/app/; its requests go to the hub.
   frontend-client:
@@ -63,6 +66,8 @@ services:
       HUB_URL: http://hub:3000
       # The hub lets a write in only from its own PUBLIC_URL, not from the name it has in the network of Docker.
       HUB_ORIGIN: ${PUBLIC_URL:-http://localhost:3000}
+      # The menu of an administrator leads to the admin panel, which the app serves under /panel/ from there.
+      ADMIN_URL: http://frontend-admin:5173
     ports:
       - '127.0.0.1:${CLIENT_UI_PORT:-5174}:5174'
     depends_on:

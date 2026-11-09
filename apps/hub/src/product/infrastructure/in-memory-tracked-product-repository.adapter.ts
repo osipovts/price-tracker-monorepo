@@ -96,6 +96,14 @@ export class InMemoryTrackedProductRepositoryAdapter implements TrackedProductRe
     );
   }
 
+  listTracked(): Promise<TrackedProductEntity[]> {
+    return Promise.resolve(
+      Array.from(this.products.values()).filter((product): boolean =>
+        this.subscriptions.some(({ productId }): boolean => productId === product.snapshot.id),
+      ),
+    );
+  }
+
   listDueForRefresh(before: Date, limit: number): Promise<TrackedProductEntity[]> {
     const lastTouch = (product: TrackedProductEntity): number =>
       Math.max(

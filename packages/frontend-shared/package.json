@@ -2,10 +2,11 @@
   "name": "frontend-shared",
   "version": "1.0.0",
   "private": true,
-  "description": "What the frontends share: the way to the hub and its errors",
+  "description": "What the frontends share: the way to the hub and its errors, the theme and the fonts",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./fonts.css": "./src/assets/fonts.css",
     "./test-setup": "./src/test-setup.ts"
   },
   "scripts": {

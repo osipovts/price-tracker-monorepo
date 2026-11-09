@@ -10,6 +10,10 @@ export interface ProductGroupRepositoryPort {
   create(userId: string, title: string | null): Promise<ProductGroupEntity>;
   /** The group, if the user owns it. */
   findOwned(userId: string, groupId: string): Promise<ProductGroupEntity | null>;
+  /** The group whoever owns it: for an administrator, never for a user. */
+  findById(groupId: string): Promise<ProductGroupEntity | null>;
+  /** The groups of every user, the newest first: for an administrator, never for a user. */
+  listAll(pagination: PaginationInterface): Promise<PageInterface<ProductGroupEntity>>;
   /** The groups of the user, the newest first. */
   listOwned(
     userId: string,

@@ -5,6 +5,7 @@ import type {
 import { ProductGroupNotFoundError } from './product-group-not-found.error.js';
 import type { ProductGroupPreferenceRepositoryPort } from './product-group-preference-repository.port.js';
 import type { ProductGroupRepositoryPort } from './product-group-repository.port.js';
+import { administratorViewer, type ProductViewerType } from './product-viewer.type.js';
 
 export class GetProductGroupUseCase {
   constructor(
@@ -13,13 +14,17 @@ export class GetProductGroupUseCase {
     private readonly describe: Pick<DescribeProductGroupsUseCase, 'execute'>,
   ) {}
 
-  async execute(userId: string, groupId: string): Promise<ProductGroupViewInterface> {
-    const group = await this.groups.findOwned(userId, groupId);
+  /** The group as its owner sees it, with the period they chose; to any other user it does not exist. */
+  async execute(viewer: ProductViewerType, groupId: string): Promise<ProductGroupViewInterface> {
+    const group =
+      viewer === administratorViewer
+        ? await this.groups.findById(groupId)
+        : await this.groups.findOwned(viewer, groupId);
     if (group === null) throw new ProductGroupNotFoundError(groupId);
 
     const [view] = await this.describe.execute(
       [group],
-      await this.preferences.getStatsPeriod(userId),
+      await this.preferences.getStatsPeriod(group.snapshot.userId),
     );
     if (view === undefined) throw new ProductGroupNotFoundError(groupId);
 

@@ -8,6 +8,7 @@ export {
   type MeInterface,
   meQueryKey,
 } from './auth-hooks.factory.js';
+export { ayuTheme, ayuVariables, BRAND_FONT } from './ayu.theme.js';
 export { ColorSchemeControl } from './color-scheme.component.js';
 export { ErrorAlert } from './error-alert.component.js';
 export {

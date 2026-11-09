@@ -6,6 +6,7 @@ import type { PriceObservationInterface } from '../domain/price-observation.inte
 import type { TrackedProductEntity } from '../domain/tracked-product.entity.js';
 import type { PriceObservationRepositoryPort } from './price-observation-repository.port.js';
 import { ProductNotFoundError } from './product-not-found.error.js';
+import { administratorViewer, type ProductViewerType } from './product-viewer.type.js';
 import type { TrackedProductRepositoryPort } from './tracked-product-repository.port.js';
 
 export class ListPriceHistoryUseCase {
@@ -14,12 +15,16 @@ export class ListPriceHistoryUseCase {
     private readonly observations: PriceObservationRepositoryPort,
   ) {}
 
+  /** The history of a product the user tracks; to any other user the product does not exist. */
   async execute(
-    userId: string,
+    viewer: ProductViewerType,
     productId: string,
     pagination: PaginationInterface,
   ): Promise<{ product: TrackedProductEntity; page: PageInterface<PriceObservationInterface> }> {
-    const product = await this.products.findSubscribed(userId, productId);
+    const product =
+      viewer === administratorViewer
+        ? await this.products.findById(productId)
+        : await this.products.findSubscribed(viewer, productId);
     if (product === null) throw new ProductNotFoundError(productId);
 
     return { product, page: await this.observations.listByProduct(productId, pagination) };

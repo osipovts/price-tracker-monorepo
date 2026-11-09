@@ -32,11 +32,27 @@ export class PrismaProductGroupRepositoryAdapter implements ProductGroupReposito
     return row === null ? null : toEntity(row);
   }
 
-  async listOwned(
+  async findById(groupId: string): Promise<ProductGroupEntity | null> {
+    const row = await this.prisma.productGroup.findUnique({ where: { id: groupId } });
+
+    return row === null ? null : toEntity(row);
+  }
+
+  listAll(pagination: PaginationInterface): Promise<PageInterface<ProductGroupEntity>> {
+    return this.listWhere({}, pagination);
+  }
+
+  listOwned(
     userId: string,
     pagination: PaginationInterface,
   ): Promise<PageInterface<ProductGroupEntity>> {
-    const where = { userId };
+    return this.listWhere({ userId }, pagination);
+  }
+
+  private async listWhere(
+    where: { userId?: string },
+    pagination: PaginationInterface,
+  ): Promise<PageInterface<ProductGroupEntity>> {
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.productGroup.findMany({
         where,

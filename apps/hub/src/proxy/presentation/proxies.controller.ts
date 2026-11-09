@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -22,8 +21,7 @@ import {
 import { toPageResponse } from '../../shared/presentation/pagination-query.type.js';
 import { routeAccess } from '../../shared/presentation/route-access.type.js';
 import { AddManualProxyUseCase } from '../application/add-manual-proxy.use-case.js';
-import { DeleteAllProxiesUseCase } from '../application/delete-all-proxies.use-case.js';
-import { DeleteProxyUseCase } from '../application/delete-proxy.use-case.js';
+import { GetProxyStatsUseCase } from '../application/get-proxy-stats.use-case.js';
 import { ListProxiesUseCase } from '../application/list-proxies.use-case.js';
 import { SetProxyDisabledUseCase } from '../application/set-proxy-disabled.use-case.js';
 import {
@@ -37,6 +35,8 @@ import {
   type ProxyListResponseType,
   proxyServerQuerySchema,
   type ProxyServerQueryType,
+  proxyStatsResponseSchema,
+  type ProxyStatsResponseType,
 } from './proxy-list.type.js';
 
 @ApiBearerAuth()
@@ -48,8 +48,7 @@ export class ProxiesController {
     @Inject(ListProxiesUseCase) private readonly listProxies: ListProxiesUseCase,
     @Inject(AddManualProxyUseCase) private readonly addManualProxy: AddManualProxyUseCase,
     @Inject(SetProxyDisabledUseCase) private readonly setDisabled: SetProxyDisabledUseCase,
-    @Inject(DeleteProxyUseCase) private readonly deleteProxy: DeleteProxyUseCase,
-    @Inject(DeleteAllProxiesUseCase) private readonly deleteAllProxies: DeleteAllProxiesUseCase,
+    @Inject(GetProxyStatsUseCase) private readonly getStats: GetProxyStatsUseCase,
   ) {}
 
   @Get()
@@ -67,6 +66,7 @@ export class ProxiesController {
         ...(query.alive === undefined ? {} : { alive: query.alive === 'true' }),
         ...(query.disabled === undefined ? {} : { disabled: query.disabled === 'true' }),
         ...(query.country === undefined ? {} : { country: query.country }),
+        ...(query.source === undefined ? {} : { source: query.source }),
       },
       query,
     );
@@ -92,6 +92,19 @@ export class ProxiesController {
         cooldownUntil: snapshot.cooldownUntil?.toISOString() ?? null,
       })),
     }));
+  }
+
+  @Get('stats')
+  @ApiOperation({
+    summary: 'The proxies in figures',
+    description:
+      'How many there are, alive and turned off, by source; and how many a read of each marketplace may be given now.',
+  })
+  @ApiOkResponse({ standardSchema: proxyStatsResponseSchema })
+  async stats(): Promise<ProxyStatsResponseType> {
+    const stats = await this.getStats.execute();
+
+    return { ...stats, lastCheckedAt: stats.lastCheckedAt?.toISOString() ?? null };
   }
 
   @Post()
@@ -120,32 +133,5 @@ export class ProxiesController {
     @Body({ schema: proxyDisabledBodySchema }) body: ProxyDisabledBodyType,
   ): Promise<void> {
     await this.setDisabled.execute(query.server, body.disabled);
-  }
-
-  @Delete()
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({
-    summary: 'Delete a proxy',
-    description:
-      'The next refresh of its source finds it again if it is still listed there: turn it off instead to keep it away.',
-  })
-  @ApiNoContentResponse()
-  @ApiNotFoundResponse({ description: 'The proxy is unknown' })
-  async remove(
-    @Query({ schema: proxyServerQuerySchema }) query: ProxyServerQueryType,
-  ): Promise<void> {
-    await this.deleteProxy.execute(query.server);
-  }
-
-  @Delete('all')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({
-    summary: 'Delete all proxies',
-    description:
-      'The next refresh of a source finds the ones still listed there again: turn them off instead to keep them away.',
-  })
-  @ApiNoContentResponse()
-  async removeAll(): Promise<void> {
-    await this.deleteAllProxies.execute();
   }
 }

@@ -73,6 +73,12 @@ import { JobsController } from './presentation/jobs.controller.js';
       inject: [JOB_REPOSITORY],
     },
   ],
-  exports: [ScheduleJobUseCase, RecordJobMessageUseCase, GetJobStatsUseCase, GetJobActivityUseCase],
+  exports: [
+    ScheduleJobUseCase,
+    RecordJobMessageUseCase,
+    GetJobStatsUseCase,
+    GetJobActivityUseCase,
+    ListJobsUseCase,
+  ],
 })
 export class JobModule {}
