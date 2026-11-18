@@ -296,50 +296,56 @@ test('leaves the form closed when the add cut short was to a group', async (): P
 
 const dnsLink = 'https://www.dns-shop.ru/product/0463bb2411a1d582/156-noutbuk/';
 
-test('asks for the city of a link of a marketplace that has cities, searches it by name, and sends its id', async (): Promise<void> => {
-  const sent: string[] = [];
-  const searched: string[] = [];
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (request: Request | string | URL): Promise<Response> => {
-      if (typeof request === 'string' || request instanceof URL) return pageOf([]);
-      if (request.method === 'GET') {
-        const { pathname, searchParams } = new URL(request.url);
-        if (pathname === '/marketplaces/dns/cities') {
-          searched.push(searchParams.get('query') ?? '');
+test.each([
+  ['dns', dnsLink, 'irkutsk-id'],
+  ['sportmaster', 'https://www.sportmaster.ru/product/33427090299/', '30970299'],
+])(
+  'searches cities for %s and sends the selected city ID',
+  async (marketplace, link, cityId): Promise<void> => {
+    const sent: string[] = [];
+    const searched: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (request: Request | string | URL): Promise<Response> => {
+        if (typeof request === 'string' || request instanceof URL) return pageOf([]);
+        if (request.method === 'GET') {
+          const { pathname, searchParams } = new URL(request.url);
+          if (pathname === `/marketplaces/${marketplace}/cities`) {
+            searched.push(searchParams.get('query') ?? '');
 
-          return Response.json({
-            items: [{ id: 'irkutsk-id', name: 'Иркутск', region: 'Иркутская область' }],
-          });
+            return Response.json({
+              items: [{ id: cityId, name: 'Иркутск', region: 'Иркутская область' }],
+            });
+          }
+
+          return pageOf([]);
         }
 
-        return pageOf([]);
-      }
+        sent.push(JSON.stringify(await request.json()));
 
-      sent.push(JSON.stringify(await request.json()));
+        return new Promise<Response>(() => undefined);
+      }),
+    );
+    renderPage();
+    const user = userEvent.setup();
 
-      return new Promise<Response>(() => undefined);
-    }),
-  );
-  renderPage();
-  const user = userEvent.setup();
+    await openForm();
+    expect(screen.queryByLabelText('City', { selector: 'input' })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText(/link/i), 'https://example.com/item/1');
+    expect(screen.queryByLabelText('City', { selector: 'input' })).not.toBeInTheDocument();
 
-  await openForm();
-  expect(screen.queryByLabelText('City', { selector: 'input' })).not.toBeInTheDocument();
-  await user.type(screen.getByLabelText(/link/i), 'https://example.com/item/1');
-  expect(screen.queryByLabelText('City', { selector: 'input' })).not.toBeInTheDocument();
+    await user.clear(screen.getByLabelText(/link/i));
+    await user.type(screen.getByLabelText(/link/i), link);
+    await user.type(screen.getByLabelText('City', { selector: 'input' }), 'Ирк');
+    await user.click(await screen.findByRole('option', { name: /Иркутск/ }));
+    await user.click(screen.getByRole('button', { name: 'Track' }));
 
-  await user.clear(screen.getByLabelText(/link/i));
-  await user.type(screen.getByLabelText(/link/i), dnsLink);
-  await user.type(screen.getByLabelText('City', { selector: 'input' }), 'Ирк');
-  await user.click(await screen.findByRole('option', { name: /Иркутск/ }));
-  await user.click(screen.getByRole('button', { name: 'Track' }));
-
-  await waitFor((): void => {
-    expect(sent).toEqual([JSON.stringify({ url: dnsLink, cityId: 'irkutsk-id' })]);
-  });
-  expect(searched).toContain('Ирк');
-});
+    await waitFor((): void => {
+      expect(sent).toEqual([JSON.stringify({ url: link, cityId })]);
+    });
+    expect(searched).toContain('Ирк');
+  },
+);
 
 test('offers again the city last picked for the marketplace, on the next visit too', async (): Promise<void> => {
   vi.stubGlobal(
@@ -449,7 +455,9 @@ test('starts the list with a row to track a new product, in place of a title of 
   renderPage();
 
   const row = await screen.findByRole('button', { name: 'Track a new product' });
-  expect(row).toHaveAccessibleDescription(/^Paste a link from WB, Ozon, DNS or Citilink/);
+  expect(row).toHaveAccessibleDescription(
+    /^Paste a link from WB, Ozon, DNS, Citilink or Sportmaster/,
+  );
   expect(row.compareDocumentPosition(screen.getByRole('link', { name: /Notebook/ }))).toBe(
     Node.DOCUMENT_POSITION_FOLLOWING,
   );

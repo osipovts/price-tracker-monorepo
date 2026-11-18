@@ -7,6 +7,7 @@ const marketplaceColors: Record<string, string> = {
   dns: 'orange',
   wildberries: 'grape',
   citilink: 'red',
+  sportmaster: 'indigo',
 };
 
 /** The short names of the marketplaces whose own is long; the others are shown by their own. */

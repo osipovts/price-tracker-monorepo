@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import { FetchCitiesUseCase } from './application/fetch-cities.use-case.js';
 import { DnsBrowserCitySourceAdapter } from './infrastructure/dns-browser-city-source.adapter.js';
+import { SportmasterBrowserCitySourceAdapter } from './infrastructure/sportmaster-browser-city-source.adapter.js';
 import { WildberriesBrowserCitySourceAdapter } from './infrastructure/wildberries-browser-city-source.adapter.js';
 import { WildberriesPickupCitiesParser } from './infrastructure/wildberries-pickup-cities.parser.js';
 import { HandbookFetchController } from './presentation/handbook-fetch.controller.js';
@@ -77,6 +78,11 @@ const controller = new HandbookFetchController(
       new DnsBrowserCitySourceAdapter(browser, options, env.timeoutMs, logger.child('dns-site')),
       russianLetters,
       logger.child('dns-cities'),
+    ),
+    'sportmaster-cities': new FetchCitiesUseCase(
+      new SportmasterBrowserCitySourceAdapter(browser, options, env.timeoutMs),
+      ['', ...russianLetters, 'Ё'],
+      logger.child('sportmaster-cities'),
     ),
     'wildberries-cities': new FetchCitiesUseCase(
       new WildberriesBrowserCitySourceAdapter(

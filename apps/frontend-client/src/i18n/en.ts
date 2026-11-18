@@ -89,10 +89,11 @@ export const en = {
     add: 'Add',
     addTitle: 'Track a product',
     addRow: 'Track a new product',
-    addRowHint: 'Paste a link from WB, Ozon, DNS or Citilink - the price is watched from then on',
+    addRowHint:
+      'Paste a link from WB, Ozon, DNS, Citilink or Sportmaster - the price is watched from then on',
     addFirst: 'Add the first product',
     linkLabel: 'Link to a product',
-    supported: 'Supported: WB, Ozon, DNS, Citilink',
+    supported: 'Supported: WB, Ozon, DNS, Citilink, Sportmaster',
     city: 'City',
     cityHint: 'The prices of this marketplace depend on the city. Moscow when none is chosen.',
     cityPlaceholder: 'Start typing the name of a city',

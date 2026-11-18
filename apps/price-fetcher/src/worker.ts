@@ -7,6 +7,7 @@ import {
   OzonReferenceParser,
   OzonShortLinkParser,
   ResolveProductReferenceUseCase,
+  SportmasterReferenceParser,
   WildberriesReferenceParser,
 } from 'product-reference';
 import { type PriceFetchResultType, queueNames } from 'queue-contract';
@@ -36,6 +37,9 @@ import { MarketplaceProductReaderAdapter } from './infrastructure/product/market
 import { GeoIpPageParser } from './infrastructure/shared/geo-ip-page.parser.js';
 import { ProxyExitChecker } from './infrastructure/shared/proxy-exit.checker.js';
 import { TlsRouteProbeAdapter } from './infrastructure/shared/tls-route-probe.adapter.js';
+import { SportmasterPageParser } from './infrastructure/sportmaster/sportmaster-page.parser.js';
+import { SportmasterPlaywrightProductReaderAdapter } from './infrastructure/sportmaster/sportmaster-playwright-product-reader.adapter.js';
+import { SportmasterProductParser } from './infrastructure/sportmaster/sportmaster-product.parser.js';
 import { WildberriesChallengeParser } from './infrastructure/wildberries/wildberries-challenge.parser.js';
 import { WildberriesPageParser } from './infrastructure/wildberries/wildberries-page.parser.js';
 import { WildberriesPlaywrightProductReaderAdapter } from './infrastructure/wildberries/wildberries-playwright-product-reader.adapter.js';
@@ -108,6 +112,7 @@ const references = new OzonReferenceParser();
 const dnsReferences = new DnsReferenceParser();
 const wildberriesReferences = new WildberriesReferenceParser();
 const citilinkReferences = new CitilinkReferenceParser();
+const sportmasterReferences = new SportmasterReferenceParser();
 const citilinkStates = new CitilinkStateParser();
 // The exit of a proxy is checked once in a while for all the jobs, not by every job again.
 const exits = new ProxyExitChecker(30 * 60_000);
@@ -125,6 +130,7 @@ const controller = new PriceFetchController(
       dnsReferences,
       wildberriesReferences,
       citilinkReferences,
+      sportmasterReferences,
     ]),
     (timeoutMs): MarketplaceProductReaderAdapter => {
       const wildberries = new WildberriesPlaywrightProductReaderAdapter(
@@ -176,6 +182,18 @@ const controller = new PriceFetchController(
             },
             timeoutMs,
             logger.child('citilink'),
+            exits,
+          ),
+          sportmaster: new SportmasterPlaywrightProductReaderAdapter(
+            browser,
+            options,
+            {
+              geoIp: parsers.geoIp,
+              pages: new SportmasterPageParser(),
+              products: new SportmasterProductParser(sportmasterReferences),
+            },
+            timeoutMs,
+            logger.child('sportmaster'),
             exits,
           ),
         },

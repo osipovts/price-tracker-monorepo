@@ -205,6 +205,11 @@ export const en = {
         hint: 'The cities a visitor of dns-shop.ru can choose: the prices of DNS depend on the city.',
         id: 'Id on dns-shop.ru',
       },
+      'sportmaster-cities': {
+        title: 'Sportmaster cities',
+        hint: 'Cities available in the city selector on sportmaster.ru.',
+        id: 'ID on sportmaster.ru',
+      },
       'wildberries-cities': {
         title: 'Cities of Wildberries',
         hint: 'The towns with pickup points of wildberries.ru: the prices depend on the town, the same for all its points.',

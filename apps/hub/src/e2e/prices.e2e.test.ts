@@ -23,6 +23,7 @@ import {
  */
 const stack = new DockerStackAdapter();
 const productUrl = 'https://www.ozon.ru/product/4775581891/';
+const sportmasterCity = { id: '28300299', name: 'Казань', region: 'Республика Татарстан' };
 let hub: RunningHubInterface;
 let worker: FakePriceWorkerAdapter;
 let database: ReturnType<typeof connectDatabase>;
@@ -43,6 +44,9 @@ before(
     const infrastructure = await stack.start();
     database = connectDatabase(infrastructure.databaseUrl);
     await seedProxies(database, ['socks5://217.71.230.1:1080']);
+    await database.handbook.create({
+      data: { key: 'sportmaster-cities', data: [sportmasterCity], fetchedAt: new Date() },
+    });
 
     worker = new FakePriceWorkerAdapter(infrastructure.redisUrl);
     worker.setPrice(productUrl, 129_900);
@@ -214,4 +218,30 @@ void test('a product goes for good with its last tracker, and not before', async
     await database.priceObservation.count({ where: { trackedProductId: productId } }),
     0,
   );
+});
+
+void test('searches Sportmaster cities and queues the selected city with the product', async (): Promise<void> => {
+  const url = 'https://www.sportmaster.ru/product/33427090299/';
+  const city = sportmasterCity;
+  worker.setPrice(url, 228_700);
+
+  const search = await jane.request(
+    `/marketplaces/sportmaster/cities?query=${encodeURIComponent('Каз')}`,
+  );
+  assert.equal(search.status, 200);
+  assert.deepEqual(search.body, { items: [city] });
+
+  const added = await jane.request('/products', { json: { url, cityId: city.id } });
+  assert.equal(added.status, 201);
+  const product = productSchema.parse(added.body);
+  assert.ok(product.jobId !== null);
+
+  const job = await eventually(
+    (): Promise<(typeof worker.jobs)[number] | null> =>
+      Promise.resolve(worker.jobs.find(({ jobId }): boolean => jobId === product.jobId) ?? null),
+    'the Sportmaster price job reached the worker',
+  );
+  assert.deepEqual(job.products, [
+    { trackedProductId: product.id, url, cityId: city.id, cityName: city.name },
+  ]);
 });

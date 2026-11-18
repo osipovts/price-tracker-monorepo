@@ -15,6 +15,8 @@ test('tells the marketplace of a link whose prices depend on the city', (): void
   expect(cityMarketplaceOf('https://citilink.ru/product/2194059/')).toBe('citilink');
   expect(cityMarketplaceOf('https://www.ozon.ru/product/1/')).toBe('ozon');
   expect(cityMarketplaceOf('https://ozon.ru/t/AbC')).toBe('ozon');
+  expect(cityMarketplaceOf('https://www.sportmaster.ru/product/33427090299/')).toBe('sportmaster');
+  expect(cityMarketplaceOf('https://sportmaster.ru/product/33427090299/')).toBe('sportmaster');
 });
 
 test('has no city for a link of another site, for a link that is not finished, or for a lookalike host', (): void => {

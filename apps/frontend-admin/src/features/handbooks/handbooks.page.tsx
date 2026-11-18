@@ -27,7 +27,11 @@ import {
 } from './use-handbooks.hook.js';
 
 /** The handbooks of the cities, in the order of their tabs. */
-const cityHandbooks: readonly HandbookType[] = ['dns-cities', 'wildberries-cities'];
+const cityHandbooks: readonly HandbookType[] = [
+  'dns-cities',
+  'wildberries-cities',
+  'sportmaster-cities',
+];
 
 function isCityHandbook(value: string | null): value is HandbookType {
   return cityHandbooks.some((handbook): boolean => handbook === value);

@@ -237,6 +237,7 @@ void test('an administrator of the list gets the operator routes once the email 
       { marketplace: 'dns', count: 0 },
       { marketplace: 'wildberries', count: 0 },
       { marketplace: 'citilink', count: 0 },
+      { marketplace: 'sportmaster', count: 0 },
     ],
   });
   // Nothing is queued: the hub asks for the handbook of cities when it starts, but has no proxy to read it through.
@@ -247,7 +248,7 @@ void test('an administrator of the list gets the operator routes once the email 
     { kind: 'handbook_fetch', ...none },
   ]);
   assert.deepEqual(dashboard.jobs.unfinished, { queued: 0, running: 0, retrying: 0, lost: 0 });
-  assert.equal(dashboard.products.marketplaces.length, 4);
+  assert.equal(dashboard.products.marketplaces.length, 5);
 
   const user = hub.browser();
   await signUpAndLogIn(user, 'plain@example.com');

@@ -7,9 +7,10 @@ export class ProductReferenceEntity {
     readonly url: string,
     /** The city whose price is read, by the id the marketplace gives it; null where it has no cities. */
     readonly cityId: string | null = null,
+    readonly cityName: string | null = null,
   ) {}
 
-  inCity(cityId: string | null): ProductReferenceEntity {
-    return new ProductReferenceEntity(this.marketplace, this.id, this.url, cityId);
+  inCity(cityId: string | null, cityName: string | null = null): ProductReferenceEntity {
+    return new ProductReferenceEntity(this.marketplace, this.id, this.url, cityId, cityName);
   }
 }

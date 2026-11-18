@@ -8,6 +8,7 @@ import { NoProxiesAvailableError } from '../../shared/application/no-proxies-ava
 /** The marketplace a handbook is read from: the proxies are chosen for it. */
 const handbookMarketplaces: Readonly<Record<HandbookType, MarketplaceType>> = {
   'dns-cities': 'dns',
+  'sportmaster-cities': 'sportmaster',
   'wildberries-cities': 'wildberries',
 };
 

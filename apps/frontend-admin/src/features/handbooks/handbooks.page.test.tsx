@@ -72,6 +72,17 @@ beforeEach((): void => {
           }),
         );
       }
+      if (pathname === '/handbooks/sportmaster-cities' && request.method === 'GET') {
+        return Promise.resolve(
+          Response.json({
+            items: [{ id: '30970299', name: 'Иркутск', region: 'Иркутская область' }],
+            page: 1,
+            pageSize: 20,
+            total: 1,
+            fetchedAt: hub.fetchedAt,
+          }),
+        );
+      }
       if (pathname === '/handbooks/dns-cities' && request.method === 'GET') {
         return Promise.resolve(
           Response.json({
@@ -83,7 +94,10 @@ beforeEach((): void => {
           }),
         );
       }
-      if (pathname === '/handbooks/dns-cities/refresh') {
+      if (
+        pathname === '/handbooks/dns-cities/refresh' ||
+        pathname === '/handbooks/sportmaster-cities/refresh'
+      ) {
         return Promise.resolve(Response.json({ jobId }, { status: 202 }));
       }
       if (pathname === '/jobs') {
@@ -172,4 +186,14 @@ test('shows the cities of Wildberries on their own tab, with the region of each 
   expect(screen.getByText('Region (dest) on wildberries.ru')).toBeInTheDocument();
   expect(screen.queryByText(irkutsk.id)).not.toBeInTheDocument();
   expect(hub.requests).toContain('GET /handbooks/wildberries-cities?page=1&pageSize=20&query=');
+});
+
+test('shows the Sportmaster handbook and refreshes it from its own tab', async (): Promise<void> => {
+  renderPage();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('tab', { name: 'Sportmaster cities' }));
+
+  expect(await screen.findByText('30970299')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Refresh' }));
+  expect(hub.requests).toContain('POST /handbooks/sportmaster-cities/refresh');
 });
