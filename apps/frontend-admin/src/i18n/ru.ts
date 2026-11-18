@@ -203,6 +203,11 @@ export const ru: DictionaryType = {
   handbooks: {
     title: 'Справочники',
     cities: {
+      'aliexpress-cities': {
+        title: 'Города AliExpress',
+        hint: 'Города, которые можно выбрать на aliexpress.ru.',
+        id: 'Идентификатор на aliexpress.ru',
+      },
       'dns-cities': {
         title: 'Города DNS',
         hint: 'Города, которые можно выбрать на dns-shop.ru: цены DNS зависят от города.',

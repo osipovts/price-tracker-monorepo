@@ -3,6 +3,7 @@ import type { HandbookType } from 'queue-contract';
 
 /** The handbook that has the cities of a marketplace; one that is not here has no cities. */
 export const marketplaceCityHandbooks: Readonly<Partial<Record<MarketplaceType, HandbookType>>> = {
+  aliexpress: 'aliexpress-cities',
   dns: 'dns-cities',
   sportmaster: 'sportmaster-cities',
   wildberries: 'wildberries-cities',

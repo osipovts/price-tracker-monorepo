@@ -703,7 +703,7 @@ export interface operations {
                             staleAfterMs: number;
                             marketplaces: {
                                 /** @enum {string} */
-                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster";
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress";
                                 products: number;
                                 readsLastDay: number;
                                 /** Format: date-time */
@@ -715,7 +715,7 @@ export interface operations {
                                 /** Format: date-time */
                                 hour: string;
                                 /** @enum {string} */
-                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster";
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress";
                                 reads: number;
                             }[];
                         };
@@ -734,7 +734,7 @@ export interface operations {
                             }[];
                             usable: {
                                 /** @enum {string} */
-                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster";
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress";
                                 count: number;
                             }[];
                         };
@@ -872,7 +872,7 @@ export interface operations {
                                 /** Format: uuid */
                                 id: string;
                                 /** @enum {string} */
-                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster";
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress";
                                 url: string;
                                 cityName: string | null;
                                 title: string | null;
@@ -1691,7 +1691,7 @@ export interface operations {
                             disabled: boolean;
                             reputations: {
                                 /** @enum {string} */
-                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster";
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress";
                                 successes: number;
                                 failures: number;
                                 failureStreak: number;
@@ -1796,7 +1796,7 @@ export interface operations {
                         }[];
                         usable: {
                             /** @enum {string} */
-                            marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster";
+                            marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress";
                             count: number;
                         }[];
                     };
@@ -1845,7 +1845,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster";
+                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress";
             };
             cookie?: never;
         };
@@ -1883,7 +1883,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                handbook: "dns-cities" | "wildberries-cities" | "sportmaster-cities";
+                handbook: "dns-cities" | "wildberries-cities" | "sportmaster-cities" | "aliexpress-cities";
             };
             cookie?: never;
         };
@@ -1915,7 +1915,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                handbook: "dns-cities" | "wildberries-cities" | "sportmaster-cities";
+                handbook: "dns-cities" | "wildberries-cities" | "sportmaster-cities" | "aliexpress-cities";
             };
             cookie?: never;
         };

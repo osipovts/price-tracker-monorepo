@@ -8,6 +8,7 @@ test('each known marketplace has its colour, and one not known yet is grey', () 
   expect(marketplaceColor('wildberries')).toBe('grape');
   expect(marketplaceColor('citilink')).toBe('red');
   expect(marketplaceColor('sportmaster')).toBe('indigo');
+  expect(marketplaceColor('aliexpress')).toBe('pink');
   expect(marketplaceColor('yandex')).toBe('gray');
 });
 

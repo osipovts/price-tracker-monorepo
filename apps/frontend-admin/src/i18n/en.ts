@@ -200,6 +200,11 @@ export const en = {
   handbooks: {
     title: 'Handbooks',
     cities: {
+      'aliexpress-cities': {
+        title: 'AliExpress cities',
+        hint: 'Cities available in the city selector on aliexpress.ru.',
+        id: 'ID on aliexpress.ru',
+      },
       'dns-cities': {
         title: 'Cities of DNS',
         hint: 'The cities a visitor of dns-shop.ru can choose: the prices of DNS depend on the city.',

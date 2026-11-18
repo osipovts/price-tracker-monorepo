@@ -6,6 +6,7 @@ import type { ListBestProxyServersUseCase } from '../../proxy/application/index.
 
 /** The marketplace a handbook is read from: the proxies are chosen for it. */
 const handbookMarketplaces: Readonly<Record<HandbookType, MarketplaceType>> = {
+  'aliexpress-cities': 'aliexpress',
   'dns-cities': 'dns',
   'sportmaster-cities': 'sportmaster',
   'wildberries-cities': 'wildberries',

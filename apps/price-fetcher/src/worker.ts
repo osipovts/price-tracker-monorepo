@@ -2,6 +2,7 @@ import { Camoufox } from 'camoufox-js';
 import { CamoufoxOptionsFactory } from 'camoufox-options';
 import { ConsoleLoggerAdapter, parseLogLevel } from 'logger';
 import {
+  AliexpressReferenceParser,
   CitilinkReferenceParser,
   DnsReferenceParser,
   OzonReferenceParser,
@@ -16,6 +17,9 @@ import { z } from 'zod';
 
 import { ExpandLinkUseCase } from './application/link/expand-link.use-case.js';
 import { FetchPricesUseCase } from './application/product/fetch-prices.use-case.js';
+import { AliexpressPageParser } from './infrastructure/aliexpress/aliexpress-page.parser.js';
+import { AliexpressPlaywrightProductReaderAdapter } from './infrastructure/aliexpress/aliexpress-playwright-product-reader.adapter.js';
+import { AliexpressProductParser } from './infrastructure/aliexpress/aliexpress-product.parser.js';
 import { CitilinkPageParser } from './infrastructure/citilink/citilink-page.parser.js';
 import { CitilinkPlaywrightProductReaderAdapter } from './infrastructure/citilink/citilink-playwright-product-reader.adapter.js';
 import { CitilinkProductParser } from './infrastructure/citilink/citilink-product.parser.js';
@@ -113,6 +117,7 @@ const dnsReferences = new DnsReferenceParser();
 const wildberriesReferences = new WildberriesReferenceParser();
 const citilinkReferences = new CitilinkReferenceParser();
 const sportmasterReferences = new SportmasterReferenceParser();
+const aliexpressReferences = new AliexpressReferenceParser();
 const citilinkStates = new CitilinkStateParser();
 // The exit of a proxy is checked once in a while for all the jobs, not by every job again.
 const exits = new ProxyExitChecker(30 * 60_000);
@@ -131,6 +136,7 @@ const controller = new PriceFetchController(
       wildberriesReferences,
       citilinkReferences,
       sportmasterReferences,
+      aliexpressReferences,
     ]),
     (timeoutMs): MarketplaceProductReaderAdapter => {
       const wildberries = new WildberriesPlaywrightProductReaderAdapter(
@@ -194,6 +200,18 @@ const controller = new PriceFetchController(
             },
             timeoutMs,
             logger.child('sportmaster'),
+            exits,
+          ),
+          aliexpress: new AliexpressPlaywrightProductReaderAdapter(
+            browser,
+            options,
+            {
+              geoIp: parsers.geoIp,
+              pages: new AliexpressPageParser(),
+              products: new AliexpressProductParser(aliexpressReferences),
+            },
+            timeoutMs,
+            logger.child('aliexpress'),
             exits,
           ),
         },

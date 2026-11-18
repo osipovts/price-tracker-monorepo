@@ -72,6 +72,17 @@ beforeEach((): void => {
           }),
         );
       }
+      if (pathname === '/handbooks/aliexpress-cities' && request.method === 'GET') {
+        return Promise.resolve(
+          Response.json({
+            items: [{ id: '917473757371000000', name: 'Иркутск', region: 'Иркутская область' }],
+            page: 1,
+            pageSize: 20,
+            total: 1,
+            fetchedAt: hub.fetchedAt,
+          }),
+        );
+      }
       if (pathname === '/handbooks/sportmaster-cities' && request.method === 'GET') {
         return Promise.resolve(
           Response.json({
@@ -96,7 +107,8 @@ beforeEach((): void => {
       }
       if (
         pathname === '/handbooks/dns-cities/refresh' ||
-        pathname === '/handbooks/sportmaster-cities/refresh'
+        pathname === '/handbooks/sportmaster-cities/refresh' ||
+        pathname === '/handbooks/aliexpress-cities/refresh'
       ) {
         return Promise.resolve(Response.json({ jobId }, { status: 202 }));
       }
@@ -196,4 +208,14 @@ test('shows the Sportmaster handbook and refreshes it from its own tab', async (
   expect(await screen.findByText('30970299')).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Refresh' }));
   expect(hub.requests).toContain('POST /handbooks/sportmaster-cities/refresh');
+});
+
+test('shows the AliExpress handbook and refreshes it from its own tab', async (): Promise<void> => {
+  renderPage();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('tab', { name: 'AliExpress cities' }));
+
+  expect(await screen.findByText('917473757371000000')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Refresh' }));
+  expect(hub.requests).toContain('POST /handbooks/aliexpress-cities/refresh');
 });

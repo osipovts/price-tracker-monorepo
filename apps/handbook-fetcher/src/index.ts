@@ -6,6 +6,7 @@ import { JobLifecycleReporter, QueueMessageParser, QueueWorkerRunner } from 'que
 import { z } from 'zod';
 
 import { FetchCitiesUseCase } from './application/fetch-cities.use-case.js';
+import { AliexpressBrowserCitySourceAdapter } from './infrastructure/aliexpress-browser-city-source.adapter.js';
 import { DnsBrowserCitySourceAdapter } from './infrastructure/dns-browser-city-source.adapter.js';
 import { SportmasterBrowserCitySourceAdapter } from './infrastructure/sportmaster-browser-city-source.adapter.js';
 import { WildberriesBrowserCitySourceAdapter } from './infrastructure/wildberries-browser-city-source.adapter.js';
@@ -74,6 +75,11 @@ const russianLetters = Array.from('АБВГДЕЖЗИЙКЛМНОПРСТУФХ�
 
 const controller = new HandbookFetchController(
   {
+    'aliexpress-cities': new FetchCitiesUseCase(
+      new AliexpressBrowserCitySourceAdapter(browser, options, env.timeoutMs),
+      ['', ...russianLetters, 'Ё'],
+      logger.child('aliexpress-cities'),
+    ),
     'dns-cities': new FetchCitiesUseCase(
       new DnsBrowserCitySourceAdapter(browser, options, env.timeoutMs, logger.child('dns-site')),
       russianLetters,

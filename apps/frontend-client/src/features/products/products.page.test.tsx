@@ -299,6 +299,7 @@ const dnsLink = 'https://www.dns-shop.ru/product/0463bb2411a1d582/156-noutbuk/';
 test.each([
   ['dns', dnsLink, 'irkutsk-id'],
   ['sportmaster', 'https://www.sportmaster.ru/product/33427090299/', '30970299'],
+  ['aliexpress', 'https://aliexpress.ru/item/1005012815784218.html', '917473757371000000'],
 ])(
   'searches cities for %s and sends the selected city ID',
   async (marketplace, link, cityId): Promise<void> => {
@@ -456,7 +457,7 @@ test('starts the list with a row to track a new product, in place of a title of 
 
   const row = await screen.findByRole('button', { name: 'Track a new product' });
   expect(row).toHaveAccessibleDescription(
-    /^Paste a link from WB, Ozon, DNS, Citilink or Sportmaster/,
+    /^Paste a link from WB, Ozon, DNS, Citilink, Sportmaster or AliExpress/,
   );
   expect(row.compareDocumentPosition(screen.getByRole('link', { name: /Notebook/ }))).toBe(
     Node.DOCUMENT_POSITION_FOLLOWING,

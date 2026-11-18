@@ -24,6 +24,7 @@ function createController(
 
   return new HandbookFetchController(
     {
+      'aliexpress-cities': { execute },
       'dns-cities': { execute },
       'wildberries-cities': { execute },
       'sportmaster-cities': { execute },
