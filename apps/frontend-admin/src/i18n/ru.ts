@@ -208,6 +208,11 @@ export const ru: DictionaryType = {
         hint: 'Города, которые можно выбрать на dns-shop.ru: цены DNS зависят от города.',
         id: 'Идентификатор на dns-shop.ru',
       },
+      'sportmaster-cities': {
+        title: 'Города Спортмастера',
+        hint: 'Города, которые можно выбрать на sportmaster.ru.',
+        id: 'Идентификатор на sportmaster.ru',
+      },
       'wildberries-cities': {
         title: 'Города Wildberries',
         hint: 'Города с пунктами выдачи wildberries.ru: цены зависят от города и одинаковы для всех его пунктов.',

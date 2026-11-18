@@ -5,6 +5,7 @@ import {
   OzonReferenceParser,
   OzonShortLinkParser,
   ResolveProductReferenceUseCase,
+  SportmasterReferenceParser,
   WildberriesReferenceParser,
 } from 'product-reference';
 
@@ -119,6 +120,7 @@ import { ProductsController } from './presentation/products.controller.js';
           new DnsReferenceParser(),
           new WildberriesReferenceParser(),
           new CitilinkReferenceParser(),
+          new SportmasterReferenceParser(),
         ]),
     },
     {

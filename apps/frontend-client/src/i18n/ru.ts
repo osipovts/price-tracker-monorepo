@@ -90,10 +90,11 @@ export const ru: DictionaryType = {
     add: 'Добавить',
     addTitle: 'Отслеживать товар',
     addRow: 'Отслеживать новый товар',
-    addRowHint: 'Вставьте ссылку с WB, Ozon, DNS или Citilink - дальше за ценой следим мы',
+    addRowHint:
+      'Вставьте ссылку с WB, Ozon, DNS, Citilink или Sportmaster - дальше за ценой следим мы',
     addFirst: 'Добавить первый товар',
     linkLabel: 'Ссылка на товар',
-    supported: 'Поддерживаются: WB, Ozon, DNS, Citilink',
+    supported: 'Поддерживаются: WB, Ozon, DNS, Citilink, Sportmaster',
     city: 'Город',
     cityHint: 'Цены этого маркетплейса зависят от города. Если не выбрать, будет Москва.',
     cityPlaceholder: 'Начните вводить название города',

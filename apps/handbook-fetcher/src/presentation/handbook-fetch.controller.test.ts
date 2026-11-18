@@ -23,7 +23,11 @@ function createController(
   };
 
   return new HandbookFetchController(
-    { 'dns-cities': { execute }, 'wildberries-cities': { execute } },
+    {
+      'dns-cities': { execute },
+      'wildberries-cities': { execute },
+      'sportmaster-cities': { execute },
+    },
     new QueueMessageParser(silentLogger),
     new JobLifecycleReporter(publish, silentLogger),
     publish,

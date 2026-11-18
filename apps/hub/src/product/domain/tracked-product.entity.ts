@@ -25,9 +25,14 @@ export class TrackedProductEntity {
   constructor(readonly snapshot: TrackedProductInterface) {}
 
   /** What a worker is asked to read: the page, and the city of a marketplace that has them. */
-  get readRequest(): { trackedProductId: string; url: string; cityId?: string } {
-    const { id, url, cityId } = this.snapshot;
+  get readRequest(): { trackedProductId: string; url: string; cityId?: string; cityName?: string } {
+    const { id, url, marketplace, cityId, cityName } = this.snapshot;
 
-    return { trackedProductId: id, url, ...(cityId === null ? {} : { cityId }) };
+    return {
+      trackedProductId: id,
+      url,
+      ...(cityId === null ? {} : { cityId }),
+      ...(marketplace === 'sportmaster' && cityName !== null ? { cityName } : {}),
+    };
   }
 }

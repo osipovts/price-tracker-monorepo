@@ -28,6 +28,7 @@ export interface FetchPricesJobInterface {
     trackedProductId: string;
     url: string;
     cityId?: string | undefined;
+    cityName?: string | undefined;
     /** Read by an earlier try: it is counted as done and not read again. */
     read?: boolean | undefined;
   }>;
@@ -224,7 +225,9 @@ export class FetchPricesUseCase {
     product: FetchPricesJobInterface['products'][number],
   ): ProductReferenceEntity | null {
     try {
-      return this.resolveReference.execute(product.url).inCity(product.cityId ?? null);
+      return this.resolveReference
+        .execute(product.url)
+        .inCity(product.cityId ?? null, product.cityName ?? null);
     } catch {
       this.logger.warn(`Product ${product.trackedProductId}: unsupported URL`);
 
