@@ -8,7 +8,7 @@ export interface ProductBatchReaderPort {
   /** A result for each reference, in their order. */
   readMany(
     references: readonly ProductReferenceEntity[],
-    proxy: ProxyEndpointEntity,
+    proxy: ProxyEndpointEntity | null,
     signal: AbortSignal,
   ): Promise<ReadProductResultType[]>;
 }

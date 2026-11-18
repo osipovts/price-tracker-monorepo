@@ -37,7 +37,10 @@ export class DnsBrowserCitySourceAdapter implements CitySourcePort {
     private readonly apiUrl = 'https://restapi.dns-shop.ru/',
   ) {}
 
-  async open(proxy: ProxyEndpointEntity, signal: AbortSignal): Promise<CitySourceSessionInterface> {
+  async open(
+    proxy: ProxyEndpointEntity | null,
+    signal: AbortSignal,
+  ): Promise<CitySourceSessionInterface> {
     signal.throwIfAborted();
     const context = await this.browser.newContext({
       ...this.options.context(proxy),
@@ -51,7 +54,7 @@ export class DnsBrowserCitySourceAdapter implements CitySourcePort {
       await page.goto(this.siteUrl, { waitUntil: 'domcontentloaded' });
       // The pages of the site have the city selector in their header; a check has none.
       await page.locator('.header-top-menu__city-selector').first().waitFor({ state: 'visible' });
-      this.logger.debug(`Opened ${this.siteUrl} via ${proxy.server}`);
+      this.logger.debug(`Opened ${this.siteUrl} via ${proxy?.server ?? 'direct connection'}`);
 
       return this.sessionOf(context, page);
     } catch (error: unknown) {

@@ -38,7 +38,7 @@ export class RequestPriceObservationUseCase {
 
     this.logger.info(
       `Queued price observation ${jobId} of ${product.marketplace} ${product.externalId} (product ${product.id}) via ${String(routes.length)} routes: ${routes
-        .map((route): string => route.server)
+        .map((route): string => route.server ?? 'direct')
         .join(', ')}`,
     );
 

@@ -59,7 +59,7 @@ export class WildberriesPlaywrightProductReaderAdapter
 
   async read(
     reference: ProductReferenceEntity,
-    proxy: ProxyEndpointEntity,
+    proxy: ProxyEndpointEntity | null,
     signal: AbortSignal,
   ): Promise<ReadProductResultType> {
     const [result] = await this.readMany([reference], proxy, signal);
@@ -70,13 +70,13 @@ export class WildberriesPlaywrightProductReaderAdapter
   /** The references are of one city: the page asks the card service in the region of the first. */
   async readMany(
     references: readonly ProductReferenceEntity[],
-    proxy: ProxyEndpointEntity,
+    proxy: ProxyEndpointEntity | null,
     signal: AbortSignal,
   ): Promise<ReadProductResultType[]> {
     signal.throwIfAborted();
     if (references.length === 0) return [];
 
-    const route = proxy.server;
+    const route = proxy?.server ?? 'direct connection';
     this.logger.debug(`Opening a browser context via ${route}`);
 
     const context = await this.browser.newContext({
@@ -107,29 +107,32 @@ export class WildberriesPlaywrightProductReaderAdapter
 
   private async readPages(
     references: readonly ProductReferenceEntity[],
-    proxy: ProxyEndpointEntity,
+    proxy: ProxyEndpointEntity | null,
     context: BrowserContext,
   ): Promise<ReadProductResultType[]> {
     const page = await context.newPage();
     const [first] = references;
-    const country = marketplaceExitCountries.wildberries;
-    const exit = await this.exits.check(proxy, country, () => this.parsers.geoIp.parse(page));
-    if (exit.status !== 'confirmed') {
-      this.logger.warn(
-        exit.status === 'unavailable'
-          ? `GeoIP gave no answer through ${proxy.server}`
-          : `GeoIP did not confirm an exit in ${country} through ${proxy.server}`,
-      );
-      const failure: ReadProductResultType = {
-        status: exit.status === 'unavailable' ? 'network_error' : 'proxy_rejected',
-        stage: 'exit',
-      };
+    let exitIp: string | null = null;
+    if (proxy !== null) {
+      const country = marketplaceExitCountries.wildberries;
+      const exit = await this.exits.check(proxy, country, () => this.parsers.geoIp.parse(page));
+      if (exit.status !== 'confirmed') {
+        this.logger.warn(
+          exit.status === 'unavailable'
+            ? `GeoIP gave no answer through ${proxy.server}`
+            : `GeoIP did not confirm an exit in ${country} through ${proxy.server}`,
+        );
+        const failure: ReadProductResultType = {
+          status: exit.status === 'unavailable' ? 'network_error' : 'proxy_rejected',
+          stage: 'exit',
+        };
 
-      return references.map((): ReadProductResultType => failure);
+        return references.map((): ReadProductResultType => failure);
+      }
+
+      exitIp = exit.exitIp;
+      this.logger.debug(`Exit IP through ${proxy.server} is ${exitIp} (${country})`);
     }
-
-    const exitIp = exit.exitIp;
-    this.logger.debug(`Exit IP through ${proxy.server} is ${exitIp} (${country})`);
 
     const ask: CardAskInterface = { opened: '', numbers: [] };
     await this.askAbout(page, first?.cityId ?? null, ask);
@@ -166,8 +169,8 @@ export class WildberriesPlaywrightProductReaderAdapter
     opened: ProductReferenceEntity,
     wanted: readonly ProductReferenceEntity[],
     lastResponse: () => Response | null,
-    exitIp: string,
-    proxy: ProxyEndpointEntity,
+    exitIp: string | null,
+    proxy: ProxyEndpointEntity | null,
   ): Promise<PageOutcomeType> {
     const card = this.watchCard(page, opened);
     await page.goto(opened.url, { waitUntil: 'domcontentloaded' });
@@ -175,7 +178,7 @@ export class WildberriesPlaywrightProductReaderAdapter
     const response = lastResponse();
     if (response === null) return { failure: { status: 'network_error' } };
     if (this.parsers.challenges.isChallenge(response.status())) {
-      this.logger.warn(`The site check was not passed via ${proxy.server}`);
+      this.logger.warn(`The site check was not passed via ${proxy?.server ?? 'direct connection'}`);
 
       return { failure: { status: 'challenge_required' } };
     }

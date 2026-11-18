@@ -11,5 +11,5 @@ export interface CitySourceSessionInterface {
 
 export interface CitySourcePort {
   /** Opens the marketplace through the route; rejects when the route does not work. */
-  open(proxy: ProxyEndpointEntity, signal: AbortSignal): Promise<CitySourceSessionInterface>;
+  open(proxy: ProxyEndpointEntity | null, signal: AbortSignal): Promise<CitySourceSessionInterface>;
 }

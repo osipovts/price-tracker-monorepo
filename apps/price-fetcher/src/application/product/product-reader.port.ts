@@ -6,7 +6,7 @@ import type { ReadProductResultType } from '../../domain/product/product-snapsho
 export interface ProductReaderPort {
   read(
     reference: ProductReferenceEntity,
-    proxy: ProxyEndpointEntity,
+    proxy: ProxyEndpointEntity | null,
     signal: AbortSignal,
   ): Promise<ReadProductResultType>;
 }

@@ -24,13 +24,17 @@ export class CamoufoxOptionsFactory {
     };
   }
 
-  /** The route of a context: a browser never goes out without a proxy. */
-  context(proxy: ProxyEndpointEntity): BrowserContextOptions {
-    return {
-      proxy: {
-        server: proxy.server,
-        ...(proxy.username === '' ? {} : { username: proxy.username, password: proxy.password }),
-      },
-    };
+  /** The route of a context; a null proxy is a direct connection. */
+  context(proxy: ProxyEndpointEntity | null): BrowserContextOptions {
+    return proxy === null
+      ? {}
+      : {
+          proxy: {
+            server: proxy.server,
+            ...(proxy.username === ''
+              ? {}
+              : { username: proxy.username, password: proxy.password }),
+          },
+        };
   }
 }

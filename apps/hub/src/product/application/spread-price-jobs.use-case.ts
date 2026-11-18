@@ -29,12 +29,15 @@ export class SpreadPriceJobsUseCase {
     const at = now.getTime();
     this.forgetPast(at);
 
-    const [head] = routes;
+    const candidates = routes.some(({ server }): boolean => server !== null)
+      ? routes.filter(({ server }): boolean => server !== null)
+      : routes;
+    const [head] = candidates;
     if (head === undefined) return { routes, delayMs: 0 };
 
-    const keyOf = (route: RouteInterface): string => `${marketplace} ${route.server}`;
+    const keyOf = (route: RouteInterface): string => `${marketplace} ${route.server ?? 'direct'}`;
     const freeAt = (route: RouteInterface): number => this.busyUntil.get(keyOf(route)) ?? at;
-    const first = routes.reduce(
+    const first = candidates.reduce(
       (best, route): RouteInterface => (freeAt(route) < freeAt(best) ? route : best),
       head,
     );

@@ -29,7 +29,10 @@ export class SportmasterBrowserCitySourceAdapter implements CitySourcePort {
     private readonly timeoutMs: number,
   ) {}
 
-  async open(proxy: ProxyEndpointEntity, signal: AbortSignal): Promise<CitySourceSessionInterface> {
+  async open(
+    proxy: ProxyEndpointEntity | null,
+    signal: AbortSignal,
+  ): Promise<CitySourceSessionInterface> {
     signal.throwIfAborted();
     const context = await this.browser.newContext({
       ...this.options.context(proxy),

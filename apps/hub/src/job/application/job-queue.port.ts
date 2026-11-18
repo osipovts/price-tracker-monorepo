@@ -12,8 +12,8 @@ export interface ProxyFetchRequestInterface {
 }
 
 export interface RouteInterface {
-  /** Proxy URL in the order of trying. */
-  server: string;
+  /** Proxy URL in the order of trying; null is a direct connection. */
+  server: string | null;
 }
 
 export interface PriceFetchRequestInterface {
@@ -28,8 +28,8 @@ export interface PriceFetchRequestInterface {
 export interface HandbookFetchRequestInterface {
   jobId: string;
   handbook: HandbookType;
-  /** Proxy URLs in the order of trying. */
-  proxies: string[];
+  /** Proxy URLs in the order of trying; null is a direct connection. */
+  proxies: Array<string | null>;
 }
 
 export interface JobQueuePort {

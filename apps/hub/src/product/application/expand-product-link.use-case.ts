@@ -22,7 +22,10 @@ export class ExpandProductLinkUseCase {
   async execute(url: string): Promise<string> {
     if (!this.isShortLink(url)) return url;
 
-    const routes = (await this.chooseRoutes.execute('ozon')).slice(0, maxRoutes);
+    const chosen = await this.chooseRoutes.execute('ozon');
+    const direct = chosen.filter(({ server }): boolean => server === null);
+    const proxies = chosen.filter(({ server }): boolean => server !== null);
+    const routes = [...proxies.slice(0, maxRoutes - direct.length), ...direct];
     if (routes.length === 0) throw new NoProxiesAvailableError();
 
     try {

@@ -14,7 +14,11 @@ export class OzonPlaywrightLinkExpanderAdapter implements LinkExpanderPort {
     private readonly logger: LoggerPort = silentLogger,
   ) {}
 
-  async expand(url: URL, proxy: ProxyEndpointEntity, signal: AbortSignal): Promise<string | null> {
+  async expand(
+    url: URL,
+    proxy: ProxyEndpointEntity | null,
+    signal: AbortSignal,
+  ): Promise<string | null> {
     signal.throwIfAborted();
     const context = await this.browser.newContext({
       ...this.options.context(proxy),
@@ -39,7 +43,7 @@ export class OzonPlaywrightLinkExpanderAdapter implements LinkExpanderPort {
     } catch (error: unknown) {
       signal.throwIfAborted();
       this.logger.warn(
-        `The short link was not followed via ${proxy.server}: ${errorMessage(error).split('\n')[0] ?? ''}`,
+        `The short link was not followed via ${proxy?.server ?? 'direct connection'}: ${errorMessage(error).split('\n')[0] ?? ''}`,
       );
 
       return null;
