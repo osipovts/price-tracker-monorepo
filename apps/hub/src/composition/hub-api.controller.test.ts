@@ -365,12 +365,19 @@ async function addProduct(url = productUrl): Promise<{ id: string; jobId: string
   return { id: String(added.body['id']), jobId: typeof jobId === 'string' ? jobId : null };
 }
 
-void test('tracks a product though there is no way to read its price yet', async (): Promise<void> => {
+void test('tracks a product and queues the first price read through a direct connection when there are no proxies', async (): Promise<void> => {
   const added = await call('/products', post({ url: productUrl }));
 
   assert.equal(added.status, 201);
-  assert.equal(added.body['jobId'], null);
-  assert.equal(queued.length, 0);
+  assert.equal(typeof added.body['jobId'], 'string');
+  assert.deepEqual(queued, [
+    {
+      jobId: added.body['jobId'],
+      routes: [{ server: null }],
+      products: [{ trackedProductId: added.body['id'], url: productUrl, cityId: 'moskva' }],
+      timeoutMs: 30000,
+    },
+  ]);
 });
 
 void test('queues a proxy source refresh with defaults, with and without a body', async (): Promise<void> => {
@@ -546,7 +553,11 @@ void test('queues the read of the first price when a product is added, and serve
   assert.ok(jobId !== null);
   assert.deepEqual(queued.at(-1), {
     jobId,
-    routes: [{ server: 'socks5://217.71.230.1:1080' }, { server: 'socks5://217.71.230.2:1080' }],
+    routes: [
+      { server: 'socks5://217.71.230.1:1080' },
+      { server: 'socks5://217.71.230.2:1080' },
+      { server: null },
+    ],
     products: [{ trackedProductId: id, url, cityId: 'moskva' }],
     timeoutMs: 30000,
   });
@@ -926,9 +937,7 @@ void test('the operator queues the read of a handbook through the proxies, and t
   assert.ok(typeof request === 'object' && request !== null && 'handbook' in request);
   assert.equal(request.handbook, 'dns-cities');
   assert.ok(
-    'proxies' in request &&
-      Array.isArray(request.proxies) &&
-      request.proxies.every((proxy) => typeof proxy === 'string'),
+    'proxies' in request && Array.isArray(request.proxies) && request.proxies.at(-1) === null,
   );
   assert.equal((await call('/handbooks/unknown/refresh', post())).status, 400);
 });

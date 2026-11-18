@@ -292,7 +292,7 @@ void test('starts the next try on the routes that did not fail this one', async 
       (): ProductBatchReaderPort =>
         oneByOne({
           read: (_reference, endpoint): Promise<ReadProductResultType> =>
-            Promise.resolve(answers[endpoint.server] ?? success),
+            Promise.resolve(answers[endpoint?.server ?? ''] ?? success),
         }),
     ),
     new QueueMessageParser(silentLogger),

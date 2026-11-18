@@ -22,6 +22,7 @@ void test('launches a Russian visitor whose place follows the address, headless 
 });
 
 void test('routes a context through the proxy it is given, with the credentials of one that asks for them', (): void => {
+  assert.deepEqual(factory.context(null), {});
   assert.deepEqual(
     factory.context(new ProxyEndpointEntity('socks5://217.71.230.1:1080')).proxy?.username,
     undefined,

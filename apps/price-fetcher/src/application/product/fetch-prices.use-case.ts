@@ -17,12 +17,12 @@ import type { ProductBatchReaderPort } from './product-batch-reader.port.js';
 import type { RouteProbePort } from './route-probe.port.js';
 
 export interface FetchPricesRouteInterface {
-  /** Proxy URL, with the credentials if it has them. */
-  server: string;
+  /** Proxy URL, with the credentials if it has them; null is a direct connection. */
+  server: string | null;
 }
 
 export interface FetchPricesJobInterface {
-  /** Routes in the order they are tried: a product is never read without a proxy. */
+  /** Routes in the order they are tried; a null server is a direct connection. */
   routes: readonly FetchPricesRouteInterface[];
   products: ReadonlyArray<{
     trackedProductId: string;
@@ -103,7 +103,7 @@ const everyRouteReaches: RouteProbePort = {
 
 interface CandidateInterface {
   route: FetchPricesRouteInterface;
-  proxy: ProxyEndpointEntity;
+  proxy: ProxyEndpointEntity | null;
 }
 
 interface ProductToReadInterface {
@@ -156,7 +156,10 @@ export class FetchPricesUseCase {
     const unsafe: FetchPricesRouteInterface[] = [];
     for (const route of job.routes) {
       try {
-        candidates.push({ route, proxy: new ProxyEndpointEntity(route.server) });
+        candidates.push({
+          route,
+          proxy: route.server === null ? null : new ProxyEndpointEntity(route.server),
+        });
       } catch {
         // An unsafe or unsupported address is skipped like an unavailable proxy.
         this.logger.warn('Skipping a route with an unsafe or unsupported proxy address');
@@ -197,7 +200,7 @@ export class FetchPricesUseCase {
       signal.throwIfAborted();
       const readings = await this.readBatch(
         batch,
-        candidates.map(({ proxy }): ProxyEndpointEntity => proxy),
+        candidates.map(({ proxy }): ProxyEndpointEntity | null => proxy),
         reader,
         signal,
       );
@@ -270,9 +273,13 @@ export class FetchPricesUseCase {
     const failed = attempts
       .filter(({ result }): boolean => isRouteFailure(result))
       .map(({ proxy }): string | null => proxy);
-    // The one that read, then the untried and the unharmed ones, then the failed ones from the first to fail.
+    // The one that read, then the untried and the unharmed ones, then the failed ones from the first to fail; direct stays last.
     const rank = ({ proxy }: CandidateInterface): number =>
-      proxy.server === read ? -1 : failed.indexOf(proxy.server) + 1;
+      proxy === null
+        ? failed.length + 1
+        : proxy.server === read
+          ? -1
+          : failed.indexOf(proxy.server) + 1;
 
     return candidates.toSorted((a, b): number => rank(a) - rank(b));
   }
@@ -283,7 +290,7 @@ export class FetchPricesUseCase {
    */
   private async readBatch(
     batch: readonly ProductToReadInterface[],
-    candidates: readonly ProxyEndpointEntity[],
+    candidates: ReadonlyArray<ProxyEndpointEntity | null>,
     reader: ProductBatchReaderPort,
     signal: AbortSignal,
   ): Promise<ReadingInterface[]> {
@@ -307,7 +314,7 @@ export class FetchPricesUseCase {
       if (tries > 0) await setTimeout(1000, undefined, { signal });
       tries += 1;
 
-      const route = `Attempt ${String(tries)} via ${proxy.server}`;
+      const route = `Attempt ${String(tries)} via ${proxy?.server ?? 'direct connection'}`;
       this.logger.verbose(`${route} for ${String(open.length)} products`);
       const startedAt = performance.now();
       const results = await this.attempt(
@@ -323,7 +330,7 @@ export class FetchPricesUseCase {
         const result = results[index] ?? { status: 'parse_error' };
         // The first product of the visit tells of it; the others share it.
         reading.output.attempts.push({
-          proxy: proxy.server,
+          proxy: proxy?.server ?? null,
           result,
           durationMs,
           shared: index > 0,
@@ -349,23 +356,25 @@ export class FetchPricesUseCase {
   /** A route that does not reach the site fails at once, without a browser. */
   private async attempt(
     references: readonly ProductReferenceEntity[],
-    proxy: ProxyEndpointEntity,
+    proxy: ProxyEndpointEntity | null,
     reader: ProductBatchReaderPort,
     signal: AbortSignal,
   ): Promise<ReadProductResultType[]> {
     const [first] = references;
     if (first === undefined) return [];
 
-    const host = new URL(first.url).hostname;
-    const reaches = await this.probe.reaches(proxy, host, signal);
-    signal.throwIfAborted();
-    if (!reaches) {
-      this.logger.warn(`The route via ${proxy.server} did not reach ${host}`);
+    if (proxy !== null) {
+      const host = new URL(first.url).hostname;
+      const reaches = await this.probe.reaches(proxy, host, signal);
+      signal.throwIfAborted();
+      if (!reaches) {
+        this.logger.warn(`The route via ${proxy.server} did not reach ${host}`);
 
-      return references.map((): ReadProductResultType => ({
-        status: 'network_error',
-        stage: 'preflight',
-      }));
+        return references.map((): ReadProductResultType => ({
+          status: 'network_error',
+          stage: 'preflight',
+        }));
+      }
     }
 
     return (await reader.readMany(references, proxy, signal)).map(withStage);

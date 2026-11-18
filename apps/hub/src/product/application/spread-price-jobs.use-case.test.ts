@@ -34,10 +34,22 @@ void test('keeps the other routes behind the first one, in their order', (): voi
 
 void test('puts the jobs of one proxy a lag apart when there is no other', (): void => {
   const spread = new SpreadPriceJobsUseCase(lag);
+  const direct = { server: null };
 
-  const delays = [1, 2, 3].map(() => spread.execute('ozon', [a], start).delayMs);
+  const slots = [1, 2, 3].map(() => spread.execute('ozon', [a, direct], start));
 
-  assert.deepEqual(delays, [0, lag, 2 * lag]);
+  assert.deepEqual(
+    slots.map(({ delayMs }) => delayMs),
+    [0, lag, 2 * lag],
+  );
+  assert.deepEqual(
+    slots.map(({ routes }) => routes),
+    [
+      [a, direct],
+      [a, direct],
+      [a, direct],
+    ],
+  );
 });
 
 void test('counts the lag from the moment of the job, and forgets a proxy that is free again', (): void => {
@@ -60,4 +72,17 @@ void test('leaves a job without routes as it is', (): void => {
     routes: [],
     delayMs: 0,
   });
+});
+
+void test('spaces jobs on the direct route when no proxy is present', (): void => {
+  const spread = new SpreadPriceJobsUseCase(lag);
+  const direct = { server: null };
+
+  assert.deepEqual(
+    [1, 2].map(() => spread.execute('ozon', [direct], start)),
+    [
+      { routes: [direct], delayMs: 0 },
+      { routes: [direct], delayMs: lag },
+    ],
+  );
 });

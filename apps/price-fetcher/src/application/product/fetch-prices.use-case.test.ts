@@ -35,7 +35,7 @@ const product = { trackedProductId, url: 'https://www.ozon.ru/product/1/' };
 const proxy = 'socks5://217.71.230.103:1080';
 
 async function fetchOne(
-  servers: string[],
+  servers: Array<string | null>,
   reader: ProductReaderPort,
 ): Promise<ProductFetchResultInterface | undefined> {
   const results: ProductFetchResultInterface[] = [];
@@ -82,7 +82,7 @@ void test('stops at a challenge instead of rotating proxies or claiming out-of-s
 void test('reads the product through the proxy of its route', async (): Promise<void> => {
   const result = await fetchOne([proxy], {
     read: (_reference, endpoint): Promise<ReadProductResultType> => {
-      assert.equal(endpoint.server, proxy);
+      assert.equal(endpoint?.server, proxy);
 
       return Promise.resolve({ status: 'network_error' });
     },
@@ -93,6 +93,21 @@ void test('reads the product through the proxy of its route', async (): Promise<
     [{ server: proxy, read: { status: 'network_error', stage: 'page' } }],
   );
   assert.equal(typeof result.attempts[0]?.durationMs, 'number');
+});
+
+void test('a null route makes a direct attempt', async (): Promise<void> => {
+  const result = await fetchOne([null], {
+    read: (_reference, endpoint): Promise<ReadProductResultType> => {
+      assert.equal(endpoint, null);
+
+      return Promise.resolve({ status: 'network_error' });
+    },
+  });
+
+  assert.deepEqual(
+    result?.attempts.map(({ proxy: server, result: read }) => ({ server, read })),
+    [{ server: null, read: { status: 'network_error', stage: 'page' } }],
+  );
 });
 
 void test('reports no proxies without routes', async (): Promise<void> => {
@@ -174,15 +189,18 @@ void test('learns its routes as it goes: the next product starts on the one that
     (): ProductBatchReaderPort =>
       oneByOne({
         read: (reference, endpoint): Promise<ReadProductResultType> => {
+          const server = endpoint?.server ?? 'direct';
           if (tried.at(-1)?.[0] !== reference.url) tried.push([reference.url]);
-          tried.at(-1)?.push(endpoint.server);
+          tried.at(-1)?.push(server);
 
-          return Promise.resolve(answers[endpoint.server] ?? { status: 'network_error' });
+          return Promise.resolve(answers[server] ?? { status: 'network_error' });
         },
       }),
   ).execute(
     {
-      routes: [dead, 'socks5://127.0.0.1:1080', refused, good, spare].map((server) => ({ server })),
+      routes: [dead, 'socks5://127.0.0.1:1080', refused, good, spare, null].map((server) => ({
+        server,
+      })),
       products,
       timeoutMs: 1000,
     },
@@ -194,14 +212,14 @@ void test('learns its routes as it goes: the next product starts on the one that
   );
 
   // The first product: the dead route, then the refusal ends it, as a refusal of the site is not rotated around.
-  // The second starts on the routes the first did not try: the dead and the refused ones go last.
+  // The second starts on the routes the first did not try: the dead, refused, and direct ones go last.
   assert.deepEqual(tried, [
     ['https://www.ozon.ru/product/1/', dead, refused],
     ['https://www.ozon.ru/product/2/', good],
   ]);
   assert.deepEqual(
-    routes.map(({ server }): string => server),
-    [good, spare, dead, refused, 'socks5://127.0.0.1:1080'],
+    routes.map(({ server }): string | null => server),
+    [good, spare, dead, refused, null, 'socks5://127.0.0.1:1080'],
   );
 });
 
@@ -220,7 +238,7 @@ void test('a route that does not reach the site fails at once, before a browser 
     (): ProductBatchReaderPort =>
       oneByOne({
         read: (_reference, endpoint): Promise<ReadProductResultType> => {
-          read.push(endpoint.server);
+          read.push(endpoint?.server ?? '');
 
           return Promise.resolve({ status: 'parse_error' });
         },
@@ -306,7 +324,7 @@ void test('tries the next route only for the products of a batch the last one le
 
         return Promise.resolve(
           references.map(({ id }): ReadProductResultType =>
-            endpoint.server === dead && id === '2'
+            endpoint?.server === dead && id === '2'
               ? { status: 'network_error' }
               : { status: 'parse_error' },
           ),

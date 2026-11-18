@@ -52,6 +52,30 @@ void test('asks the worker to expand a short link through the routes', async ():
   assert.deepEqual(asked, [{ url: 'https://ozon.ru/t/AbC', routes, timeoutMs: 20_000 }]);
 });
 
+void test('keeps the direct fallback route last when trimming to the route limit', async (): Promise<void> => {
+  const asked: ProductLinkExpansionInterface[] = [];
+  const chosen: RouteInterface[] = [
+    { server: 'socks5://217.71.230.1:1080' },
+    { server: 'socks5://217.71.230.2:1080' },
+    { server: 'socks5://217.71.230.3:1080' },
+    { server: null },
+  ];
+  const useCase = useCaseOf(
+    {
+      expand: (request): Promise<string> => {
+        asked.push(request);
+
+        return Promise.resolve('https://www.ozon.ru/product/1/');
+      },
+    },
+    chosen,
+  );
+
+  await useCase.execute('https://ozon.ru/t/AbC');
+
+  assert.deepEqual(asked[0]?.routes, [chosen[0], chosen[1], { server: null }]);
+});
+
 void test('refuses a short link when there is no route or no answer', async (): Promise<void> => {
   await assert.rejects(
     useCaseOf({ expand: (): Promise<string> => Promise.resolve('') }, []).execute(

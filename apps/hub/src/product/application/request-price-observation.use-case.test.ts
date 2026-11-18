@@ -12,7 +12,6 @@ import { ProxyEntity } from '../../proxy/domain/proxy.entity.js';
 import { InMemoryProxyRepositoryAdapter } from '../../proxy/infrastructure/in-memory-proxy-repository.adapter.js';
 import { InMemoryProxyReputationRepositoryAdapter } from '../../proxy/infrastructure/in-memory-proxy-reputation-repository.adapter.js';
 import { systemClock } from '../../shared/application/clock.port.js';
-import { NoProxiesAvailableError } from '../../shared/application/no-proxies-available.error.js';
 import { InMemoryTrackedProductRepositoryAdapter } from '../infrastructure/in-memory-tracked-product-repository.adapter.js';
 import { ChoosePriceRoutesUseCase } from './choose-price-routes.use-case.js';
 import { ProductNotFoundError } from './product-not-found.error.js';
@@ -112,6 +111,7 @@ void test('queues the product with the best alive proxies and records the job', 
   assert.deepEqual(request.routes, [
     { server: 'socks5://217.71.230.2:1080' },
     { server: 'socks5://217.71.230.3:1080' },
+    { server: null },
   ]);
   assert.deepEqual(request.products, [{ trackedProductId: productId, url: productUrl }]);
   assert.equal(request.timeoutMs, 30000);
@@ -137,8 +137,8 @@ void test('gives the manual proxies first, with their credentials', async (): Pr
   await useCase.execute(userId, productId);
 
   assert.deepEqual(
-    requests[0]?.routes.map((route): string => route.server),
-    ['http://user:secret@217.71.230.5:3128/', 'socks5://217.71.230.1:1080'],
+    requests[0]?.routes.map((route): string | null => route.server),
+    ['http://user:secret@217.71.230.5:3128/', 'socks5://217.71.230.1:1080', null],
   );
 });
 
@@ -154,17 +154,17 @@ void test('refuses a product the user does not track, though it exists', async (
   assert.equal(requests.length, 0);
 });
 
-void test('refuses an unknown product and a missing route without queueing', async (): Promise<void> => {
+void test('falls back to a direct route when no proxy is alive, and refuses an unknown product', async (): Promise<void> => {
   const empty = await createUseCase([proxy('socks5://217.71.230.1:1080', false, 0)]);
 
-  await assert.rejects(empty.useCase.execute(userId, empty.productId), NoProxiesAvailableError);
+  await empty.useCase.execute(userId, empty.productId);
+  assert.deepEqual(empty.requests[0]?.routes, [{ server: null }]);
+
   await assert.rejects(
     empty.useCase.execute(userId, '9a2d0f3c-0a44-4b6a-b8c2-7e7e2f3b1d33'),
     ProductNotFoundError,
   );
-
-  assert.equal(empty.requests.length, 0);
-  assert.equal((await empty.jobs.list({}, { page: 1, pageSize: 10 })).total, 0);
+  assert.equal((await empty.jobs.list({}, { page: 1, pageSize: 10 })).total, 1);
 });
 
 void test('marks the job failed if it cannot be queued', async (): Promise<void> => {

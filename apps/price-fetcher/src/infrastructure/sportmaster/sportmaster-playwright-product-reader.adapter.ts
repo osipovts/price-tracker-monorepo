@@ -46,11 +46,11 @@ export class SportmasterPlaywrightProductReaderAdapter implements ProductReaderP
 
   async read(
     reference: ProductReferenceEntity,
-    proxy: ProxyEndpointEntity,
+    proxy: ProxyEndpointEntity | null,
     signal: AbortSignal,
   ): Promise<ReadProductResultType> {
     signal.throwIfAborted();
-    const route = proxy.server;
+    const route = proxy?.server ?? 'direct connection';
     this.logger.debug(`Opening a browser context via ${route}`);
 
     let context: BrowserContext | undefined;
@@ -90,25 +90,28 @@ export class SportmasterPlaywrightProductReaderAdapter implements ProductReaderP
 
   private async readPage(
     reference: ProductReferenceEntity,
-    proxy: ProxyEndpointEntity,
+    proxy: ProxyEndpointEntity | null,
     context: BrowserContext,
   ): Promise<ReadProductResultType> {
     const page = await context.newPage();
-    const country = marketplaceExitCountries[reference.marketplace];
-    const exit = await this.exits.check(proxy, country, () => this.parsers.geoIp.parse(page));
-    if (exit.status === 'unavailable') {
-      this.logger.warn(`GeoIP gave no answer through ${proxy.server}`);
+    let exitIp: string | null = null;
+    if (proxy !== null) {
+      const country = marketplaceExitCountries[reference.marketplace];
+      const exit = await this.exits.check(proxy, country, () => this.parsers.geoIp.parse(page));
+      if (exit.status === 'unavailable') {
+        this.logger.warn(`GeoIP gave no answer through ${proxy.server}`);
 
-      return { status: 'network_error', stage: 'exit' };
+        return { status: 'network_error', stage: 'exit' };
+      }
+      if (exit.status === 'rejected') {
+        this.logger.warn(`GeoIP did not confirm an exit in ${country} through ${proxy.server}`);
+
+        return { status: 'proxy_rejected', stage: 'exit' };
+      }
+
+      exitIp = exit.exitIp;
+      this.logger.debug(`Exit IP through ${proxy.server} is ${exitIp} (${country})`);
     }
-    if (exit.status === 'rejected') {
-      this.logger.warn(`GeoIP did not confirm an exit in ${country} through ${proxy.server}`);
-
-      return { status: 'proxy_rejected', stage: 'exit' };
-    }
-
-    const exitIp = exit.exitIp;
-    this.logger.debug(`Exit IP through ${proxy.server} is ${exitIp} (${country})`);
 
     const lastResponse = this.watch(page);
     await page.goto(reference.url, { waitUntil: 'commit' });
@@ -134,7 +137,9 @@ export class SportmasterPlaywrightProductReaderAdapter implements ProductReaderP
       document = await this.parsers.pages.parse(page);
     }
     if (document.hasChallenge) {
-      this.logger.warn(`The Qrator check was not passed via ${proxy.server}`);
+      this.logger.warn(
+        `The Qrator check was not passed via ${proxy?.server ?? 'direct connection'}`,
+      );
 
       return { status: 'challenge_required' };
     }

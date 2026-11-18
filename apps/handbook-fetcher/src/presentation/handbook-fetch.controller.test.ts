@@ -9,7 +9,7 @@ import type { FetchCitiesUseCase } from '../application/fetch-cities.use-case.js
 import { HandbookFetchController } from './handbook-fetch.controller.js';
 
 const jobId = '3f0c9a52-7a53-4a64-9d0d-2f2f6c1f0a11';
-const job = { jobId, handbook: 'dns-cities', proxies: ['socks5://217.71.230.1:1080'] };
+const job = { jobId, handbook: 'dns-cities', proxies: ['socks5://217.71.230.1:1080', null] };
 const irkutsk = { id: '30b7c1f1-03fb-11dc-95ee-00151716f9f5', name: 'Иркутск', region: null };
 
 function createController(
@@ -36,9 +36,9 @@ function createController(
 
 void test('reports the letters read, and then the cities, of a job from start to finish', async (): Promise<void> => {
   const published: HandbookFetchResultType[] = [];
-  const routes: string[] = [];
+  const routes: Array<string | undefined> = [];
   const controller = createController(async (given, _signal, listener) => {
-    routes.push(...given.map((route) => route.server));
+    routes.push(...given.map((route) => route?.server));
     await listener.onProgress(0, 2);
     await listener.onProgress(2, 2);
 
@@ -47,7 +47,7 @@ void test('reports the letters read, and then the cities, of a job from start to
 
   await controller.handle(job, new AbortController().signal);
 
-  assert.deepEqual(routes, ['socks5://217.71.230.1:1080']);
+  assert.deepEqual(routes, ['socks5://217.71.230.1:1080', undefined]);
   assert.deepEqual(published, [
     { type: 'job_started', jobId },
     { type: 'job_progress', jobId, processed: 0, total: 2, succeeded: 0 },
@@ -58,9 +58,9 @@ void test('reports the letters read, and then the cities, of a job from start to
 });
 
 void test('leaves out a route that is not safe to connect through', async (): Promise<void> => {
-  const routes: string[] = [];
+  const routes: Array<string | undefined> = [];
   const controller = createController((given): Promise<never[]> => {
-    routes.push(...given.map((route) => route.server));
+    routes.push(...given.map((route) => route?.server));
 
     return Promise.resolve([]);
   }, []);

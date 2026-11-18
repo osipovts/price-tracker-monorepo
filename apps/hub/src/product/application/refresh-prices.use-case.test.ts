@@ -176,7 +176,7 @@ void test('starts the jobs that run together on different proxies, and a lag apa
   await several.refresh.execute();
 
   assert.deepEqual(
-    several.requests.map((request): string | undefined => request.routes[0]?.server),
+    several.requests.map((request): string | null | undefined => request.routes[0]?.server),
     [route.server, otherRoute.server],
   );
   assert.deepEqual(

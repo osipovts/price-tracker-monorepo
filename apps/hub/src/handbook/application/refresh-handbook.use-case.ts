@@ -3,7 +3,6 @@ import type { HandbookType } from 'queue-contract';
 
 import type { ScheduleJobUseCase } from '../../job/application/index.js';
 import type { ListBestProxyServersUseCase } from '../../proxy/application/index.js';
-import { NoProxiesAvailableError } from '../../shared/application/no-proxies-available.error.js';
 
 /** The marketplace a handbook is read from: the proxies are chosen for it. */
 const handbookMarketplaces: Readonly<Record<HandbookType, MarketplaceType>> = {
@@ -12,12 +11,12 @@ const handbookMarketplaces: Readonly<Record<HandbookType, MarketplaceType>> = {
   'wildberries-cities': 'wildberries',
 };
 
-/** Queues the read of a handbook by a worker, through the best proxies. */
+/** Queues the read of a handbook by a worker, through the best proxies, and a direct connection last. */
 export class RefreshHandbookUseCase {
   constructor(
     private readonly proxyServers: ListBestProxyServersUseCase,
     private readonly scheduleJob: ScheduleJobUseCase,
-    /** How many of the best proxies a job may try. */
+    /** How many of the best proxies a job may try before the direct connection. */
     private readonly proxyCount: number,
   ) {}
 
@@ -27,7 +26,6 @@ export class RefreshHandbookUseCase {
       marketplace: handbookMarketplaces[handbook],
       limit: this.proxyCount,
     });
-    if (servers.length === 0) throw new NoProxiesAvailableError();
 
     // The workers connect with the credentials of a proxy, which the hub keeps apart from its server.
     const urls = await this.proxyServers.urlsOf(servers);
@@ -36,7 +34,7 @@ export class RefreshHandbookUseCase {
       kind: 'handbook_fetch',
       requestedBy,
       handbook,
-      proxies: servers.map((server): string => urls.get(server) ?? server),
+      proxies: [...servers.map((server): string => urls.get(server) ?? server), null],
     });
   }
 }

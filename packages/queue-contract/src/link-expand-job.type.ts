@@ -5,7 +5,7 @@ import { priceFetchRouteSchema } from './price-fetch-job.type.js';
 export const linkExpandJobSchema = z.object({
   /** A short link of a marketplace. */
   url: z.url(),
-  /** Routes in the order they are tried: the job never goes out without a proxy. */
+  /** Routes in the order they are tried; a null server is a direct connection. */
   proxies: z.array(priceFetchRouteSchema).min(1),
   timeoutMs: z.number().int().min(1000).max(60000),
 });

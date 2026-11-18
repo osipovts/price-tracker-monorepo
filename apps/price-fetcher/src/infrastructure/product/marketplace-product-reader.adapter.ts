@@ -20,7 +20,7 @@ export class MarketplaceProductReaderAdapter implements ProductBatchReaderPort {
 
   async readMany(
     references: readonly ProductReferenceEntity[],
-    proxy: ProxyEndpointEntity,
+    proxy: ProxyEndpointEntity | null,
     signal: AbortSignal,
   ): Promise<ReadProductResultType[]> {
     const [first] = references;

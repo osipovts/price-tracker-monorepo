@@ -34,7 +34,10 @@ export class WildberriesBrowserCitySourceAdapter implements CitySourcePort {
     private readonly pointsUrl = 'https://static-basket-01.wbbasket.ru/vol0/data/all-poo-fr-v12.json',
   ) {}
 
-  async open(proxy: ProxyEndpointEntity, signal: AbortSignal): Promise<CitySourceSessionInterface> {
+  async open(
+    proxy: ProxyEndpointEntity | null,
+    signal: AbortSignal,
+  ): Promise<CitySourceSessionInterface> {
     signal.throwIfAborted();
     const context = await this.browser.newContext({
       ...this.options.context(proxy),
@@ -56,7 +59,7 @@ export class WildberriesBrowserCitySourceAdapter implements CitySourcePort {
         .locator('[data-wba-header-name="DLV_Adress"]')
         .first()
         .waitFor({ state: 'attached' });
-      this.logger.debug(`Opened ${this.siteUrl} via ${proxy.server}`);
+      this.logger.debug(`Opened ${this.siteUrl} via ${proxy?.server ?? 'direct connection'}`);
 
       const cities = this.parser.parse(await this.readPoints(page));
       this.logger.debug(`Made ${String(cities.length)} towns of the pickup points`);

@@ -23,7 +23,7 @@ export class FetchCitiesUseCase {
    * cities would pass for all.
    */
   async execute(
-    routes: readonly ProxyEndpointEntity[],
+    routes: ReadonlyArray<ProxyEndpointEntity | null>,
     signal: AbortSignal,
     listener: FetchCitiesListenerInterface,
   ): Promise<CityInterface[]> {
@@ -53,13 +53,13 @@ export class FetchCitiesUseCase {
 
   /** Returns how many letters are done once the route reads no more: all of them, or up to the one it failed at. */
   private async readFrom(
-    route: ProxyEndpointEntity,
+    route: ProxyEndpointEntity | null,
     done: number,
     signal: AbortSignal,
     cities: Map<string, CityInterface>,
     listener: FetchCitiesListenerInterface,
   ): Promise<number> {
-    const name = route.server;
+    const name = route?.server ?? 'direct connection';
     let session;
     try {
       session = await this.source.open(route, signal);

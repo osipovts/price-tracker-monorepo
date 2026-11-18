@@ -240,14 +240,14 @@ void test('an administrator of the list gets the operator routes once the email 
       { marketplace: 'sportmaster', count: 0 },
     ],
   });
-  // Nothing is queued: the hub asks for the handbook of cities when it starts, but has no proxy to read it through.
+  // The handbooks of cities are queued through a direct connection when the hub starts with no proxies.
   const none = { queued: 0, running: 0, retrying: 0, completed: 0, failed: 0 };
   assert.deepEqual(dashboard.jobs.lastDay, [
     { kind: 'proxy_fetch', ...none },
     { kind: 'price_fetch', ...none },
-    { kind: 'handbook_fetch', ...none },
+    { kind: 'handbook_fetch', ...none, queued: 3 },
   ]);
-  assert.deepEqual(dashboard.jobs.unfinished, { queued: 0, running: 0, retrying: 0, lost: 0 });
+  assert.deepEqual(dashboard.jobs.unfinished, { queued: 3, running: 0, retrying: 0, lost: 0 });
   assert.equal(dashboard.products.marketplaces.length, 5);
 
   const user = hub.browser();

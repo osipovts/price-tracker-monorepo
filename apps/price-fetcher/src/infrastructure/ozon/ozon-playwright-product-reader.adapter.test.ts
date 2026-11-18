@@ -197,6 +197,25 @@ void test('headless reader keeps an unavailable product distinct from a parsing 
   assert.deepEqual(result.snapshot.prices, []);
 });
 
+void test('direct reader omits proxy configuration and skips GeoIP even for a non-Russian connection', async (): Promise<void> => {
+  const reader = createReader(
+    '<h1>Notebook</h1><div data-widget="webPrice">100 000 ₽</div>',
+    'US',
+    200,
+    (options): void => {
+      assert.equal(options?.proxy, undefined);
+    },
+  );
+
+  const result = await reader.read(reference, null, new AbortController().signal);
+
+  assert.equal(result.status, 'success');
+  assert.ok('snapshot' in result);
+  assert.equal(result.exitIp, null);
+  assert.equal(result.snapshot.prices[0]?.amountMinor, 10000000);
+  assert.equal(browser.contexts().length, 0);
+});
+
 void test('reader reports a challenge', async (): Promise<void> => {
   const reader = createReader(
     '<title>Antibot Captcha</title><div class="captcha">Подтвердите, что вы человек</div>',

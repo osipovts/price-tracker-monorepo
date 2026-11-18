@@ -3,12 +3,12 @@ import { z } from 'zod';
 import { proxyServerSchema } from './proxy-server.type.js';
 
 export const priceFetchRouteSchema = z.object({
-  server: proxyServerSchema,
+  server: proxyServerSchema.nullable(),
 });
 
 export const priceFetchJobSchema = z.object({
   jobId: z.uuid(),
-  /** Routes in the order they are tried: the job never goes out without a proxy. */
+  /** Routes in the order they are tried; a null server is a direct connection. */
   proxies: z.array(priceFetchRouteSchema).min(1),
   products: z
     .array(

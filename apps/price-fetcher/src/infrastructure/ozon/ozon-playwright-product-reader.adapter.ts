@@ -44,11 +44,11 @@ export class OzonPlaywrightProductReaderAdapter implements ProductReaderPort {
 
   async read(
     reference: ProductReferenceEntity,
-    proxy: ProxyEndpointEntity,
+    proxy: ProxyEndpointEntity | null,
     signal: AbortSignal,
   ): Promise<ReadProductResultType> {
     signal.throwIfAborted();
-    const route = proxy.server;
+    const route = proxy?.server ?? 'direct connection';
     this.logger.debug(`Opening a browser context via ${route}`);
 
     const context = await this.browser.newContext({
@@ -79,25 +79,28 @@ export class OzonPlaywrightProductReaderAdapter implements ProductReaderPort {
 
   private async readPage(
     reference: ProductReferenceEntity,
-    proxy: ProxyEndpointEntity,
+    proxy: ProxyEndpointEntity | null,
     context: BrowserContext,
   ): Promise<ReadProductResultType> {
     const page = await context.newPage();
-    const country = marketplaceExitCountries[reference.marketplace];
-    const exit = await this.exits.check(proxy, country, () => this.parsers.geoIp.parse(page));
-    if (exit.status === 'unavailable') {
-      this.logger.warn(`GeoIP gave no answer through ${proxy.server}`);
+    let exitIp: string | null = null;
+    if (proxy !== null) {
+      const country = marketplaceExitCountries[reference.marketplace];
+      const exit = await this.exits.check(proxy, country, () => this.parsers.geoIp.parse(page));
+      if (exit.status === 'unavailable') {
+        this.logger.warn(`GeoIP gave no answer through ${proxy.server}`);
 
-      return { status: 'network_error', stage: 'exit' };
+        return { status: 'network_error', stage: 'exit' };
+      }
+      if (exit.status === 'rejected') {
+        this.logger.warn(`GeoIP did not confirm an exit in ${country} through ${proxy.server}`);
+
+        return { status: 'proxy_rejected', stage: 'exit' };
+      }
+
+      exitIp = exit.exitIp;
+      this.logger.debug(`Exit IP through ${proxy.server} is ${exitIp} (${country})`);
     }
-    if (exit.status === 'rejected') {
-      this.logger.warn(`GeoIP did not confirm an exit in ${country} through ${proxy.server}`);
-
-      return { status: 'proxy_rejected', stage: 'exit' };
-    }
-
-    const exitIp = exit.exitIp;
-    this.logger.debug(`Exit IP through ${proxy.server} is ${exitIp} (${country})`);
 
     const lastResponse = await this.open(page, reference);
     if (this.isChallenge(await this.parsers.pages.parse(page), proxy)) {
@@ -148,10 +151,11 @@ export class OzonPlaywrightProductReaderAdapter implements ProductReaderPort {
 
   private isChallenge(
     document: { title: string; body: string },
-    proxy: ProxyEndpointEntity,
+    proxy: ProxyEndpointEntity | null,
   ): boolean {
     const challenge = this.parsers.challenges.isChallenge(document.title, document.body);
-    if (challenge) this.logger.warn(`The site check appeared via ${proxy.server}`);
+    if (challenge)
+      this.logger.warn(`The site check appeared via ${proxy?.server ?? 'direct connection'}`);
 
     return challenge;
   }

@@ -57,11 +57,11 @@ export class HandbookFetchController {
     });
   }
 
-  private routesOf(job: HandbookFetchJobType): ProxyEndpointEntity[] {
-    const routes: ProxyEndpointEntity[] = [];
+  private routesOf(job: HandbookFetchJobType): Array<ProxyEndpointEntity | null> {
+    const routes: Array<ProxyEndpointEntity | null> = [];
     for (const server of job.proxies) {
       try {
-        routes.push(new ProxyEndpointEntity(server));
+        routes.push(server === null ? null : new ProxyEndpointEntity(server));
       } catch {
         // An unsafe or unsupported address is skipped like an unavailable proxy.
         this.logger.warn('Skipping a route with an unsafe or unsupported proxy address');
