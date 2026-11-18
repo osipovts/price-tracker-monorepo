@@ -24,6 +24,11 @@ import {
 const stack = new DockerStackAdapter();
 const productUrl = 'https://www.ozon.ru/product/4775581891/';
 const sportmasterCity = { id: '28300299', name: 'Казань', region: 'Республика Татарстан' };
+const aliexpressCity = {
+  id: '917473757371000000',
+  name: 'Иркутск',
+  region: 'Иркутская область',
+};
 let hub: RunningHubInterface;
 let worker: FakePriceWorkerAdapter;
 let database: ReturnType<typeof connectDatabase>;
@@ -46,6 +51,9 @@ before(
     await seedProxies(database, ['socks5://217.71.230.1:1080']);
     await database.handbook.create({
       data: { key: 'sportmaster-cities', data: [sportmasterCity], fetchedAt: new Date() },
+    });
+    await database.handbook.create({
+      data: { key: 'aliexpress-cities', data: [aliexpressCity], fetchedAt: new Date() },
     });
 
     worker = new FakePriceWorkerAdapter(infrastructure.redisUrl);
@@ -244,4 +252,28 @@ void test('searches Sportmaster cities and queues the selected city with the pro
   assert.deepEqual(job.products, [
     { trackedProductId: product.id, url, cityId: city.id, cityName: city.name },
   ]);
+});
+
+void test('searches AliExpress cities and queues the selected city with the product', async (): Promise<void> => {
+  const url = 'https://aliexpress.ru/item/1005012815784218.html';
+  const city = aliexpressCity;
+  worker.setPrice(url, 39_900);
+
+  const search = await jane.request(
+    `/marketplaces/aliexpress/cities?query=${encodeURIComponent('Ирк')}`,
+  );
+  assert.equal(search.status, 200);
+  assert.deepEqual(search.body, { items: [city] });
+
+  const added = await jane.request('/products', { json: { url, cityId: city.id } });
+  assert.equal(added.status, 201);
+  const product = productSchema.parse(added.body);
+  assert.ok(product.jobId !== null);
+
+  const job = await eventually(
+    (): Promise<(typeof worker.jobs)[number] | null> =>
+      Promise.resolve(worker.jobs.find(({ jobId }): boolean => jobId === product.jobId) ?? null),
+    'the AliExpress price job reached the worker',
+  );
+  assert.deepEqual(job.products, [{ trackedProductId: product.id, url, cityId: city.id }]);
 });

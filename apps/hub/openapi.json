@@ -80,7 +80,8 @@
                                   "dns",
                                   "wildberries",
                                   "citilink",
-                                  "sportmaster"
+                                  "sportmaster",
+                                  "aliexpress"
                                 ]
                               },
                               "products": {
@@ -138,7 +139,8 @@
                                   "dns",
                                   "wildberries",
                                   "citilink",
-                                  "sportmaster"
+                                  "sportmaster",
+                                  "aliexpress"
                                 ]
                               },
                               "reads": {
@@ -241,7 +243,8 @@
                                   "dns",
                                   "wildberries",
                                   "citilink",
-                                  "sportmaster"
+                                  "sportmaster",
+                                  "aliexpress"
                                 ]
                               },
                               "count": {
@@ -733,7 +736,8 @@
                                   "dns",
                                   "wildberries",
                                   "citilink",
-                                  "sportmaster"
+                                  "sportmaster",
+                                  "aliexpress"
                                 ]
                               },
                               "url": {
@@ -3084,7 +3088,8 @@
                                     "dns",
                                     "wildberries",
                                     "citilink",
-                                    "sportmaster"
+                                    "sportmaster",
+                                    "aliexpress"
                                   ]
                                 },
                                 "successes": {
@@ -3361,7 +3366,8 @@
                               "dns",
                               "wildberries",
                               "citilink",
-                              "sportmaster"
+                              "sportmaster",
+                              "aliexpress"
                             ]
                           },
                           "count": {
@@ -3502,7 +3508,8 @@
                 "dns",
                 "wildberries",
                 "citilink",
-                "sportmaster"
+                "sportmaster",
+                "aliexpress"
               ]
             }
           },
@@ -3598,7 +3605,8 @@
               "enum": [
                 "dns-cities",
                 "wildberries-cities",
-                "sportmaster-cities"
+                "sportmaster-cities",
+                "aliexpress-cities"
               ]
             }
           },
@@ -3727,7 +3735,8 @@
               "enum": [
                 "dns-cities",
                 "wildberries-cities",
-                "sportmaster-cities"
+                "sportmaster-cities",
+                "aliexpress-cities"
               ]
             }
           }
