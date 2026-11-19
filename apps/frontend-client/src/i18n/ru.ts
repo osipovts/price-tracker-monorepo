@@ -144,6 +144,7 @@ export const ru: DictionaryType = {
     openOn: 'Открыть на {{marketplace}}',
     observed: 'Время',
     price: 'Цена',
+    outlier: 'выброс',
     availability: 'Наличие',
     noHistory: 'Цены ещё не считывались.',
     checked: 'Проверено',

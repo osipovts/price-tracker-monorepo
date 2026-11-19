@@ -1,6 +1,10 @@
 import type { MarketplaceType } from 'product-reference';
 
 import type { PriceObservationInterface } from '../domain/price-observation.interface.js';
+import {
+  findPriceOutlierIds,
+  type PricedPointInterface,
+} from '../domain/price-outlier.type.js';
 import { statsPeriodMs, type StatsPeriodType } from '../domain/stats-period.type.js';
 
 export interface GroupPriceInterface {
@@ -55,6 +59,32 @@ function pick(
   }, null);
 }
 
+function outlierIdsOf(
+  observations: readonly PriceObservationInterface[],
+  marketplaces: ReadonlyMap<string, MarketplaceType>,
+): ReadonlySet<string> {
+  const byProduct = new Map<string, PricedPointInterface[]>();
+  for (const observation of observations) {
+    const offer = offerOf(observation, marketplaces);
+    if (offer === null) continue;
+
+    const list = byProduct.get(observation.trackedProductId) ?? [];
+    list.push({
+      id: observation.id,
+      observedAt: observation.observedAt,
+      amountMinor: offer.amountMinor,
+    });
+    byProduct.set(observation.trackedProductId, list);
+  }
+
+  const outliers = new Set<string>();
+  for (const points of byProduct.values()) {
+    for (const id of findPriceOutlierIds(points)) outliers.add(id);
+  }
+
+  return outliers;
+}
+
 /**
  * What the products of a group cost: the best price now, and how it stands against the period. `observations`
  * are those of the products from the start of the period on, at least; a product not read since the start has
@@ -73,6 +103,7 @@ export function summarizeGroupPrices({
 }): GroupPriceSummaryInterface {
   const marketplaces = new Map(products.map(({ id, marketplace }) => [id, marketplace]));
   const since = now.getTime() - statsPeriodMs[period];
+  const outliers = outlierIdsOf(observations, marketplaces);
 
   const newest = new Map<string, PriceObservationInterface>();
   for (const observation of observations) {
@@ -94,7 +125,12 @@ export function summarizeGroupPrices({
     const offer = offerOf(observation, marketplaces);
     const isNewest = newest.get(observation.trackedProductId) === observation;
 
-    return offer === null || isNewest || observation.observedAt.getTime() < since ? [] : [offer];
+    return offer === null ||
+      isNewest ||
+      outliers.has(observation.id) ||
+      observation.observedAt.getTime() < since
+      ? []
+      : [offer];
   });
   const min = pick(earlier, (candidate, other): boolean => candidate < other);
 

@@ -4,6 +4,7 @@ import {
   ActionIcon,
   Alert,
   Anchor,
+  Badge,
   Box,
   Button,
   CloseButton,
@@ -44,6 +45,7 @@ import { hasPendingAdd } from './pending-add.type.js';
 import { type ChartLineInterface, PriceChart } from './price-chart.component.js';
 import { PriceChecks } from './price-checks.component.js';
 import { formatPrice } from './price-format.type.js';
+import { findPriceOutlierIds } from './price-outlier.type.js';
 import { buildPriceSeries, granularities, type GranularityType } from './price-series.type.js';
 import { ProductThumbnail } from './product-thumbnail.component.js';
 import { type SeriesStyleInterface, styleSeries } from './series-style.type.js';
@@ -81,6 +83,7 @@ type GroupProductType = ProductGroupDetailType['products'][number];
 interface HistoryRowInterface {
   productId: string;
   observation: ObservationType;
+  outlier: boolean;
 }
 
 /** The mark of a product in the list, the chart and the table: the colour of its line. */
@@ -455,7 +458,7 @@ function HistoryTable({
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {shown.map(({ productId, observation }): ReactElement => {
+            {shown.map(({ productId, observation, outlier }): ReactElement => {
               const amountMinor = priceOf(observation);
               const style = styles.find((candidate): boolean => candidate.id === productId);
 
@@ -473,7 +476,14 @@ function HistoryTable({
                     </Group>
                   </Table.Td>
                   <Table.Td style={{ whiteSpace: 'nowrap' }}>
-                    {amountMinor === null ? '-' : formatPrice(amountMinor)}
+                    <Group gap={6} wrap="nowrap">
+                      <span>{amountMinor === null ? '-' : formatPrice(amountMinor)}</span>
+                      {outlier && (
+                        <Badge size="xs" variant="light" color="orange">
+                          {t('product.outlier')}
+                        </Badge>
+                      )}
+                    </Group>
                   </Table.Td>
                   <Table.Td>{availabilityLabel(observation.availability, t)}</Table.Td>
                 </Table.Tr>
@@ -510,21 +520,36 @@ function PriceHistory({
   // As many points as the width keeps apart, the same number on any wide screen.
   const chart = useElementSize();
   const pointCount = chartPointsFitting(chart.width);
+  const outlierSets = useMemo(
+    (): Array<ReadonlySet<string>> =>
+      histories.map((history): ReadonlySet<string> => findPriceOutlierIds(history ?? [])),
+    [histories],
+  );
   const lines = useMemo((): ChartLineInterface[] => {
     const now = new Date();
 
-    return styles.map((style, index): ChartLineInterface => ({
-      ...style,
-      buckets: buildPriceSeries(toPoints(histories[index] ?? []), granularity, pointCount, now),
-    }));
-  }, [styles, histories, granularity, pointCount]);
+    return styles.map((style, index): ChartLineInterface => {
+      const outliers = outlierSets[index];
+      const clean = (histories[index] ?? []).filter(
+        (observation): boolean => !(outliers?.has(observation.id) ?? false),
+      );
+
+      return {
+        ...style,
+        buckets: buildPriceSeries(toPoints(clean), granularity, pointCount, now),
+      };
+    });
+  }, [styles, histories, outlierSets, granularity, pointCount]);
   const rows = products
-    .flatMap((product, index): HistoryRowInterface[] =>
-      (histories[index] ?? []).map((observation): HistoryRowInterface => ({
+    .flatMap((product, index): HistoryRowInterface[] => {
+      const outliers = outlierSets[index];
+
+      return (histories[index] ?? []).map((observation): HistoryRowInterface => ({
         productId: product.id,
         observation,
-      })),
-    )
+        outlier: outliers?.has(observation.id) ?? false,
+      }));
+    })
     .toSorted((a, b): number => b.observation.observedAt.localeCompare(a.observation.observedAt));
 
   return (
