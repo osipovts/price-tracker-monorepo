@@ -142,6 +142,7 @@ export const en = {
     openOn: 'Open on {{marketplace}}',
     observed: 'Observed',
     price: 'Price',
+    outlier: 'outlier',
     availability: 'Availability',
     noHistory: 'No prices have been read yet.',
     checked: 'Checked',

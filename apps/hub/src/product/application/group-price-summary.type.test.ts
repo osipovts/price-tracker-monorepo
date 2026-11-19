@@ -111,3 +111,15 @@ void test('the current price is highlighted when it is not above the lowest pric
     [true, true, false, false],
   );
 });
+
+void test('isolated price spikes are excluded from the period min and max', () => {
+  const summary = summarize([
+    seen('oz', 10, 205_906),
+    seen('oz', 5, 408_501),
+    seen('oz', 1, 199_332),
+  ]);
+
+  assert.equal(summary.current?.amountMinor, 199_332);
+  assert.equal(summary.min?.amountMinor, 205_906);
+  assert.equal(summary.max?.amountMinor, 205_906);
+});
