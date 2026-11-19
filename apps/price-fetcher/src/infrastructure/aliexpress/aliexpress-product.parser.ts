@@ -19,6 +19,7 @@ const amountSchema = z.object({
 const skuPriceSchema = z.object({
   skuId: z.union([z.string(), z.number()]).optional(),
   availQuantity: z.number().optional(),
+  priceWithCoupon: z.object({ amount: amountSchema.nullish() }).nullish(),
   activityAmount: amountSchema.nullish(),
   amount: amountSchema.nullish(),
 });
@@ -69,14 +70,14 @@ export class AliexpressProductParser {
 
     const priceList = product.skuInfo?.priceList ?? [];
     const activeSku = this.selectSku(product, priceList, requestedSkuId);
-    const amount =
-      requestedSkuId !== null
-        ? (activeSku?.activityAmount ?? activeSku?.amount)
-        : (activeSku?.activityAmount ??
-          activeSku?.amount ??
-          product.price?.minActivityAmount ??
-          product.price?.minAmount);
-    const amountMinor = this.readAmountMinor(amount);
+    const amountMinor =
+      this.readAmountMinor(activeSku?.priceWithCoupon?.amount) ??
+      this.readAmountMinor(activeSku?.activityAmount) ??
+      this.readAmountMinor(activeSku?.amount) ??
+      (requestedSkuId === null
+        ? (this.readAmountMinor(product.price?.minActivityAmount) ??
+          this.readAmountMinor(product.price?.minAmount))
+        : null);
     const prices: PriceObservationInterface[] =
       amountMinor === null ? [] : [{ amountMinor, currency: 'RUB' }];
 

@@ -229,3 +229,28 @@ void test('reads price and availability of the requested sku_id instead of activ
   assert.deepEqual(missingVariant.prices, []);
   assert.equal(missingVariant.availability, 'out_of_stock');
 });
+
+void test('prefers priceWithCoupon.amount over activityAmount when a coupon is available', (): void => {
+  const snapshot = parser.parse(
+    reference,
+    pageOf({
+      ...productDataBase,
+      skuInfo: {
+        priceList: [
+          {
+            skuId: '12000059397901048',
+            availQuantity: 28,
+            priceWithCoupon: {
+              amount: { value: 3993, currency: 'RUB', cents: '399300' },
+            },
+            activityAmount: { value: 4921, currency: 'RUB', cents: '492100' },
+            amount: { value: 9531, currency: 'RUB', cents: '953100' },
+          },
+        ],
+      },
+    }),
+  );
+
+  assert.ok(snapshot);
+  assert.deepEqual(snapshot.prices, [{ amountMinor: 399_300, currency: 'RUB' }]);
+});
