@@ -1,6 +1,7 @@
 import { Camoufox } from 'camoufox-js';
 import { CamoufoxOptionsFactory } from 'camoufox-options';
 import { ConsoleLoggerAdapter, parseLogLevel } from 'logger';
+import { citilinkCities, ozonCities } from 'product-reference';
 import { type HandbookFetchResultType, queueNames } from 'queue-contract';
 import { JobLifecycleReporter, QueueMessageParser, QueueWorkerRunner } from 'queue-worker';
 import { z } from 'zod';
@@ -72,6 +73,9 @@ const publish = (message: HandbookFetchResultType): Promise<void> => runner.publ
 
 /** The first letters of the names of the cities. */
 const russianLetters = Array.from('АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЭЮЯ');
+const sportmasterSeedCities = Array.from(
+  new Set([...ozonCities, ...citilinkCities].map(({ name }): string => name)),
+);
 
 const controller = new HandbookFetchController(
   {
@@ -86,7 +90,12 @@ const controller = new HandbookFetchController(
       logger.child('dns-cities'),
     ),
     'sportmaster-cities': new FetchCitiesUseCase(
-      new SportmasterBrowserCitySourceAdapter(browser, options, env.timeoutMs),
+      new SportmasterBrowserCitySourceAdapter(
+        browser,
+        options,
+        env.timeoutMs,
+        sportmasterSeedCities,
+      ),
       ['', ...russianLetters, 'Ё'],
       logger.child('sportmaster-cities'),
     ),

@@ -22,11 +22,15 @@ const searchCitiesSchema = z.object({
   ),
 });
 
+const queryBatchSize = 6;
+
 export class SportmasterBrowserCitySourceAdapter implements CitySourcePort {
   constructor(
     private readonly browser: Pick<Browser, 'newContext'>,
     private readonly options: CamoufoxOptionsFactory,
     private readonly timeoutMs: number,
+    /** Known city names queried alongside each letter so major cities are not lost to the 100-item search cap. */
+    private readonly seedCities: readonly string[] = [],
   ) {}
 
   async open(
@@ -66,21 +70,7 @@ export class SportmasterBrowserCitySourceAdapter implements CitySourcePort {
           readSignal.throwIfAborted();
           if (letter === '') return this.readTopAndShopCities(page);
 
-          const body = await this.readJson(
-            page,
-            `/web-api/v1/cities?text=${encodeURIComponent(letter)}`,
-          );
-
-          return searchCitiesSchema
-            .parse(body)
-            .cities.filter(({ cityName }): boolean =>
-              cityName.toLocaleUpperCase('ru').startsWith(letter),
-            )
-            .map(({ cityId, cityName, macrocity }): CityInterface => ({
-              id: cityId,
-              name: cityName,
-              region: macrocity === '' ? null : (macrocity ?? null),
-            }));
+          return this.readByLetter(page, letter, readSignal);
         },
         close,
       };
@@ -88,6 +78,46 @@ export class SportmasterBrowserCitySourceAdapter implements CitySourcePort {
       await close();
       throw error;
     }
+  }
+
+  private async readByLetter(
+    page: Page,
+    letter: string,
+    signal: AbortSignal,
+  ): Promise<CityInterface[]> {
+    const queries = Array.from(
+      new Set([
+        letter,
+        ...this.seedCities.filter((name): boolean =>
+          name.toLocaleUpperCase('ru').startsWith(letter),
+        ),
+      ]),
+    );
+    const cities = new Map<string, CityInterface>();
+
+    for (let index = 0; index < queries.length; index += queryBatchSize) {
+      signal.throwIfAborted();
+      const batch = queries.slice(index, index + queryBatchSize);
+      const responses = await Promise.all(
+        batch.map((query): Promise<unknown> =>
+          this.readJson(page, `/web-api/v1/cities?text=${encodeURIComponent(query)}`),
+        ),
+      );
+
+      for (const body of responses) {
+        for (const { cityId, cityName, macrocity } of searchCitiesSchema.parse(body).cities) {
+          if (!cityName.toLocaleUpperCase('ru').startsWith(letter)) continue;
+
+          cities.set(cityId, {
+            id: cityId,
+            name: cityName,
+            region: macrocity === '' ? null : (macrocity ?? null),
+          });
+        }
+      }
+    }
+
+    return Array.from(cities.values());
   }
 
   private async readTopAndShopCities(page: Page): Promise<CityInterface[]> {
