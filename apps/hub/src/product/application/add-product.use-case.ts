@@ -10,8 +10,13 @@ import { enforceRateLimits } from '../../shared/application/enforce-rate-limits.
 import type { RateLimiterPort } from '../../shared/application/rate-limiter.port.js';
 import type { TrackedProductEntity } from '../domain/tracked-product.entity.js';
 import { unchangedLinks } from './add-product-defaults.type.js';
+import {
+  allMarketplacesEnabled,
+  type DisabledMarketplaceRepositoryPort,
+} from './disabled-marketplace-repository.port.js';
 import type { ExpandProductLinkUseCase } from './expand-product-link.use-case.js';
 import type { KnownCityInterface, MarketplaceCitiesPort } from './marketplace-cities.port.js';
+import { MarketplaceDisabledError } from './marketplace-disabled.error.js';
 import type { PriceObservationRepositoryPort } from './price-observation-repository.port.js';
 import { ProductAddingInProgressError } from './product-adding-in-progress.error.js';
 import { ProductGoneError } from './product-gone.error.js';
@@ -61,6 +66,10 @@ export class AddProductUseCase {
       find: (): Promise<KnownCityInterface | null> => Promise.resolve(null),
     },
     private readonly clock: ClockPort = systemClock,
+    private readonly disabledMarketplaces: Pick<
+      DisabledMarketplaceRepositoryPort,
+      'isDisabled'
+    > = allMarketplacesEnabled,
   ) {}
 
   /** The adds in progress by user: a link can take minutes to expand, and a reload sends it again. */
@@ -112,6 +121,10 @@ export class AddProductUseCase {
       reference = this.resolveReference.execute(productUrl);
     } catch {
       throw new UnsupportedProductUrlError();
+    }
+
+    if (await this.disabledMarketplaces.isDisabled(reference.marketplace)) {
+      throw new MarketplaceDisabledError(reference.marketplace);
     }
 
     const city = await this.cityOf(reference, askedCityId);

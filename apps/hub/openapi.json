@@ -109,6 +109,9 @@
                                 "type": "integer",
                                 "minimum": -9007199254740991,
                                 "maximum": 9007199254740991
+                              },
+                              "disabled": {
+                                "type": "boolean"
                               }
                             },
                             "required": [
@@ -117,7 +120,8 @@
                               "readsLastDay",
                               "lastReadAt",
                               "stale",
-                              "unread"
+                              "unread",
+                              "disabled"
                             ],
                             "additionalProperties": false
                           }
@@ -1019,7 +1023,7 @@
             "description": "Unsupported marketplace or product URL, or a city the marketplace does not have"
           },
           "403": {
-            "description": "The user tracks the most products the hub allows, or the group holds the most it may"
+            "description": "The user tracks the most products the hub allows, the group holds the most it may, or the marketplace is disabled"
           },
           "404": {
             "description": "The group is not the user's"
@@ -2618,6 +2622,61 @@
           }
         },
         "summary": "Price history of any tracked product, the newest first",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/marketplaces/{marketplace}": {
+      "patch": {
+        "description": "A marketplace that is off refuses new links; products already tracked keep reading. For administrators.",
+        "operationId": "AdminProductsController_setMarketplaceDisabled",
+        "parameters": [
+          {
+            "name": "marketplace",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ozon",
+                "dns",
+                "wildberries",
+                "citilink",
+                "sportmaster",
+                "aliexpress"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "disabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "disabled"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "The user is not an administrator"
+          }
+        },
+        "summary": "Turn link intake for a marketplace off or on",
         "tags": [
           "admin"
         ]

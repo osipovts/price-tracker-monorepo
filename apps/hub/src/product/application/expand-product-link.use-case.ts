@@ -3,6 +3,11 @@ import type { OzonShortLinkParser } from 'product-reference';
 
 import { NoProxiesAvailableError } from '../../shared/application/no-proxies-available.error.js';
 import type { ChoosePriceRoutesUseCase } from './choose-price-routes.use-case.js';
+import {
+  allMarketplacesEnabled,
+  type DisabledMarketplaceRepositoryPort,
+} from './disabled-marketplace-repository.port.js';
+import { MarketplaceDisabledError } from './marketplace-disabled.error.js';
 import type { ProductLinkExpanderPort } from './product-link-expander.port.js';
 import { UnsupportedProductUrlError } from './unsupported-product-url.error.js';
 
@@ -17,10 +22,17 @@ export class ExpandProductLinkUseCase {
     private readonly expander: ProductLinkExpanderPort,
     private readonly routeTimeoutMs: number,
     private readonly logger: LoggerPort = silentLogger,
+    private readonly disabledMarketplaces: Pick<
+      DisabledMarketplaceRepositoryPort,
+      'isDisabled'
+    > = allMarketplacesEnabled,
   ) {}
 
   async execute(url: string): Promise<string> {
     if (!this.isShortLink(url)) return url;
+    if (await this.disabledMarketplaces.isDisabled('ozon')) {
+      throw new MarketplaceDisabledError('ozon');
+    }
 
     const chosen = await this.chooseRoutes.execute('ozon');
     const direct = chosen.filter(({ server }): boolean => server === null);

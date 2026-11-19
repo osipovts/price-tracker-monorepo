@@ -41,6 +41,8 @@ export const dashboardResponseSchema = z.strictObject({
         stale: z.number().int(),
         /** The products whose price was never read. */
         unread: z.number().int(),
+        /** Turned off by an administrator: new links to this marketplace are refused. */
+        disabled: z.boolean(),
       }),
     ),
     /** The reads of the last day by the hour and the marketplace, the oldest first; an hour with none is left out. */

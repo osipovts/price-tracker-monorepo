@@ -6,7 +6,11 @@ import { silentLogger } from 'logger';
 import type { JobLifecycleType } from 'queue-contract';
 import { z } from 'zod';
 
-import { JobLifecycleReporter } from './job-lifecycle.reporter.js';
+import {
+  formatFailureReason,
+  JobLifecycleReporter,
+  maxReasonLength,
+} from './job-lifecycle.reporter.js';
 import { QueueMessageParser } from './queue-message.parser.js';
 
 const jobId = '3f0c9a52-7a53-4a64-9d0d-2f2f6c1f0a11';
@@ -109,4 +113,22 @@ void test('has nobody to tell about a malformed job that does not say whose it i
   );
 
   assert.deepEqual(published, []);
+});
+
+void test('keeps detailed reasons beyond 200 characters up to maxReasonLength and redacts URL credentials', async (): Promise<void> => {
+  const published: JobLifecycleType[] = [];
+  const longReason = `via http://user:secret@203.0.113.10:8080 failed: ${'x'.repeat(250)}`;
+
+  await assert.rejects(
+    createReporter(published).run(jobId, false, (): Promise<void> => {
+      throw new Error(longReason);
+    }),
+  );
+
+  const failed = published.find((message) => message.type === 'job_failed');
+  assert.ok(failed !== undefined);
+  assert.ok(failed.reason.length > 200);
+  assert.ok(!failed.reason.includes('user:secret'));
+  assert.ok(failed.reason.includes('http://***@203.0.113.10:8080'));
+  assert.equal(formatFailureReason('a'.repeat(maxReasonLength + 50)).length, maxReasonLength);
 });

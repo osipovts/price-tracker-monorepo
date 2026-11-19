@@ -1,6 +1,7 @@
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { expect, test, vi } from 'vitest';
 
@@ -27,6 +28,7 @@ function dashboardOf(lost = 0): Record<string, unknown> {
           lastReadAt: '2026-11-10T12:20:00.000Z',
           stale: 2,
           unread: 1,
+          disabled: false,
         },
         {
           marketplace: 'dns',
@@ -35,6 +37,7 @@ function dashboardOf(lost = 0): Record<string, unknown> {
           lastReadAt: null,
           stale: 4,
           unread: 0,
+          disabled: true,
         },
       ],
       readsByHour: [{ hour: '2026-11-10T12:00:00.000Z', marketplace: 'ozon', reads: 9 }],
@@ -118,7 +121,35 @@ test('tells for each marketplace its reads, its stale prices and the proxies its
     within(dns)
       .getAllByRole('cell')
       .map((cell) => cell.textContent),
-  ).toEqual(['dns', '10', '5', '-', '4', '0', '0']);
+  ).toEqual(['dns', '10', '5', '-', '4', '0', '0', '']);
+  expect(within(dns).getByLabelText('Accepting links for dns')).not.toBeChecked();
+});
+
+test('toggles link intake for a marketplace', async () => {
+  let patchedBody: string | undefined;
+  const fetchMock = vi.fn(async (request: Request): Promise<Response> => {
+    const { pathname } = new URL(request.url);
+    if (request.method === 'PATCH' && pathname === '/admin/marketplaces/ozon') {
+      patchedBody = await request.text();
+
+      return new Response(null, { status: 204 });
+    }
+
+    return pathname === '/admin/jobs'
+      ? Response.json({ items: [], page: 1, pageSize: 5, total: 0 })
+      : Response.json(dashboardOf());
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  renderPage();
+
+  const toggle = await screen.findByLabelText('Accepting links for ozon');
+  expect(toggle).toBeChecked();
+
+  await userEvent.click(toggle);
+
+  await waitFor((): void => {
+    expect(patchedBody).toBe(JSON.stringify({ disabled: true }));
+  });
 });
 
 test('warns of the lost jobs, and lists the recent failures with a way to all of them', async () => {

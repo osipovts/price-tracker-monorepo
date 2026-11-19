@@ -5,7 +5,9 @@ import { OzonShortLinkParser } from 'product-reference';
 
 import type { RouteInterface } from '../../job/application/index.js';
 import { NoProxiesAvailableError } from '../../shared/application/no-proxies-available.error.js';
+import { InMemoryDisabledMarketplaceRepositoryAdapter } from '../infrastructure/in-memory-disabled-marketplace-repository.adapter.js';
 import { ExpandProductLinkUseCase } from './expand-product-link.use-case.js';
+import { MarketplaceDisabledError } from './marketplace-disabled.error.js';
 import type {
   ProductLinkExpanderPort,
   ProductLinkExpansionInterface,
@@ -89,4 +91,19 @@ void test('refuses a short link when there is no route or no answer', async (): 
     ),
     UnsupportedProductUrlError,
   );
+});
+
+void test('refuses a short link without expanding when ozon is disabled', async (): Promise<void> => {
+  const disabledMarketplaces = new InMemoryDisabledMarketplaceRepositoryAdapter();
+  await disabledMarketplaces.setDisabled('ozon', true);
+  const useCase = new ExpandProductLinkUseCase(
+    new OzonShortLinkParser(),
+    { execute: (): Promise<RouteInterface[]> => Promise.resolve(routes) },
+    { expand: (): Promise<string> => Promise.reject(new Error('must not be asked')) },
+    20_000,
+    undefined,
+    disabledMarketplaces,
+  );
+
+  await assert.rejects(useCase.execute('https://ozon.ru/t/AbC'), MarketplaceDisabledError);
 });

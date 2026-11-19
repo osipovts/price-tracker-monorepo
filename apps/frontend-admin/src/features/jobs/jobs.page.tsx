@@ -80,7 +80,7 @@ function JobDetails({ job }: { job: JobRecordType }): ReactElement {
       {job.error !== null &&
         field(
           t('jobs.error'),
-          <Code block style={{ whiteSpace: 'pre-wrap' }}>
+          <Code block style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
             {job.error}
           </Code>,
         )}

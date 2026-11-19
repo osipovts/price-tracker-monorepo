@@ -34,6 +34,10 @@ import { ChoosePriceRoutesUseCase } from './application/choose-price-routes.use-
 import { CreateProductGroupUseCase } from './application/create-product-group.use-case.js';
 import { DescribeProductGroupsUseCase } from './application/describe-product-groups.use-case.js';
 import { DescribeProductsUseCase } from './application/describe-products.use-case.js';
+import {
+  DISABLED_MARKETPLACE_REPOSITORY,
+  type DisabledMarketplaceRepositoryPort,
+} from './application/disabled-marketplace-repository.port.js';
 import { ExpandProductLinkUseCase } from './application/expand-product-link.use-case.js';
 import { GetProductGroupUseCase } from './application/get-product-group.use-case.js';
 import { GetProductStatsUseCase } from './application/get-product-stats.use-case.js';
@@ -66,6 +70,7 @@ import { RemoveProductGroupUseCase } from './application/remove-product-group.us
 import { RemoveUserProductsUseCase } from './application/remove-user-products.use-case.js';
 import { RenameProductGroupUseCase } from './application/rename-product-group.use-case.js';
 import { RequestPriceObservationUseCase } from './application/request-price-observation.use-case.js';
+import { SetMarketplaceDisabledUseCase } from './application/set-marketplace-disabled.use-case.js';
 import { SetStatsPeriodUseCase } from './application/set-stats-period.use-case.js';
 import { SpreadPriceJobsUseCase } from './application/spread-price-jobs.use-case.js';
 import { StoreProductThumbnailUseCase } from './application/store-product-thumbnail.use-case.js';
@@ -76,6 +81,7 @@ import {
 import { BullmqProductLinkExpanderAdapter } from './infrastructure/bullmq-product-link-expander.adapter.js';
 import { HttpImageDownloaderAdapter } from './infrastructure/http-image-downloader.adapter.js';
 import { PeriodicPriceRefreshAdapter } from './infrastructure/periodic-price-refresh.adapter.js';
+import { PrismaDisabledMarketplaceRepositoryAdapter } from './infrastructure/prisma-disabled-marketplace-repository.adapter.js';
 import { PrismaPriceObservationRepositoryAdapter } from './infrastructure/prisma-price-observation-repository.adapter.js';
 import { PrismaProductGroupPreferenceRepositoryAdapter } from './infrastructure/prisma-product-group-preference-repository.adapter.js';
 import { PrismaProductGroupRepositoryAdapter } from './infrastructure/prisma-product-group-repository.adapter.js';
@@ -114,6 +120,19 @@ import { ProductsController } from './presentation/products.controller.js';
       inject: [PRISMA],
     },
     {
+      provide: DISABLED_MARKETPLACE_REPOSITORY,
+      useFactory: (prisma: PrismaClient): DisabledMarketplaceRepositoryPort =>
+        new PrismaDisabledMarketplaceRepositoryAdapter(prisma),
+      inject: [PRISMA],
+    },
+    {
+      provide: SetMarketplaceDisabledUseCase,
+      useFactory: (
+        disabledMarketplaces: DisabledMarketplaceRepositoryPort,
+      ): SetMarketplaceDisabledUseCase => new SetMarketplaceDisabledUseCase(disabledMarketplaces),
+      inject: [DISABLED_MARKETPLACE_REPOSITORY],
+    },
+    {
       provide: ResolveProductReferenceUseCase,
       useFactory: (): ResolveProductReferenceUseCase =>
         new ResolveProductReferenceUseCase([
@@ -138,6 +157,7 @@ import { ProductsController } from './presentation/products.controller.js';
         logger: LoggerPort,
         expandLink: ExpandProductLinkUseCase,
         findCity: FindCityUseCase,
+        disabledMarketplaces: DisabledMarketplaceRepositoryPort,
       ): AddProductUseCase =>
         new AddProductUseCase(
           resolve,
@@ -162,6 +182,8 @@ import { ProductsController } from './presentation/products.controller.js';
                 : { id: city.id, name: city.name, aliases: city.aliases ?? [] };
             },
           },
+          systemClock,
+          disabledMarketplaces,
         ),
       inject: [
         ResolveProductReferenceUseCase,
@@ -174,6 +196,7 @@ import { ProductsController } from './presentation/products.controller.js';
         LOGGER,
         ExpandProductLinkUseCase,
         FindCityUseCase,
+        DISABLED_MARKETPLACE_REPOSITORY,
       ],
     },
     {
@@ -189,6 +212,7 @@ import { ProductsController } from './presentation/products.controller.js';
         expander: ProductLinkExpanderPort,
         config: AppConfigInterface,
         logger: LoggerPort,
+        disabledMarketplaces: DisabledMarketplaceRepositoryPort,
       ): ExpandProductLinkUseCase =>
         new ExpandProductLinkUseCase(
           new OzonShortLinkParser(),
@@ -196,8 +220,15 @@ import { ProductsController } from './presentation/products.controller.js';
           expander,
           config.linkExpandTimeoutMs,
           logger.child('products'),
+          disabledMarketplaces,
         ),
-      inject: [ChoosePriceRoutesUseCase, PRODUCT_LINK_EXPANDER, APP_CONFIG, LOGGER],
+      inject: [
+        ChoosePriceRoutesUseCase,
+        PRODUCT_LINK_EXPANDER,
+        APP_CONFIG,
+        LOGGER,
+        DISABLED_MARKETPLACE_REPOSITORY,
+      ],
     },
     {
       provide: GetProductStatsUseCase,
@@ -205,8 +236,21 @@ import { ProductsController } from './presentation/products.controller.js';
         products: TrackedProductRepositoryPort,
         groups: ProductGroupRepositoryPort,
         observations: PriceObservationRepositoryPort,
-      ): GetProductStatsUseCase => new GetProductStatsUseCase(products, groups, observations),
-      inject: [TRACKED_PRODUCT_REPOSITORY, PRODUCT_GROUP_REPOSITORY, PRICE_OBSERVATION_REPOSITORY],
+        disabledMarketplaces: DisabledMarketplaceRepositoryPort,
+      ): GetProductStatsUseCase =>
+        new GetProductStatsUseCase(
+          products,
+          groups,
+          observations,
+          systemClock,
+          disabledMarketplaces,
+        ),
+      inject: [
+        TRACKED_PRODUCT_REPOSITORY,
+        PRODUCT_GROUP_REPOSITORY,
+        PRICE_OBSERVATION_REPOSITORY,
+        DISABLED_MARKETPLACE_REPOSITORY,
+      ],
     },
     {
       provide: RemoveProductUseCase,

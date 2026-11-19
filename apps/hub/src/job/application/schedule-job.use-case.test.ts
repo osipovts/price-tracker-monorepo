@@ -125,7 +125,7 @@ void test('fails the recorded job for good when the queue is down', async (): Pr
   const { items } = await jobs.list({}, { page: 1, pageSize: 10 });
   assert.equal(items.length, 1);
   assert.equal(items[0]?.snapshot.status, 'failed');
-  assert.equal(items[0].snapshot.error, 'Could not be queued');
+  assert.equal(items[0].snapshot.error, 'Could not be queued: redis is down');
 });
 
 void test('records a queued handbook job of the operator and publishes it with its routes', async (): Promise<void> => {

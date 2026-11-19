@@ -68,9 +68,10 @@ export class OzonPlaywrightProductReaderAdapter implements ProductReaderPort {
       return await this.readPage(reference, proxy, context);
     } catch (error: unknown) {
       signal.throwIfAborted();
-      this.logger.warn(`Browser error via ${route}: ${errorMessage(error).split('\n')[0] ?? ''}`);
+      const detail = errorMessage(error).split('\n')[0] ?? '';
+      this.logger.warn(`Browser error via ${route}: ${detail}`);
 
-      return { status: 'network_error' };
+      return { status: 'network_error', ...(detail === '' ? {} : { detail }) };
     } finally {
       signal.removeEventListener('abort', abort);
       await context.close();

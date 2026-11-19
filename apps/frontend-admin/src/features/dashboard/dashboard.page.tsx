@@ -7,12 +7,13 @@ import {
   Loader,
   SimpleGrid,
   Stack,
+  Switch,
   Table,
   Text,
   Title,
   Tooltip,
 } from '@mantine/core';
-import { ErrorAlert, MarketplaceName, useLocale } from 'frontend-shared';
+import { ErrorAlert, MarketplaceName, marketplaceName, useLocale } from 'frontend-shared';
 import type { ReactElement, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -24,7 +25,11 @@ import { jobKindLabel } from '../jobs/job-status-label.type.js';
 import { useJobRecords } from '../jobs/use-job-records.hook.js';
 import { JobsChart, ReadsChart } from './hour-charts.component.js';
 import { jobRows, readRows } from './hour-rows.type.js';
-import { type DashboardType, useDashboard } from './use-dashboard.hook.js';
+import {
+  type DashboardType,
+  useDashboard,
+  useSetMarketplaceDisabled,
+} from './use-dashboard.hook.js';
 
 /** A figure that is the point by itself: its name, the number, and what stands behind it. */
 function Stat({
@@ -150,54 +155,76 @@ function ChartCard({
 function Marketplaces({ data }: { data: DashboardType }): ReactElement {
   const { t } = useTranslation();
   const locale = useLocale();
+  const setDisabled = useSetMarketplaceDisabled();
 
   return (
     <Card withBorder>
-      <Title order={4} mb="xs">
-        {t('dashboard.marketplaces')}
-      </Title>
-      <Table.ScrollContainer minWidth={640}>
-        <Table>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>{t('dashboard.marketplace')}</Table.Th>
-              <Table.Th>{t('dashboard.products')}</Table.Th>
-              <Table.Th>{t('dashboard.readsLastDay')}</Table.Th>
-              <Table.Th>{t('dashboard.lastRead')}</Table.Th>
-              <Table.Th>{t('dashboard.staleCount')}</Table.Th>
-              <Table.Th>{t('dashboard.unread')}</Table.Th>
-              <Table.Th>
-                <Tooltip multiline w={280} label={t('dashboard.usableHint')}>
-                  <span>{t('dashboard.usable')}</span>
-                </Tooltip>
-              </Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {data.products.marketplaces.map((reads): ReactElement => {
-              const usable = data.proxies.usable.find(
-                ({ marketplace }): boolean => marketplace === reads.marketplace,
-              );
+      <Stack gap="xs">
+        <Title order={4}>{t('dashboard.marketplaces')}</Title>
+        {setDisabled.error !== null && <ErrorAlert error={setDisabled.error} />}
+        <Table.ScrollContainer minWidth={720}>
+          <Table>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>{t('dashboard.marketplace')}</Table.Th>
+                <Table.Th>{t('dashboard.products')}</Table.Th>
+                <Table.Th>{t('dashboard.readsLastDay')}</Table.Th>
+                <Table.Th>{t('dashboard.lastRead')}</Table.Th>
+                <Table.Th>{t('dashboard.staleCount')}</Table.Th>
+                <Table.Th>{t('dashboard.unread')}</Table.Th>
+                <Table.Th>
+                  <Tooltip multiline w={280} label={t('dashboard.usableHint')}>
+                    <span>{t('dashboard.usable')}</span>
+                  </Tooltip>
+                </Table.Th>
+                <Table.Th>
+                  <Tooltip multiline w={280} label={t('dashboard.acceptingLinksHint')}>
+                    <span>{t('dashboard.acceptingLinks')}</span>
+                  </Tooltip>
+                </Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {data.products.marketplaces.map((reads): ReactElement => {
+                const usable = data.proxies.usable.find(
+                  ({ marketplace }): boolean => marketplace === reads.marketplace,
+                );
 
-              return (
-                <Table.Tr key={reads.marketplace}>
-                  <Table.Td>
-                    <MarketplaceName marketplace={reads.marketplace} size="sm" />
-                  </Table.Td>
-                  <Table.Td>{reads.products}</Table.Td>
-                  <Table.Td>{reads.readsLastDay}</Table.Td>
-                  <Table.Td>{formatMoment(reads.lastReadAt, locale)}</Table.Td>
-                  <Table.Td {...alarmColor(reads.stale > 0, 'orange')}>{reads.stale}</Table.Td>
-                  <Table.Td>{reads.unread}</Table.Td>
-                  <Table.Td {...alarmColor(usable?.count === 0, 'red')}>
-                    {usable?.count ?? '-'}
-                  </Table.Td>
-                </Table.Tr>
-              );
-            })}
-          </Table.Tbody>
-        </Table>
-      </Table.ScrollContainer>
+                return (
+                  <Table.Tr key={reads.marketplace}>
+                    <Table.Td>
+                      <MarketplaceName marketplace={reads.marketplace} size="sm" />
+                    </Table.Td>
+                    <Table.Td>{reads.products}</Table.Td>
+                    <Table.Td>{reads.readsLastDay}</Table.Td>
+                    <Table.Td>{formatMoment(reads.lastReadAt, locale)}</Table.Td>
+                    <Table.Td {...alarmColor(reads.stale > 0, 'orange')}>{reads.stale}</Table.Td>
+                    <Table.Td>{reads.unread}</Table.Td>
+                    <Table.Td {...alarmColor(usable?.count === 0, 'red')}>
+                      {usable?.count ?? '-'}
+                    </Table.Td>
+                    <Table.Td>
+                      <Switch
+                        aria-label={t('dashboard.acceptingLinksOf', {
+                          marketplace: marketplaceName(reads.marketplace),
+                        })}
+                        checked={!reads.disabled}
+                        disabled={setDisabled.isPending}
+                        onChange={(event): void => {
+                          setDisabled.mutate({
+                            marketplace: reads.marketplace,
+                            disabled: !event.currentTarget.checked,
+                          });
+                        }}
+                      />
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
+      </Stack>
     </Card>
   );
 }

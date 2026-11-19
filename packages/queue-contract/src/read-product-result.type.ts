@@ -42,5 +42,7 @@ export const readProductResultSchema = z.union([
     httpStatus: z.number().int().optional(),
     /** Absent from older workers. */
     stage: z.enum(readStages).optional(),
+    /** Short error detail (e.g. browser failure message) for diagnostics; absent from older workers. */
+    detail: z.string().optional(),
   }),
 ]);

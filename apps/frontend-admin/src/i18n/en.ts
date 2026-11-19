@@ -68,6 +68,10 @@ export const en = {
     usable: 'Usable proxies',
     usableHint:
       'The proxies a read may be given now: not resting for the marketplace, not down, not turned off.',
+    acceptingLinks: 'Accepting links',
+    acceptingLinksHint:
+      'When off, new links from this marketplace are refused; products already tracked keep reading.',
+    acceptingLinksOf: 'Accepting links for {{marketplace}}',
     jobKinds: 'Jobs in a day by kind',
     kind: 'Kind',
     failuresTitle: 'Recent failures',

@@ -1,4 +1,4 @@
-import { type LoggerPort, silentLogger } from 'logger';
+import { errorMessage, type LoggerPort, silentLogger } from 'logger';
 import type { ProxyEndpointEntity } from 'proxy-endpoint';
 
 import type { CityInterface } from '../domain/city.interface.js';
@@ -30,6 +30,7 @@ export class FetchCitiesUseCase {
     if (routes.length === 0) throw new Error('No route to read the cities through');
 
     const cities = new Map<string, CityInterface>();
+    const failures: string[] = [];
     let done = 0;
     await listener.onProgress(0, this.letters.length);
 
@@ -37,12 +38,16 @@ export class FetchCitiesUseCase {
       if (done === this.letters.length) break;
 
       signal.throwIfAborted();
-      done = await this.readFrom(route, done, signal, cities, listener);
+      done = await this.readFrom(route, done, signal, cities, listener, failures);
     }
 
     const letter = this.letters[done];
-    if (letter !== undefined)
-      throw new Error(`No route could read the cities of the letter ${letter}`);
+    if (letter !== undefined) {
+      const details = failures.length === 0 ? '' : `\n${failures.join('\n')}`;
+      throw new Error(
+        `No route could read the cities of the letter ${letter} (${String(routes.length)} ${routes.length === 1 ? 'route' : 'routes'} tried)${details}`,
+      );
+    }
 
     this.logger.info(`Read ${String(cities.size)} cities`);
 
@@ -58,14 +63,18 @@ export class FetchCitiesUseCase {
     signal: AbortSignal,
     cities: Map<string, CityInterface>,
     listener: FetchCitiesListenerInterface,
+    failures: string[],
   ): Promise<number> {
     const name = route?.server ?? 'direct connection';
     let session;
     try {
       session = await this.source.open(route, signal);
-    } catch {
+    } catch (error: unknown) {
       signal.throwIfAborted();
-      this.logger.warn(`The marketplace did not open via ${name}`);
+      const firstLine = errorMessage(error).split('\n')[0] ?? '';
+      const cause = firstLine === '' ? 'unknown error' : firstLine;
+      this.logger.warn(`The marketplace did not open via ${name}: ${cause}`);
+      failures.push(`${name}: open failed: ${cause}`);
 
       return done;
     }
@@ -78,9 +87,13 @@ export class FetchCitiesUseCase {
         read += 1;
         await listener.onProgress(read, this.letters.length);
       }
-    } catch {
+    } catch (error: unknown) {
       signal.throwIfAborted();
-      this.logger.warn(`The letter ${this.letters[read] ?? '?'} was not read via ${name}`);
+      const firstLine = errorMessage(error).split('\n')[0] ?? '';
+      const cause = firstLine === '' ? 'unknown error' : firstLine;
+      const failedLetter = this.letters[read] ?? '?';
+      this.logger.warn(`The letter ${failedLetter} was not read via ${name}: ${cause}`);
+      failures.push(`${name}: letter ${failedLetter} failed: ${cause}`);
     } finally {
       await session.close();
     }
