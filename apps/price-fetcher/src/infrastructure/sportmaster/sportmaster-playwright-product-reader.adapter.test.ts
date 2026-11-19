@@ -141,7 +141,7 @@ function createReader(
     },
     new CamoufoxOptionsFactory(),
     parsers,
-    1_000,
+    10_000,
   );
 }
 
