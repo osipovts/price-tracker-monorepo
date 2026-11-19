@@ -11,6 +11,7 @@ import { DockerStackAdapter } from './support/docker-stack.adapter.js';
 import { FakePriceWorkerAdapter } from './support/fake-price-worker.adapter.js';
 import {
   connectDatabase,
+  openPage,
   type RunningHubInterface,
   seedProxies,
   startHub,
@@ -87,7 +88,7 @@ after(
 );
 
 void test('a visitor signs up, and is logged in', async (): Promise<void> => {
-  await page.goto(`${hub.baseUrl}/app/`);
+  await openPage(page, `${hub.baseUrl}/app/`);
   await page.waitForURL('**/app/login');
 
   await page.getByRole('heading', { name: 'Нищебродская' }).waitFor();
@@ -185,7 +186,7 @@ void test('the page of the group has the best price, where to buy, one chart, an
     })),
   });
 
-  await page.goto(`${hub.baseUrl}/app/groups/${group.id}`);
+  await openPage(page, `${hub.baseUrl}/app/groups/${group.id}`);
   await page
     .getByText(/^1\s299\s₽$/)
     .first()
@@ -240,7 +241,7 @@ void test('the hint of a point tells the price read at it, or the last known one
 
 void test('a product of another marketplace joins the group: the best price is the cheaper one, and the chart gets a second line', async (): Promise<void> => {
   const group = await database.productGroup.findFirstOrThrow();
-  await page.goto(`${hub.baseUrl}/app/groups/${group.id}`);
+  await openPage(page, `${hub.baseUrl}/app/groups/${group.id}`);
 
   await page.getByRole('button', { name: 'Add' }).click();
   const form = page.getByRole('dialog', { name: 'Add to the group' });
@@ -308,7 +309,7 @@ void test('a group is deleted from its page after a confirmation, and its produc
 
   // The page of the group has a cross for each of its products, and the group itself in its menu.
   const group = await database.productGroup.findFirstOrThrow();
-  await page.goto(`${hub.baseUrl}/app/groups/${group.id}`);
+  await openPage(page, `${hub.baseUrl}/app/groups/${group.id}`);
   await page.getByTitle('Open on dns').waitFor();
   assert.equal(await page.getByRole('button', { name: 'Stop tracking' }).count(), 2);
 
@@ -369,7 +370,7 @@ void test('the theme and the language are set on the page of the settings, and k
 });
 
 void test('the settings show the account and the devices, and sign the other devices out', async (): Promise<void> => {
-  await page.goto(`${hub.baseUrl}/app/settings`);
+  await openPage(page, `${hub.baseUrl}/app/settings`);
   await page.getByRole('heading', { name: 'Account', level: 4, exact: true }).waitFor();
   // The email of the account is the label of the menu.
   await openAccountMenu(page);
@@ -469,7 +470,7 @@ void test('the privacy policy and the terms are open without a login, and linked
   // And in Russian for a browser that asks for it.
   const russian = await browser.newContext({ locale: 'ru-RU' });
   const page = await russian.newPage();
-  await page.goto(`${hub.baseUrl}/app/privacy`);
+  await openPage(page, `${hub.baseUrl}/app/privacy`);
   await page.getByRole('heading', { level: 1, name: 'Политика конфиденциальности' }).waitFor();
 
   await context.close();

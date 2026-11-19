@@ -10,7 +10,7 @@ import { GithubOauthProviderAdapter } from '../auth/infrastructure/github-oauth-
 import { GoogleOauthProviderAdapter } from '../auth/infrastructure/google-oauth-provider.adapter.js';
 import { DockerStackAdapter } from './support/docker-stack.adapter.js';
 import { FakeIdentityProviderAdapter } from './support/fake-identity-provider.adapter.js';
-import { type RunningHubInterface, startHub } from './support/hub-harness.js';
+import { openPage, type RunningHubInterface, startHub } from './support/hub-harness.js';
 
 /**
  * The buttons of the login through Google and GitHub in the client app, in a real Chromium: the browser
@@ -66,7 +66,7 @@ void test('the login page offers both providers, and a login through one lands t
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  await page.goto(`${hub.baseUrl}/app/login`);
+  await openPage(page, `${hub.baseUrl}/app/login`);
   await page.getByRole('link', { name: 'Continue with GitHub' }).waitFor();
   // Each button has the mark of its provider.
   assert.equal(
@@ -90,7 +90,7 @@ void test('a login that the user refuses at the provider brings them back to the
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  await page.goto(`${hub.baseUrl}/app/login`);
+  await openPage(page, `${hub.baseUrl}/app/login`);
   await page.getByRole('link', { name: 'Continue with Google' }).click();
 
   await page.waitForURL(/\/app\/login\?error=oauth/);
@@ -105,7 +105,7 @@ void test('a first login through GitHub signs a new user up, and they are in the
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  await page.goto(`${hub.baseUrl}/app/login`);
+  await openPage(page, `${hub.baseUrl}/app/login`);
   await page.getByRole('link', { name: 'Continue with GitHub' }).click();
 
   await page.waitForURL(/\/app\/?$/);
@@ -118,11 +118,11 @@ void test('the settings show the account linked, refuse to unlink the only way i
   provider.profile = { subject: '4001', email: 'dana@example.com', emailVerified: true };
   const context = await browser.newContext();
   const page = await context.newPage();
-  await page.goto(`${hub.baseUrl}/app/login`);
+  await openPage(page, `${hub.baseUrl}/app/login`);
   await page.getByRole('link', { name: 'Continue with GitHub' }).click();
   await page.waitForURL(/\/app\/?$/);
 
-  await page.goto(`${hub.baseUrl}/app/settings`);
+  await openPage(page, `${hub.baseUrl}/app/settings`);
   await page.getByRole('heading', { name: 'Sign-in methods' }).waitFor();
   await page.getByText('The only way to log in').waitFor();
   assert.equal(await page.getByRole('button', { name: 'Unlink' }).isDisabled(), true);
