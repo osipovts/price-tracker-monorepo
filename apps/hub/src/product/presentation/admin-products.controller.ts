@@ -1,11 +1,23 @@
-import { Controller, Get, Inject, Param, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Param,
+  Patch,
+  Query,
+} from '@nestjs/common';
 import {
   ApiForbiddenResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import type { MarketplaceType } from 'product-reference';
 
 import {
   APP_CONFIG,
@@ -21,8 +33,14 @@ import { GetProductGroupUseCase } from '../application/get-product-group.use-cas
 import { GetProductThumbnailUrlUseCase } from '../application/get-product-thumbnail-url.use-case.js';
 import { ListPriceHistoryUseCase } from '../application/list-price-history.use-case.js';
 import { administratorViewer } from '../application/product-viewer.type.js';
+import { SetMarketplaceDisabledUseCase } from '../application/set-marketplace-disabled.use-case.js';
 import { priceHistoryResponseSchema, type PriceHistoryResponseType } from './price-history.type.js';
-import { productIdParamSchema } from './product.type.js';
+import {
+  marketplaceDisabledBodySchema,
+  type MarketplaceDisabledBodyType,
+  marketplaceParamSchema,
+  productIdParamSchema,
+} from './product.type.js';
 import {
   productGroupDetailSchema,
   type ProductGroupDetailType,
@@ -30,7 +48,7 @@ import {
 } from './product-group.type.js';
 import { toObservation, toProduct, toProductGroupDetail } from './product-presenter.type.js';
 
-/** The groups and the prices of any user as the user sees them, for an administrator to look at and not to change. */
+/** Admin endpoints owned by the product context. */
 @ApiTags('admin')
 @routeAccess('admin')
 @Controller('admin')
@@ -40,6 +58,8 @@ export class AdminProductsController {
     @Inject(ListPriceHistoryUseCase) private readonly listHistory: ListPriceHistoryUseCase,
     @Inject(GetProductThumbnailUrlUseCase)
     private readonly thumbnailUrl: GetProductThumbnailUrlUseCase,
+    @Inject(SetMarketplaceDisabledUseCase)
+    private readonly setMarketplaceDisabledUseCase: SetMarketplaceDisabledUseCase,
     @Inject(APP_CONFIG) private readonly config: AppConfigInterface,
   ) {}
 
@@ -84,5 +104,21 @@ export class AdminProductsController {
       ),
       ...toPageResponse(page, query, toObservation),
     };
+  }
+
+  @Patch('marketplaces/:marketplace')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Turn link intake for a marketplace off or on',
+    description:
+      'A marketplace that is off refuses new links; products already tracked keep reading. For administrators.',
+  })
+  @ApiNoContentResponse()
+  @ApiForbiddenResponse({ description: 'The user is not an administrator' })
+  async setMarketplaceDisabled(
+    @Param('marketplace', { schema: marketplaceParamSchema }) marketplace: MarketplaceType,
+    @Body({ schema: marketplaceDisabledBodySchema }) body: MarketplaceDisabledBodyType,
+  ): Promise<void> {
+    await this.setMarketplaceDisabledUseCase.execute(marketplace, body.disabled);
   }
 }

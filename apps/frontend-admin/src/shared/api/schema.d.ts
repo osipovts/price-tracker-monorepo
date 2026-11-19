@@ -227,6 +227,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/marketplaces/{marketplace}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Turn link intake for a marketplace off or on
+         * @description A marketplace that is off refuses new links; products already tracked keep reading. For administrators.
+         */
+        patch: operations["AdminProductsController_setMarketplaceDisabled"];
+        trace?: never;
+    };
     "/jobs": {
         parameters: {
             query?: never;
@@ -710,6 +730,7 @@ export interface operations {
                                 lastReadAt: string | null;
                                 stale: number;
                                 unread: number;
+                                disabled: boolean;
                             }[];
                             readsByHour: {
                                 /** Format: date-time */
@@ -975,7 +996,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The user tracks the most products the hub allows, or the group holds the most it may */
+            /** @description The user tracks the most products the hub allows, the group holds the most it may, or the marketplace is disabled */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1553,6 +1574,38 @@ export interface operations {
             };
             /** @description The product is not tracked */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminProductsController_setMarketplaceDisabled: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    disabled: boolean;
+                };
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The user is not an administrator */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

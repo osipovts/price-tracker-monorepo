@@ -271,3 +271,11 @@ model ProductGroupPreference {
 
   @@map("product_group_preferences")
 }
+
+/// Marketplaces turned off by an administrator: new links to them are refused, existing products keep reading.
+model DisabledMarketplace {
+  marketplace String   @id
+  disabledAt  DateTime @default(now())
+
+  @@map("disabled_marketplaces")
+}

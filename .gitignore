@@ -8,6 +8,7 @@ session.json
 
 generated
 AGENTS.md
+.agents/
 
 # Reports of the ub-mode tools (crapper, dryer, mutator) and their mutation workers.
 .metrics

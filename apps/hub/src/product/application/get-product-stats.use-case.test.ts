@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import type { MarketplaceType } from 'product-reference';
 
 import type { ClockPort } from '../../shared/application/clock.port.js';
+import { InMemoryDisabledMarketplaceRepositoryAdapter } from '../infrastructure/in-memory-disabled-marketplace-repository.adapter.js';
 import { InMemoryPriceObservationRepositoryAdapter } from '../infrastructure/in-memory-price-observation-repository.adapter.js';
 import { InMemoryProductGroupRepositoryAdapter } from '../infrastructure/in-memory-product-group-repository.adapter.js';
 import { InMemoryTrackedProductRepositoryAdapter } from '../infrastructure/in-memory-tracked-product-repository.adapter.js';
@@ -56,7 +57,16 @@ void test('counts the products, the trackings and the groups, and how the prices
   await read(stale, ago(5));
   await read(dns, ago(1));
 
-  const stats = await new GetProductStatsUseCase(products, groups, observations, clock).execute();
+  const disabledMarketplaces = new InMemoryDisabledMarketplaceRepositoryAdapter();
+  await disabledMarketplaces.setDisabled('dns', true);
+
+  const stats = await new GetProductStatsUseCase(
+    products,
+    groups,
+    observations,
+    clock,
+    disabledMarketplaces,
+  ).execute();
 
   assert.deepEqual(
     { products: stats.products, trackings: stats.trackings, groups: stats.groups },
@@ -72,8 +82,17 @@ void test('counts the products, the trackings and the groups, and how the prices
         lastReadAt: ago(0.5),
         stale: 1,
         unread: 1,
+        disabled: false,
       },
-      { marketplace: 'dns', products: 1, readsLastDay: 1, lastReadAt: ago(1), stale: 0, unread: 0 },
+      {
+        marketplace: 'dns',
+        products: 1,
+        readsLastDay: 1,
+        lastReadAt: ago(1),
+        stale: 0,
+        unread: 0,
+        disabled: true,
+      },
     ],
   );
   assert.deepEqual(stats.readsByHour, [

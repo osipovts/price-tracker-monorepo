@@ -236,7 +236,7 @@ void test('fails the job on the last try when a product is still unread, keeping
       new AbortController().signal,
       false,
     ),
-    /1 products could not be read/,
+    /1 of 2 products could not be read: network_error/,
   );
 
   assert.equal(published.find(isType('job_failed'))?.willRetry, false);
@@ -325,4 +325,63 @@ void test('starts the next try on the routes that did not fail this one', async 
       products: [job.products[0]],
     },
   ]);
+});
+
+void test('reports per-product status, routes, stage, duration and browser detail in job_failed reason', async (): Promise<void> => {
+  const published: PriceFetchResultType[] = [];
+  const proxy = 'socks5://217.71.230.103:1080';
+  const controller = new PriceFetchController(
+    new FetchPricesUseCase(
+      new ResolveProductReferenceUseCase([new OzonReferenceParser()]),
+      (): ProductBatchReaderPort =>
+        oneByOne({
+          read: (_reference, endpoint): Promise<ReadProductResultType> =>
+            Promise.resolve(
+              endpoint === null
+                ? { status: 'http_error', httpStatus: 403 }
+                : {
+                    status: 'network_error',
+                    stage: 'exit',
+                    detail: 'page.goto: Timeout 15000ms exceeded',
+                  },
+            ),
+        }),
+    ),
+    new QueueMessageParser(silentLogger),
+    new JobLifecycleReporter((message): Promise<void> => {
+      published.push(message);
+
+      return Promise.resolve();
+    }, silentLogger),
+    (message): Promise<void> => {
+      published.push(message);
+
+      return Promise.resolve();
+    },
+  );
+
+  await assert.rejects(
+    controller.handle(
+      {
+        ...job,
+        proxies: [{ server: proxy }, { server: null }],
+        products: [{ trackedProductId: productId, url: 'https://www.ozon.ru/product/4775581891/' }],
+      },
+      new AbortController().signal,
+      false,
+    ),
+  );
+
+  const failure = published.find(isType('job_failed'));
+  assert.ok(failure !== undefined);
+  assert.match(failure.reason, /^1 of 1 products could not be read: http_error 403\n/);
+  assert.match(
+    failure.reason,
+    /https:\/\/www\.ozon\.ru\/product\/4775581891\/: http_error 403 \(2 attempts: /,
+  );
+  assert.match(
+    failure.reason,
+    /socks5:\/\/217\.71\.230\.103:1080 -> network_error \[exit\] \d+ms: page\.goto: Timeout 15000ms exceeded/,
+  );
+  assert.match(failure.reason, /direct -> http_error 403 \[page\] \d+ms/);
 });

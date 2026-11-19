@@ -142,14 +142,25 @@ void test('goes on to the next route when one does not open, or stops working, a
 
 void test('fails, and gives none of the cities, when no route can read a letter', async (): Promise<void> => {
   const { source: cities, closed } = source({
+    closed: [first.server],
     answer: (_route, letter) => (letter === 'Б' ? new Error('timeout') : [city('1', 'Абакан')]),
   });
 
   await assert.rejects(
     new FetchCitiesUseCase(cities, ['А', 'Б']).execute([first, second], never, listener()),
-    /Б/,
+    (error: unknown): boolean => {
+      assert.ok(error instanceof Error);
+      assert.match(
+        error.message,
+        /No route could read the cities of the letter Б \(2 routes tried\)/,
+      );
+      assert.match(error.message, new RegExp(`${first.server}: open failed: no route`));
+      assert.match(error.message, new RegExp(`${second.server}: letter Б failed: timeout`));
+
+      return true;
+    },
   );
-  assert.deepEqual(closed, [first.server, second.server]);
+  assert.deepEqual(closed, [second.server]);
   await assert.rejects(
     new FetchCitiesUseCase(cities, ['А']).execute([], never, listener()),
     /route/,

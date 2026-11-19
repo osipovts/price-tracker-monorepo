@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
+import { errorMessage } from 'logger';
+import { formatFailureReason } from 'queue-worker';
+
 import { JobEntity } from '../domain/job.entity.js';
 import type { JobQueuePort } from './job-queue.port.js';
 import type { JobRepositoryPort } from './job-repository.port.js';
@@ -20,7 +23,13 @@ export class ScheduleJobUseCase {
     try {
       await this.publish(jobId, request);
     } catch (error: unknown) {
-      await this.jobs.save(job.failed('Could not be queued', false, new Date()));
+      await this.jobs.save(
+        job.failed(
+          formatFailureReason(`Could not be queued: ${errorMessage(error)}`),
+          false,
+          new Date(),
+        ),
+      );
       throw error;
     }
 

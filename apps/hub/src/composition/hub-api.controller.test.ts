@@ -47,7 +47,9 @@ import { RemoveProductUseCase } from '../product/application/remove-product.use-
 import { RemoveProductGroupUseCase } from '../product/application/remove-product-group.use-case.js';
 import { RenameProductGroupUseCase } from '../product/application/rename-product-group.use-case.js';
 import { RequestPriceObservationUseCase } from '../product/application/request-price-observation.use-case.js';
+import { SetMarketplaceDisabledUseCase } from '../product/application/set-marketplace-disabled.use-case.js';
 import { SetStatsPeriodUseCase } from '../product/application/set-stats-period.use-case.js';
+import { InMemoryDisabledMarketplaceRepositoryAdapter } from '../product/infrastructure/in-memory-disabled-marketplace-repository.adapter.js';
 import { InMemoryPriceObservationRepositoryAdapter } from '../product/infrastructure/in-memory-price-observation-repository.adapter.js';
 import { InMemoryProductGroupPreferenceRepositoryAdapter } from '../product/infrastructure/in-memory-product-group-preference-repository.adapter.js';
 import { InMemoryProductGroupRepositoryAdapter } from '../product/infrastructure/in-memory-product-group-repository.adapter.js';
@@ -103,6 +105,7 @@ const queue: JobQueuePort = {
 };
 
 const scheduleJob = new ScheduleJobUseCase(queue, jobs);
+const disabledMarketplaces = new InMemoryDisabledMarketplaceRepositoryAdapter();
 const requestObservation = new RequestPriceObservationUseCase(
   products,
   new ChoosePriceRoutesUseCase(
@@ -229,7 +232,13 @@ before(async (): Promise<void> => {
                 cityId === irkutskId ? { id: irkutskId, name: 'Иркутск', aliases: [] } : null,
               ),
           },
+          systemClock,
+          disabledMarketplaces,
         ),
+      },
+      {
+        provide: SetMarketplaceDisabledUseCase,
+        useValue: new SetMarketplaceDisabledUseCase(disabledMarketplaces),
       },
       { provide: SearchCitiesUseCase, useValue: new SearchCitiesUseCase(handbooks) },
       { provide: ListHandbookCitiesUseCase, useValue: new ListHandbookCitiesUseCase(handbooks) },
@@ -600,6 +609,7 @@ void test('rejects bad links, unknown and malformed product ids', async (): Prom
 void test('documents the endpoints and their zod schemas in Swagger', (): void => {
   const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('Hub').build());
   assert.deepEqual(Object.keys(document.paths).toSorted(), [
+    '/admin/marketplaces/{marketplace}',
     '/admin/product-groups/{id}',
     '/admin/products/{id}/prices',
     '/handbooks/{handbook}',
@@ -709,6 +719,7 @@ const operatorRoutes: Array<[string, string]> = [
 const adminRoutes: Array<[string, string]> = [
   ['GET', '/admin/product-groups/3f0c9a52-7a53-4a64-9d0d-2f2f6c1f0a11'],
   ['GET', '/admin/products/3f0c9a52-7a53-4a64-9d0d-2f2f6c1f0a11/prices'],
+  ['PATCH', '/admin/marketplaces/ozon'],
 ];
 
 async function statusOf(

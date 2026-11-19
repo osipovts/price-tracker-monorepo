@@ -1,8 +1,18 @@
+import { marketplaces } from 'product-reference';
 import { z } from 'zod';
 
 import { priceObservationSchema } from './price-observation.type.js';
 
 export const productIdParamSchema = z.uuid();
+
+export const marketplaceParamSchema = z.enum(marketplaces);
+
+export const marketplaceDisabledBodySchema = z.strictObject({
+  /** Whether to refuse new links from this marketplace. */
+  disabled: z.boolean(),
+});
+
+export type MarketplaceDisabledBodyType = z.infer<typeof marketplaceDisabledBodySchema>;
 
 export const productCreateBodySchema = z.object({
   /** Product page URL of a supported marketplace; share links are canonicalized. */

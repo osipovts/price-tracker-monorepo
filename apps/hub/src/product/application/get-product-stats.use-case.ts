@@ -1,6 +1,10 @@
 import { marketplaces, type MarketplaceType } from 'product-reference';
 
 import { type ClockPort, systemClock } from '../../shared/application/clock.port.js';
+import {
+  allMarketplacesEnabled,
+  type DisabledMarketplaceRepositoryPort,
+} from './disabled-marketplace-repository.port.js';
 import type { PriceObservationRepositoryPort } from './price-observation-repository.port.js';
 import type { ProductGroupRepositoryPort } from './product-group-repository.port.js';
 import type { TrackedProductRepositoryPort } from './tracked-product-repository.port.js';
@@ -25,6 +29,8 @@ export interface MarketplaceReadsInterface {
   stale: number;
   /** The products whose price was never read. */
   unread: number;
+  /** Turned off by an administrator: new links to this marketplace are refused. */
+  disabled: boolean;
 }
 
 /** The prices of a marketplace read in an hour. */
@@ -52,15 +58,21 @@ export class GetProductStatsUseCase {
     private readonly groups: ProductGroupRepositoryPort,
     private readonly observations: PriceObservationRepositoryPort,
     private readonly clock: ClockPort = systemClock,
+    private readonly disabledMarketplaces: Pick<
+      DisabledMarketplaceRepositoryPort,
+      'listDisabled'
+    > = allMarketplacesEnabled,
   ) {}
 
   async execute(): Promise<ProductStatsInterface> {
     const now = this.clock.now().getTime();
-    const [totals, groups, tracked] = await Promise.all([
+    const [totals, groups, tracked, disabledList] = await Promise.all([
       this.products.stats(),
       this.groups.listAll({ page: 1, pageSize: 1 }),
       this.products.listTracked(),
+      this.disabledMarketplaces.listDisabled(),
     ]);
+    const disabled = new Set(disabledList);
     const ids = tracked.map(({ snapshot }): string => snapshot.id);
     const [latest, lastDay] = await Promise.all([
       this.observations.findLatestByProducts(ids),
@@ -97,6 +109,7 @@ export class GetProductStatsUseCase {
           lastReadAt: lastReads.length === 0 ? null : new Date(newest),
           stale: lastReads.filter((at): boolean => now - at.getTime() > productStaleAfterMs).length,
           unread: own.length - lastReads.length,
+          disabled: disabled.has(marketplace),
         };
       }),
       readsByHour: this.byHour(

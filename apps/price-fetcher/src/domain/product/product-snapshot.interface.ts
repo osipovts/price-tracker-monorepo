@@ -26,6 +26,7 @@ export type ReadProductResultType =
       httpStatus?: number;
       /** The pages of the site when it is not given. */
       stage?: ReadStageType;
+      detail?: string;
     };
 
 export interface ProductAttemptInterface {

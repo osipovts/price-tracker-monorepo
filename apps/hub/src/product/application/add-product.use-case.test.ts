@@ -12,12 +12,14 @@ import {
 import { NoProxiesAvailableError } from '../../shared/application/no-proxies-available.error.js';
 import { TooManyRequestsError } from '../../shared/application/too-many-requests.error.js';
 import { InMemoryRateLimiterAdapter } from '../../shared/infrastructure/in-memory-rate-limiter.adapter.js';
+import { InMemoryDisabledMarketplaceRepositoryAdapter } from '../infrastructure/in-memory-disabled-marketplace-repository.adapter.js';
 import { InMemoryPriceObservationRepositoryAdapter } from '../infrastructure/in-memory-price-observation-repository.adapter.js';
 import { InMemoryProductGroupRepositoryAdapter } from '../infrastructure/in-memory-product-group-repository.adapter.js';
 import { InMemoryTrackedProductRepositoryAdapter } from '../infrastructure/in-memory-tracked-product-repository.adapter.js';
 import { AddProductUseCase } from './add-product.use-case.js';
 import { ListPriceHistoryUseCase } from './list-price-history.use-case.js';
 import type { KnownCityInterface, MarketplaceCitiesPort } from './marketplace-cities.port.js';
+import { MarketplaceDisabledError } from './marketplace-disabled.error.js';
 import { ProductAddingInProgressError } from './product-adding-in-progress.error.js';
 import { ProductGroupFullError } from './product-group-full.error.js';
 import { ProductGroupNotFoundError } from './product-group-not-found.error.js';
@@ -505,4 +507,38 @@ void test('a product the user tracks already stays in its group', async (): Prom
   const again = await add.execute(jane, 'https://www.ozon.ru/product/1/', null, other.snapshot.id);
 
   assert.equal(again.groupId, first.groupId);
+});
+
+void test('refuses links from a disabled marketplace until it is enabled again', async (): Promise<void> => {
+  const disabledMarketplaces = new InMemoryDisabledMarketplaceRepositoryAdapter();
+  await disabledMarketplaces.setDisabled('ozon', true);
+  const products = new InMemoryTrackedProductRepositoryAdapter();
+  const add = new AddProductUseCase(
+    new ResolveProductReferenceUseCase([new OzonReferenceParser(), new DnsReferenceParser()]),
+    products,
+    new InMemoryProductGroupRepositoryAdapter(),
+    new InMemoryPriceObservationRepositoryAdapter(),
+    { execute: (): Promise<{ jobId: string }> => Promise.resolve({ jobId: 'job-1' }) },
+    new InMemoryRateLimiterAdapter(),
+    roomy,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    disabledMarketplaces,
+  );
+
+  await assert.rejects(
+    add.execute(jane, 'https://www.ozon.ru/product/1/'),
+    MarketplaceDisabledError,
+  );
+  const dns = await add.execute(
+    jane,
+    'https://www.dns-shop.ru/product/a1b2c3d4e5f61234/smartfon-apple/',
+  );
+  assert.equal(dns.product.snapshot.marketplace, 'dns');
+
+  await disabledMarketplaces.setDisabled('ozon', false);
+  const ozon = await add.execute(jane, 'https://www.ozon.ru/product/1/');
+  assert.equal(ozon.product.snapshot.marketplace, 'ozon');
 });

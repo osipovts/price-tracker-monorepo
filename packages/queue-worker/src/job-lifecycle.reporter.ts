@@ -5,7 +5,12 @@ import { z } from 'zod';
 import type { QueueMessageParser } from './queue-message.parser.js';
 
 /** How long a reported reason of a failure may be. */
-export const maxReasonLength = 200;
+export const maxReasonLength = 2000;
+
+/** Removes URL credentials and caps a failure reason for queue messages and job records. */
+export function formatFailureReason(reason: string): string {
+  return reason.replaceAll(/\/\/[^/\s@]+@/g, '//***@').slice(0, maxReasonLength);
+}
 
 /** Reports the start and the end of a job, whatever work the job does. */
 export class JobLifecycleReporter {
@@ -32,7 +37,7 @@ export class JobLifecycleReporter {
         await this.publish({
           type: 'job_failed',
           jobId: jobId.data.jobId,
-          reason: errorMessage(error).slice(0, maxReasonLength),
+          reason: formatFailureReason(errorMessage(error)),
           willRetry: false,
         }).catch((publishError: unknown): void => {
           this.logger.error(
@@ -57,7 +62,7 @@ export class JobLifecycleReporter {
       await this.publish({
         type: 'job_failed',
         jobId,
-        reason: reason.slice(0, maxReasonLength),
+        reason: formatFailureReason(reason),
         willRetry,
       }).catch((publishError: unknown): void => {
         this.logger.error(

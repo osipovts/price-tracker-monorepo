@@ -95,7 +95,7 @@ export class ProductsController {
   })
   @ApiForbiddenResponse({
     description:
-      'The user tracks the most products the hub allows, or the group holds the most it may',
+      'The user tracks the most products the hub allows, the group holds the most it may, or the marketplace is disabled',
   })
   @ApiNotFoundResponse({ description: "The group is not the user's" })
   @ApiTooManyRequestsResponse({ description: 'The user adds products too fast' })

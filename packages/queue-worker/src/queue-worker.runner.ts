@@ -3,7 +3,7 @@ import { errorMessage, type LoggerPort } from 'logger';
 import type { JobLifecycleType } from 'queue-contract';
 
 import { closeWithin } from './close-within.type.js';
-import { maxReasonLength } from './job-lifecycle.reporter.js';
+import { formatFailureReason } from './job-lifecycle.reporter.js';
 
 export interface QueueWorkerSettingsInterface {
   redisUrl: string;
@@ -106,7 +106,7 @@ export class QueueWorkerRunner<ResultType extends { type: string; jobId: string 
     const message: JobLifecycleType = {
       type: 'job_failed',
       jobId,
-      reason: reason.slice(0, maxReasonLength),
+      reason: formatFailureReason(reason),
       willRetry: false,
     };
     try {
