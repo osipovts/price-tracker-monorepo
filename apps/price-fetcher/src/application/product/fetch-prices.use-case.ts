@@ -62,17 +62,29 @@ const retryableStatuses: ReadonlyArray<ProductFetchResultInterface['status']> = 
   'parse_error',
 ];
 
-/** The answers another route does not change. A challenge is a site decision, not a dead proxy: it is not evaded. */
-const finalStatuses: ReadonlyArray<ReadProductResultType['status']> = [
-  'success',
-  'partial',
-  'challenge_required',
-  'parse_error',
-  'http_error',
-];
-
 /** The answers that refuse the address of the proxy, or come from the proxy itself, rather than from the page. */
 const routeRefusalHttpStatuses: readonly number[] = [401, 403, 407, 429];
+
+/**
+ * The answers another route does not change. A challenge is a site decision, not a dead proxy: it is not evaded.
+ * A route refusal (401/403/407/429) belongs to the proxy, so the job continues to the remaining routes.
+ */
+function isFinal(result: ReadProductResultType): boolean {
+  switch (result.status) {
+    case 'success':
+    case 'partial':
+    case 'challenge_required':
+    case 'parse_error':
+      return true;
+    case 'http_error':
+      return (
+        result.httpStatus === undefined || !routeRefusalHttpStatuses.includes(result.httpStatus)
+      );
+    case 'network_error':
+    case 'proxy_rejected':
+      return false;
+  }
+}
 
 /** A route the job tried and that failed for a reason of its own: the next product tries it last. */
 function isRouteFailure(result: ReadProductResultType): boolean {
@@ -336,7 +348,7 @@ export class FetchPricesUseCase {
           shared: index > 0,
         });
         reading.output.status = result.status;
-        if (!finalStatuses.includes(result.status)) still.push(reading);
+        if (!isFinal(result)) still.push(reading);
       }
       this.logger.verbose(
         `${route}: ${results.map(({ status }): string => status).join(', ')} in ${String(durationMs)} ms`,
