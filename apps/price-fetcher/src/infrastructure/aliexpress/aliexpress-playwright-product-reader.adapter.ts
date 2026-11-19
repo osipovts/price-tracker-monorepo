@@ -2,6 +2,7 @@ import type { CamoufoxOptionsFactory } from 'camoufox-options';
 import { errorMessage, type LoggerPort, silentLogger } from 'logger';
 import type { Browser, BrowserContext, Page, Response } from 'playwright-core';
 import {
+  AliexpressReferenceParser,
   marketplaceDefaultCities,
   marketplaceExitCountries,
   type ProductReferenceEntity,
@@ -202,9 +203,10 @@ export class AliexpressPlaywrightProductReaderAdapter implements ProductReaderPo
           return;
         }
 
+        const { itemId } = AliexpressReferenceParser.splitId(reference.id);
         if (
           url.pathname === '/aer-jsonapi/v1/bx/pdp/web/productData' &&
-          url.searchParams.get('productId') === reference.id
+          url.searchParams.get('productId') === itemId
         ) {
           void received
             .text()
