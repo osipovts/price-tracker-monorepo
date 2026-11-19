@@ -9,7 +9,10 @@ import {
   WildberriesReferenceParser,
 } from 'product-reference';
 
-import type { ReadProductResultType } from '../../domain/product/product-snapshot.interface.js';
+import type {
+  ProductSnapshotInterface,
+  ReadProductResultType,
+} from '../../domain/product/product-snapshot.interface.js';
 import {
   type FetchPricesListenerInterface,
   FetchPricesUseCase,
@@ -211,16 +214,59 @@ void test('learns its routes as it goes: the next product starts on the one that
     },
   );
 
-  // The first product: the dead route, then the refusal ends it, as a refusal of the site is not rotated around.
-  // The second starts on the routes the first did not try: the dead, refused, and direct ones go last.
+  // The first product moves past the dead and refused routes to the good one.
+  // The second starts on the route that read: the dead, refused, and direct ones go last.
   assert.deepEqual(tried, [
-    ['https://www.ozon.ru/product/1/', dead, refused],
+    ['https://www.ozon.ru/product/1/', dead, refused, good],
     ['https://www.ozon.ru/product/2/', good],
   ]);
   assert.deepEqual(
     routes.map(({ server }): string | null => server),
     [good, spare, dead, refused, null, 'socks5://127.0.0.1:1080'],
   );
+});
+
+void test('continues to the remaining routes including direct on a route refusal HTTP status', async (): Promise<void> => {
+  const tried: Array<string | null> = [];
+  const snapshot: ProductSnapshotInterface = {
+    title: 'Boots',
+    observedAt: '2026-11-19T03:50:00.000Z',
+    prices: [{ amountMinor: 299900, currency: 'RUB' }],
+    availability: 'in_stock',
+    imageUrl: null,
+  };
+
+  const result = await fetchOne([proxy, null], {
+    read: (_reference, endpoint): Promise<ReadProductResultType> => {
+      const server = endpoint?.server ?? null;
+      tried.push(server);
+
+      return Promise.resolve(
+        server === null
+          ? { status: 'success', snapshot, exitIp: null }
+          : { status: 'http_error', httpStatus: 401 },
+      );
+    },
+  });
+
+  assert.deepEqual(tried, [proxy, null]);
+  assert.equal(result?.status, 'success');
+  assert.equal(result.attempts.length, 2);
+});
+
+void test('stops at a non-refusal HTTP error without trying the remaining routes', async (): Promise<void> => {
+  let calls = 0;
+
+  const result = await fetchOne([proxy, null], {
+    read: (): Promise<ReadProductResultType> => {
+      calls += 1;
+
+      return Promise.resolve({ status: 'http_error', httpStatus: 404 });
+    },
+  });
+
+  assert.equal(calls, 1);
+  assert.equal(result?.status, 'http_error');
 });
 
 const silentListener: FetchPricesListenerInterface = {
