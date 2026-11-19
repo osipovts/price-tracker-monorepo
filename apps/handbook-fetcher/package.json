@@ -27,6 +27,7 @@
     "camoufox-options": "workspace:*",
     "logger": "workspace:*",
     "playwright-core": "~1.62.1",
+    "product-reference": "workspace:*",
     "proxy-endpoint": "workspace:*",
     "queue-contract": "workspace:*",
     "queue-worker": "workspace:*",

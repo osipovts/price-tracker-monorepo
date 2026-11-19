@@ -88,15 +88,18 @@ export class PrismaPriceObservationRepositoryAdapter implements PriceObservation
     trackedProductId: string,
     pagination: PaginationInterface,
   ): Promise<PageInterface<PriceObservationInterface>> {
-    const [rows, total] = await this.prisma.$transaction([
-      this.prisma.priceObservation.findMany({
-        where: { trackedProductId },
-        orderBy: { observedAt: 'desc' },
-        skip: pageOffset(pagination),
-        take: pagination.pageSize,
-      }),
-      this.prisma.priceObservation.count({ where: { trackedProductId } }),
-    ]);
+    const [rows, total] = await this.prisma.$transaction(
+      [
+        this.prisma.priceObservation.findMany({
+          where: { trackedProductId },
+          orderBy: { observedAt: 'desc' },
+          skip: pageOffset(pagination),
+          take: pagination.pageSize,
+        }),
+        this.prisma.priceObservation.count({ where: { trackedProductId } }),
+      ],
+      { isolationLevel: 'RepeatableRead' },
+    );
 
     return { items: rows.map(toObservation), total };
   }

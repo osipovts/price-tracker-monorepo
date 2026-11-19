@@ -191,6 +191,9 @@ importers:
       playwright-core:
         specifier: ~1.62.1
         version: 1.62.1
+      product-reference:
+        specifier: workspace:*
+        version: link:../../packages/product-reference
       proxy-endpoint:
         specifier: workspace:*
         version: link:../../packages/proxy-endpoint
