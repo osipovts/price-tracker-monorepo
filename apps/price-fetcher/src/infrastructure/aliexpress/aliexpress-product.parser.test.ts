@@ -157,3 +157,100 @@ void test('rejects another product URL, mismatched product id, invalid json, or 
   assert.ok(nonRub);
   assert.deepEqual(nonRub.prices, []);
 });
+
+void test('reads price and availability of the requested sku_id instead of activeSkuId', (): void => {
+  const skuReference = new ProductReferenceEntity(
+    'aliexpress',
+    '1005012815784218:12000037931516788',
+    'https://aliexpress.ru/item/1005012815784218.html?sku_id=12000037931516788',
+  );
+  const multiSkuData = {
+    ...productDataBase,
+    activeSkuId: '12000037931516812',
+    quantity: { totalCount: '10' },
+    skuInfo: {
+      priceList: [
+        {
+          skuId: '12000037931516812',
+          availQuantity: 7,
+          activityAmount: { value: 27_000, currency: 'RUB', cents: '2700000' },
+        },
+        {
+          skuId: '12000037931516788',
+          availQuantity: 3,
+          activityAmount: { value: 13_000, currency: 'RUB', cents: '1300000' },
+        },
+      ],
+    },
+  };
+
+  const snapshot = parser.parse(skuReference, pageOf(multiSkuData, skuReference.url));
+
+  assert.ok(snapshot);
+  assert.deepEqual(snapshot.prices, [{ amountMinor: 1_300_000, currency: 'RUB' }]);
+  assert.equal(snapshot.availability, 'in_stock');
+
+  const outOfStockVariant = parser.parse(
+    skuReference,
+    pageOf(
+      {
+        ...multiSkuData,
+        skuInfo: {
+          priceList: [
+            multiSkuData.skuInfo.priceList[0],
+            {
+              skuId: '12000037931516788',
+              availQuantity: 0,
+              activityAmount: { value: 13_000, currency: 'RUB', cents: '1300000' },
+            },
+          ],
+        },
+      },
+      skuReference.url,
+    ),
+  );
+
+  assert.ok(outOfStockVariant);
+  assert.deepEqual(outOfStockVariant.prices, [{ amountMinor: 1_300_000, currency: 'RUB' }]);
+  assert.equal(outOfStockVariant.availability, 'out_of_stock');
+
+  const missingVariant = parser.parse(
+    skuReference,
+    pageOf(
+      {
+        ...multiSkuData,
+        skuInfo: { priceList: [multiSkuData.skuInfo.priceList[0]] },
+      },
+      skuReference.url,
+    ),
+  );
+
+  assert.ok(missingVariant);
+  assert.deepEqual(missingVariant.prices, []);
+  assert.equal(missingVariant.availability, 'out_of_stock');
+});
+
+void test('prefers priceWithCoupon.amount over activityAmount when a coupon is available', (): void => {
+  const snapshot = parser.parse(
+    reference,
+    pageOf({
+      ...productDataBase,
+      skuInfo: {
+        priceList: [
+          {
+            skuId: '12000059397901048',
+            availQuantity: 28,
+            priceWithCoupon: {
+              amount: { value: 3993, currency: 'RUB', cents: '399300' },
+            },
+            activityAmount: { value: 4921, currency: 'RUB', cents: '492100' },
+            amount: { value: 9531, currency: 'RUB', cents: '953100' },
+          },
+        ],
+      },
+    }),
+  );
+
+  assert.ok(snapshot);
+  assert.deepEqual(snapshot.prices, [{ amountMinor: 399_300, currency: 'RUB' }]);
+});

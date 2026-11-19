@@ -1,4 +1,8 @@
-import type { MarketplaceReferenceParserPort, ProductReferenceEntity } from 'product-reference';
+import {
+  AliexpressReferenceParser,
+  type MarketplaceReferenceParserPort,
+  type ProductReferenceEntity,
+} from 'product-reference';
 import { z } from 'zod';
 
 import type {
@@ -15,6 +19,7 @@ const amountSchema = z.object({
 const skuPriceSchema = z.object({
   skuId: z.union([z.string(), z.number()]).optional(),
   availQuantity: z.number().optional(),
+  priceWithCoupon: z.object({ amount: amountSchema.nullish() }).nullish(),
   activityAmount: amountSchema.nullish(),
   amount: amountSchema.nullish(),
 });
@@ -57,31 +62,22 @@ export class AliexpressProductParser {
     reference: ProductReferenceEntity,
     page: AliexpressPageInterface,
   ): ProductSnapshotInterface | null {
-    if (!this.isPageOf(reference, page.url)) return null;
+    const { itemId, skuId: requestedSkuId } = AliexpressReferenceParser.splitId(reference.id);
+    if (!this.isPageOf(itemId, page.url)) return null;
 
     const product = this.readProduct(page.productData);
-    if (product === null || String(product.id) !== reference.id) return null;
+    if (product === null || String(product.id) !== itemId) return null;
 
     const priceList = product.skuInfo?.priceList ?? [];
-    const activeSkuId =
-      product.activeSkuId !== undefined &&
-      product.activeSkuId !== null &&
-      String(product.activeSkuId) !== '0'
-        ? String(product.activeSkuId)
-        : null;
-    const activeSku =
-      (activeSkuId === null
-        ? undefined
-        : priceList.find((sku): boolean => String(sku.skuId) === activeSkuId)) ??
-      priceList.find((sku): boolean => (sku.availQuantity ?? 0) > 0) ??
-      priceList[0];
-
-    const amountMinor = this.readAmountMinor(
-      activeSku?.activityAmount ??
-        activeSku?.amount ??
-        product.price?.minActivityAmount ??
-        product.price?.minAmount,
-    );
+    const activeSku = this.selectSku(product, priceList, requestedSkuId);
+    const amountMinor =
+      this.readAmountMinor(activeSku?.priceWithCoupon?.amount) ??
+      this.readAmountMinor(activeSku?.activityAmount) ??
+      this.readAmountMinor(activeSku?.amount) ??
+      (requestedSkuId === null
+        ? (this.readAmountMinor(product.price?.minActivityAmount) ??
+          this.readAmountMinor(product.price?.minAmount))
+        : null);
     const prices: PriceObservationInterface[] =
       amountMinor === null ? [] : [{ amountMinor, currency: 'RUB' }];
 
@@ -89,9 +85,33 @@ export class AliexpressProductParser {
       title: product.name,
       observedAt: new Date().toISOString(),
       prices,
-      availability: this.readAvailability(product, priceList),
+      availability: this.readAvailability(product, priceList, requestedSkuId, activeSku),
       imageUrl: httpsUrlOf(product.gallery?.[0]?.imageUrl),
     };
+  }
+
+  private selectSku(
+    product: z.infer<typeof productSchema>,
+    priceList: ReadonlyArray<z.infer<typeof skuPriceSchema>>,
+    requestedSkuId: string | null,
+  ): z.infer<typeof skuPriceSchema> | undefined {
+    if (requestedSkuId !== null)
+      return priceList.find((sku): boolean => String(sku.skuId) === requestedSkuId);
+
+    const activeSkuId =
+      product.activeSkuId !== undefined &&
+      product.activeSkuId !== null &&
+      String(product.activeSkuId) !== '0'
+        ? String(product.activeSkuId)
+        : null;
+
+    return (
+      (activeSkuId === null
+        ? undefined
+        : priceList.find((sku): boolean => String(sku.skuId) === activeSkuId)) ??
+      priceList.find((sku): boolean => (sku.availQuantity ?? 0) > 0) ??
+      priceList[0]
+    );
   }
 
   private readProduct(raw: string): z.infer<typeof productSchema> | null {
@@ -120,9 +140,17 @@ export class AliexpressProductParser {
   private readAvailability(
     product: z.infer<typeof productSchema>,
     priceList: ReadonlyArray<z.infer<typeof skuPriceSchema>>,
+    requestedSkuId: string | null,
+    activeSku: z.infer<typeof skuPriceSchema> | undefined,
   ): ProductSnapshotInterface['availability'] {
     if (product.itemStatus !== undefined && product.itemStatus !== null && product.itemStatus !== 0)
       return 'out_of_stock';
+
+    if (requestedSkuId !== null) {
+      if (activeSku === undefined) return 'out_of_stock';
+      if (activeSku.availQuantity !== undefined)
+        return activeSku.availQuantity > 0 ? 'in_stock' : 'out_of_stock';
+    }
 
     const totalCount = product.quantity?.totalCount;
     if (totalCount !== undefined && totalCount !== null)
@@ -136,9 +164,11 @@ export class AliexpressProductParser {
     return 'unknown';
   }
 
-  private isPageOf(reference: ProductReferenceEntity, url: string): boolean {
+  private isPageOf(itemId: string, url: string): boolean {
     try {
-      return this.references.parse(new URL(url))?.id === reference.id;
+      const parsed = this.references.parse(new URL(url));
+
+      return parsed !== null && AliexpressReferenceParser.splitId(parsed.id).itemId === itemId;
     } catch {
       return false;
     }

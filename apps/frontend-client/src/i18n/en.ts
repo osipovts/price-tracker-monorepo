@@ -89,8 +89,7 @@ export const en = {
     add: 'Add',
     addTitle: 'Track a product',
     addRow: 'Track a new product',
-    addRowHint:
-      'Paste a link from WB, Ozon, DNS, Citilink, Sportmaster or AliExpress - the price is watched from then on',
+    addRowHint: 'Drop a marketplace link — we’ll track the price for you',
     addFirst: 'Add the first product',
     linkLabel: 'Link to a product',
     supported: 'Supported: WB, Ozon, DNS, Citilink, Sportmaster, AliExpress',

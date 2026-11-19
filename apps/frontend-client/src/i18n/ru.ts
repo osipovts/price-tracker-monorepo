@@ -90,8 +90,7 @@ export const ru: DictionaryType = {
     add: 'Добавить',
     addTitle: 'Отслеживать товар',
     addRow: 'Отслеживать новый товар',
-    addRowHint:
-      'Вставьте ссылку с WB, Ozon, DNS, Citilink, Sportmaster или AliExpress - дальше за ценой следим мы',
+    addRowHint: 'Вставьте ссылку на товар с маркетплейса - дальше за ценой следим мы',
     addFirst: 'Добавить первый товар',
     linkLabel: 'Ссылка на товар',
     supported: 'Поддерживаются: WB, Ozon, DNS, Citilink, Sportmaster, AliExpress',
