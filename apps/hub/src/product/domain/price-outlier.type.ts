@@ -29,8 +29,10 @@ export function findPriceOutlierIds(points: readonly PricedPointInterface[]): Re
     if (previous === undefined || current === undefined || next === undefined) continue;
     if (previous.amountMinor <= 0 || current.amountMinor <= 0 || next.amountMinor <= 0) continue;
 
-    const aboveBoth = current.amountMinor > Math.max(previous.amountMinor, next.amountMinor) * outlierHighRatio;
-    const belowBoth = current.amountMinor < Math.min(previous.amountMinor, next.amountMinor) * outlierLowRatio;
+    const aboveBoth =
+      current.amountMinor > Math.max(previous.amountMinor, next.amountMinor) * outlierHighRatio;
+    const belowBoth =
+      current.amountMinor < Math.min(previous.amountMinor, next.amountMinor) * outlierLowRatio;
 
     if (aboveBoth || belowBoth) outliers.add(current.id);
   }

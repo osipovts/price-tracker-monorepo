@@ -1,10 +1,7 @@
 import type { MarketplaceType } from 'product-reference';
 
 import type { PriceObservationInterface } from '../domain/price-observation.interface.js';
-import {
-  findPriceOutlierIds,
-  type PricedPointInterface,
-} from '../domain/price-outlier.type.js';
+import { findPriceOutlierIds, type PricedPointInterface } from '../domain/price-outlier.type.js';
 import { statsPeriodMs, type StatsPeriodType } from '../domain/stats-period.type.js';
 
 export interface GroupPriceInterface {

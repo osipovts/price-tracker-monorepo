@@ -13,16 +13,8 @@ function point(id: string, hour: number, rubles: number): PricedPointInterface {
 
 void describe('findPriceOutlierIds', (): void => {
   void it('flags an isolated upward spike between stable neighbours (ASUS Zenbook / Lenovo Xiaoxin)', (): void => {
-    const asus = [
-      point('a1', 17, 205_906),
-      point('a2', 18, 408_501),
-      point('a3', 19, 199_332),
-    ];
-    const lenovo = [
-      point('l1', 17, 161_509),
-      point('l2', 18, 308_054),
-      point('l3', 19, 154_027),
-    ];
+    const asus = [point('a1', 17, 205_906), point('a2', 18, 408_501), point('a3', 19, 199_332)];
+    const lenovo = [point('l1', 17, 161_509), point('l2', 18, 308_054), point('l3', 19, 154_027)];
 
     assert.deepEqual([...findPriceOutlierIds(asus)], ['a2']);
     assert.deepEqual([...findPriceOutlierIds(lenovo)], ['l2']);

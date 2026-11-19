@@ -18,9 +18,7 @@ interface PricedObservationInterface {
  * both its chronological neighbours. Sustained shifts (even sharp ones) are kept because the next
  * observation confirms the new level.
  */
-export function findPriceOutlierIds(
-  observations: readonly ObservationType[],
-): ReadonlySet<string> {
+export function findPriceOutlierIds(observations: readonly ObservationType[]): ReadonlySet<string> {
   const priced = observations
     .flatMap((observation): PricedObservationInterface[] => {
       const amountMinor = priceOf(observation);
