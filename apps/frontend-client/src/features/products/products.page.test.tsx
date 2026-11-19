@@ -456,9 +456,7 @@ test('starts the list with a row to track a new product, in place of a title of 
   renderPage();
 
   const row = await screen.findByRole('button', { name: 'Track a new product' });
-  expect(row).toHaveAccessibleDescription(
-    /^Paste a link from WB, Ozon, DNS, Citilink, Sportmaster or AliExpress/,
-  );
+  expect(row).toHaveAccessibleDescription(/^Drop a marketplace link/);
   expect(row.compareDocumentPosition(screen.getByRole('link', { name: /Notebook/ }))).toBe(
     Node.DOCUMENT_POSITION_FOLLOWING,
   );
