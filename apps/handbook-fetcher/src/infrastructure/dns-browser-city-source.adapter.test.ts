@@ -34,6 +34,7 @@ interface SiteInterface {
 function createSource(
   site: SiteInterface,
   inspect?: (options: BrowserContextOptions | undefined) => void,
+  timeoutMs = 10_000,
 ): { source: DnsBrowserCitySourceAdapter; asked: string[] } {
   const asked: string[] = [];
   const source = new DnsBrowserCitySourceAdapter(
@@ -73,7 +74,7 @@ function createSource(
       },
     },
     new CamoufoxOptionsFactory(),
-    1500,
+    timeoutMs,
   );
 
   return { source, asked };
@@ -164,7 +165,7 @@ void test(
     timeout: 10_000,
   },
   async (): Promise<void> => {
-    const { source } = createSource({ hangs: true });
+    const { source } = createSource({ hangs: true }, undefined, 1500);
     const session = await source.open(proxy, signal);
     const started = Date.now();
 

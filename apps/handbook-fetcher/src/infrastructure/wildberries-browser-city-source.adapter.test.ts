@@ -84,8 +84,8 @@ function createSource(
     },
     new CamoufoxOptionsFactory(),
     new WildberriesPickupCitiesParser(),
-    1500,
-    3000,
+    10_000,
+    10_000,
   );
 }
 

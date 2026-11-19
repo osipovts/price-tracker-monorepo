@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { PrismaPg } from '@prisma/adapter-pg';
+import type { Page, Response } from 'playwright';
 
 import type { OauthProvidersType } from '../../auth/application/oauth-provider.port.js';
 import { OAUTH_PROVIDERS } from '../../auth/auth.module.js';
@@ -139,4 +140,34 @@ export async function eventually<ResultType>(
   }
 
   throw new Error(`Never saw ${what} in ${String(timeoutMs)} ms${last === '' ? '' : `: ${last}`}`);
+}
+
+/** Navigates to a URL, retrying if Chromium hits a transient Linux/Docker network-change notification. */
+export async function openPage(
+  page: Page,
+  url: string,
+  options?: Parameters<Page['goto']>[1],
+): Promise<Response | null> {
+  const attempts = 3;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await page.goto(url, options);
+
+      return response;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('ERR_NETWORK_CHANGED') && attempt < attempts) {
+        await new Promise((resolve): void => {
+          setTimeout(resolve, 200 * attempt);
+        });
+
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  return null;
 }

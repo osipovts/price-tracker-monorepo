@@ -10,6 +10,7 @@ import { DockerStackAdapter } from './support/docker-stack.adapter.js';
 import {
   connectDatabase,
   eventually,
+  openPage,
   type RunningHubInterface,
   seedProxies,
   startHub,
@@ -66,7 +67,7 @@ after(
 
 async function logIn(context: BrowserContext, email: string): Promise<Page> {
   const page = await context.newPage();
-  await page.goto(`${hub.baseUrl}/panel/`);
+  await openPage(page, `${hub.baseUrl}/panel/`);
   await page.getByLabel('Email').fill(email);
   await page.getByRole('textbox', { name: 'Password' }).fill(password);
   await page.getByRole('button', { name: 'Log in' }).click();
@@ -77,7 +78,7 @@ async function logIn(context: BrowserContext, email: string): Promise<Page> {
 void test('a visitor is sent to the login, and a wrong password is refused', async (): Promise<void> => {
   const context = await browser.newContext();
   const page = await context.newPage();
-  await page.goto(`${hub.baseUrl}/panel/`);
+  await openPage(page, `${hub.baseUrl}/panel/`);
   await page.waitForURL('**/panel/login');
 
   await page.getByLabel('Email').fill(adminEmail);
@@ -226,7 +227,7 @@ void test('the panel is shut off from frames', async (): Promise<void> => {
 void test('the panel speaks the language of the browser', async (): Promise<void> => {
   const context = await browser.newContext({ locale: 'ru-RU' });
   const page = await context.newPage();
-  await page.goto(`${hub.baseUrl}/panel/login`);
+  await openPage(page, `${hub.baseUrl}/panel/login`);
 
   await page.getByRole('heading', { name: 'Админка' }).waitFor();
   await context.close();

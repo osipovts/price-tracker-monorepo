@@ -163,7 +163,7 @@ function createSource(
       },
     },
     new CamoufoxOptionsFactory(),
-    1500,
+    10_000,
   );
 
   return { source, requests };
