@@ -40,11 +40,13 @@ jobs:
         run: echo "version=$(node -p "require('./apps/price-fetcher/node_modules/camoufox-js/package.json').version")" >> "$GITHUB_OUTPUT"
 
       - uses: actions/cache@v6
+        id: camoufox-cache
         with:
           path: ~/.cache/camoufox
           key: camoufox-${{ runner.os }}-${{ steps.camoufox.outputs.version }}
 
       - name: Install Camoufox
+        if: steps.camoufox-cache.outputs.cache-hit != 'true'
         env:
           # camoufox-js looks up the releases of the browser over the API of GitHub.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
