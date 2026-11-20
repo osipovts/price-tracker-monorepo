@@ -66,8 +66,14 @@ const configSchema = z.object({
     .int()
     .min(0)
     .default(50 * 60_000),
+  priceFetchAttempts: z.coerce.number().int().min(1).max(10).default(2),
+  priceFetchBackoffMs: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .default(5 * 60_000),
   priceRefreshPollMs: z.coerce.number().int().min(1000).default(60_000),
-  priceProxyLagMs: z.coerce.number().int().min(0).default(30_000),
+  priceProxyLagMs: z.coerce.number().int().min(0).default(60_000),
   priceRefreshBatchSize: z.coerce.number().int().min(1).max(5000).default(200),
   priceRefreshCohortMs: z.coerce
     .number()
@@ -182,6 +188,8 @@ export class AppConfigParser {
         priceTimeoutMs: env['PRICE_TIMEOUT_MS'],
         linkExpandTimeoutMs: env['LINK_EXPAND_TIMEOUT_MS'],
         priceRefreshAfterMs: env['PRICE_REFRESH_AFTER_MS'],
+        priceFetchAttempts: env['PRICE_FETCH_ATTEMPTS'],
+        priceFetchBackoffMs: env['PRICE_FETCH_BACKOFF_MS'],
         priceRefreshPollMs: env['PRICE_REFRESH_POLL_MS'],
         priceProxyLagMs: env['PRICE_PROXY_LAG_MS'],
         priceRefreshBatchSize: env['PRICE_REFRESH_BATCH_SIZE'],
