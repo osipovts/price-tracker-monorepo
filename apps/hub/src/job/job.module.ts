@@ -30,7 +30,10 @@ import { JobsController } from './presentation/jobs.controller.js';
     {
       provide: JOB_QUEUE,
       useFactory: (config: AppConfigInterface, logger: LoggerPort): JobQueuePort =>
-        new BullmqJobQueueAdapter(config.redisUrl, logger.child('queue')),
+        new BullmqJobQueueAdapter(config.redisUrl, logger.child('queue'), {
+          attempts: config.priceFetchAttempts,
+          backoffMs: config.priceFetchBackoffMs,
+        }),
       inject: [APP_CONFIG, LOGGER],
     },
     {

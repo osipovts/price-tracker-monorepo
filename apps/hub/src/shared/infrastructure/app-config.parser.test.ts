@@ -108,8 +108,19 @@ void test('reads a price again 50 minutes after its last read, looking every min
   assert.throws(() => parser.parse(env(['PRICE_REFRESH_POLL_MS', '10'])));
 });
 
-void test('starts the jobs of one proxy 30 seconds apart, which can be changed', (): void => {
-  assert.equal(parser.parse(env()).priceProxyLagMs, 30_000);
+void test('retries a price fetch twice with a 5-minute backoff by default, which can be changed', (): void => {
+  const config = parser.parse(env());
+
+  assert.equal(config.priceFetchAttempts, 2);
+  assert.equal(config.priceFetchBackoffMs, 5 * 60_000);
+  assert.equal(parser.parse(env(['PRICE_FETCH_ATTEMPTS', '4'])).priceFetchAttempts, 4);
+  assert.equal(parser.parse(env(['PRICE_FETCH_BACKOFF_MS', '60000'])).priceFetchBackoffMs, 60_000);
+  assert.throws(() => parser.parse(env(['PRICE_FETCH_ATTEMPTS', '0'])));
+  assert.throws(() => parser.parse(env(['PRICE_FETCH_BACKOFF_MS', '500'])));
+});
+
+void test('starts the jobs of one proxy 60 seconds apart, which can be changed', (): void => {
+  assert.equal(parser.parse(env()).priceProxyLagMs, 60_000);
   assert.equal(parser.parse(env(['PRICE_PROXY_LAG_MS', '5000'])).priceProxyLagMs, 5000);
   assert.throws(() => parser.parse(env(['PRICE_PROXY_LAG_MS', '-1'])));
 });
