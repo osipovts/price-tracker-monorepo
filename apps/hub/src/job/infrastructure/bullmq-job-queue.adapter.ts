@@ -24,21 +24,33 @@ const jobOptions: JobsOptions = {
   removeOnFail: { age: 86400 },
 };
 
-/** A price read that found nothing comes back after a minute, twice: a hung route or a check of the site often passes by then. */
-const priceFetchJobOptions: JobsOptions = {
-  ...jobOptions,
-  backoff: { type: 'fixed', delay: 60_000 },
+/** A price read that found nothing comes back after a cooldown: a hung route or a check of the site often passes by then. */
+export interface PriceFetchRetryOptionsInterface {
+  attempts: number;
+  backoffMs: number;
+}
+
+const defaultPriceFetchRetryOptions: PriceFetchRetryOptionsInterface = {
+  attempts: 2,
+  backoffMs: 5 * 60_000,
 };
 
 export class BullmqJobQueueAdapter implements JobQueuePort {
   private readonly proxyFetchQueue: Queue;
   private readonly priceFetchQueue: Queue;
   private readonly handbookFetchQueue: Queue;
+  private readonly priceFetchJobOptions: JobsOptions;
 
   constructor(
     redisUrl: string,
     private readonly logger: LoggerPort = silentLogger,
+    priceFetchRetry: PriceFetchRetryOptionsInterface = defaultPriceFetchRetryOptions,
   ) {
+    this.priceFetchJobOptions = {
+      ...jobOptions,
+      attempts: priceFetchRetry.attempts,
+      backoff: { type: 'fixed', delay: priceFetchRetry.backoffMs },
+    };
     const connection = { url: redisUrl };
     this.proxyFetchQueue = new Queue(queueNames.proxyFetchJobs, { connection });
     this.priceFetchQueue = new Queue(queueNames.priceFetchJobs, { connection });
@@ -65,7 +77,7 @@ export class BullmqJobQueueAdapter implements JobQueuePort {
       timeoutMs: request.timeoutMs,
     });
     await this.priceFetchQueue.add('price-fetch', job, {
-      ...priceFetchJobOptions,
+      ...this.priceFetchJobOptions,
       ...(request.delayMs === undefined || request.delayMs <= 0 ? {} : { delay: request.delayMs }),
       jobId: job.jobId,
     });

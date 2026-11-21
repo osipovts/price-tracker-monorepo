@@ -50,6 +50,10 @@ export interface AppConfigInterface {
   authVerificationResendMaxAttempts: number;
   /** A product is read again once its last read or request is this old; 0 turns the refresh off. */
   priceRefreshAfterMs: number;
+  /** How many attempts a price fetch job makes before giving up. */
+  priceFetchAttempts: number;
+  /** Pause before retrying a failed price fetch job, in milliseconds. */
+  priceFetchBackoffMs: number;
   /** How often the hub looks for the products that are due. */
   priceRefreshPollMs: number;
   /** The jobs that read one marketplace through one proxy start at least this far apart. */

@@ -69,6 +69,8 @@ function configWith(operatorApiKey: string | null): AppConfigInterface {
     priceTimeoutMs: 60000,
     linkExpandTimeoutMs: 15000,
     priceRefreshAfterMs: 0,
+    priceFetchAttempts: 2,
+    priceFetchBackoffMs: 300_000,
     priceRefreshPollMs: 60_000,
     priceProxyLagMs: 30_000,
     priceRefreshBatchSize: 200,
