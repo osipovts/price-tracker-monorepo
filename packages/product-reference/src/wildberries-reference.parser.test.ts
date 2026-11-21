@@ -20,6 +20,21 @@ void test('canonicalizes the link of a product, with or without its query', (): 
   }
 });
 
+void test('canonicalizes the link of an eapteka product', (): void => {
+  for (const input of [
+    'https://www.wildberries.ru/eapteka/catalog/536115067/detail.aspx',
+    'https://wildberries.ru/eapteka/catalog/536115067/detail.aspx?erid=2TKWBDQCaHN',
+    'https://www.wb.ru/eapteka/catalog/536115067/detail.aspx?targetUrl=GP',
+  ]) {
+    const reference = parser.parse(new URL(input));
+
+    assert.equal(reference?.marketplace, 'wildberries');
+    assert.equal(reference.id, '536115067');
+    assert.equal(reference.url, 'https://www.wildberries.ru/eapteka/catalog/536115067/detail.aspx');
+    assert.equal(reference.cityId, null);
+  }
+});
+
 void test('rejects foreign hosts, credentials, ports, other paths and ids of another shape', (): void => {
   for (const input of [
     'http://www.wildberries.ru/catalog/169684889/detail.aspx',
@@ -29,6 +44,9 @@ void test('rejects foreign hosts, credentials, ports, other paths and ids of ano
     'https://www.wildberries.ru/catalog/169684889/feedbacks',
     'https://www.wildberries.ru/catalog/elektronika/noutbuki',
     'https://www.wildberries.ru/catalog/16968a889/detail.aspx',
+    'https://www.wildberries.ru/other/catalog/536115067/detail.aspx',
+    'https://www.wildberries.ru/eapteka/catalog/bady',
+    'https://www.wildberries.ru/eapteka/catalog/536115067/feedbacks',
   ]) {
     assert.equal(parser.parse(new URL(input)), null, input);
   }

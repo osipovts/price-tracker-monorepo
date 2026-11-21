@@ -6,7 +6,8 @@ export class WildberriesReferenceParser implements MarketplaceReferenceParserPor
   readonly marketplace: MarketplaceType = 'wildberries';
 
   parse(url: URL): ProductReferenceEntity | null {
-    const id = /^\/catalog\/(\d+)\/detail\.aspx$/.exec(url.pathname)?.[1];
+    const match = /^(\/eapteka)?\/catalog\/(\d+)\/detail\.aspx$/.exec(url.pathname);
+    const id = match?.[2];
     if (
       url.protocol !== 'https:' ||
       !['wildberries.ru', 'www.wildberries.ru', 'wb.ru', 'www.wb.ru'].includes(url.hostname) ||
@@ -17,10 +18,12 @@ export class WildberriesReferenceParser implements MarketplaceReferenceParserPor
     )
       return null;
 
+    const section = match?.[1] ?? '';
+
     return new ProductReferenceEntity(
       this.marketplace,
       id,
-      `https://www.wildberries.ru/catalog/${id}/detail.aspx`,
+      `https://www.wildberries.ru${section}/catalog/${id}/detail.aspx`,
     );
   }
 }
