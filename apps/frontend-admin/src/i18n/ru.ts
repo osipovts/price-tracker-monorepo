@@ -212,6 +212,11 @@ export const ru: DictionaryType = {
         hint: 'Города, которые можно выбрать на aliexpress.ru.',
         id: 'Идентификатор на aliexpress.ru',
       },
+      'apteka-cities': {
+        title: 'Города Apteka.ru',
+        hint: 'Города, которые можно выбрать на apteka.ru.',
+        id: 'URL города на apteka.ru',
+      },
       'dns-cities': {
         title: 'Города DNS',
         hint: 'Города, которые можно выбрать на dns-shop.ru: цены DNS зависят от города.',

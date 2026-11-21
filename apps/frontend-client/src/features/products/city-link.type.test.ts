@@ -21,6 +21,19 @@ test('tells the marketplace of a link whose prices depend on the city', (): void
   expect(cityMarketplaceOf('https://www.aliexpress.ru/item/1005012815784218.html')).toBe(
     'aliexpress',
   );
+  expect(
+    cityMarketplaceOf(
+      'https://apteka.ru/product/jodomarin-200-50-sht-tabletki-5e32674d65b5ab0001650ab2/',
+    ),
+  ).toBe('apteka');
+  expect(
+    cityMarketplaceOf(
+      'https://apteka.ru/irkutsk/product/jodomarin-200-50-sht-tabletki-5e32674d65b5ab0001650ab2/',
+    ),
+  ).toBe('apteka');
+  expect(cityMarketplaceOf('https://www.apteka.ru/product/5e32674d65b5ab0001650ab2/')).toBe(
+    'apteka',
+  );
 });
 
 test('has no city for a link of another site, for a link that is not finished, or for a lookalike host', (): void => {

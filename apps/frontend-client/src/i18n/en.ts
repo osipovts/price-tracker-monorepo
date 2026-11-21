@@ -92,7 +92,7 @@ export const en = {
     addRowHint: 'Drop a marketplace link — we’ll track the price for you',
     addFirst: 'Add the first product',
     linkLabel: 'Link to a product',
-    supported: 'Supported: WB, Ozon, DNS, Citilink, Sportmaster, AliExpress',
+    supported: 'Supported: WB, Ozon, DNS, Citilink, Sportmaster, AliExpress, Apteka.ru',
     city: 'City',
     cityHint: 'The prices of this marketplace depend on the city. Moscow when none is chosen.',
     cityPlaceholder: 'Start typing the name of a city',

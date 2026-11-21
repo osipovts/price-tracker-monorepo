@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import {
   AliexpressReferenceParser,
+  AptekaReferenceParser,
   CitilinkReferenceParser,
   DnsReferenceParser,
   OzonReferenceParser,
@@ -142,6 +143,7 @@ import { ProductsController } from './presentation/products.controller.js';
           new CitilinkReferenceParser(),
           new SportmasterReferenceParser(),
           new AliexpressReferenceParser(),
+          new AptekaReferenceParser(),
         ]),
     },
     {

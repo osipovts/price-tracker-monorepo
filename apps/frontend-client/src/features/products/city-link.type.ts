@@ -11,6 +11,7 @@ const cityMarketplaceHosts: ReadonlyArray<[CityMarketplaceType, readonly string[
   ['citilink', ['citilink.ru', 'www.citilink.ru']],
   ['sportmaster', ['sportmaster.ru', 'www.sportmaster.ru']],
   ['aliexpress', ['aliexpress.ru', 'www.aliexpress.ru']],
+  ['apteka', ['apteka.ru', 'www.apteka.ru']],
 ];
 
 /** The marketplace of the link when its prices depend on the city; null for the others and for what is not a link. */

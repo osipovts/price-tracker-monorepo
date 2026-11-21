@@ -209,6 +209,11 @@ export const en = {
         hint: 'Cities available in the city selector on aliexpress.ru.',
         id: 'ID on aliexpress.ru',
       },
+      'apteka-cities': {
+        title: 'Apteka.ru cities',
+        hint: 'Cities available in the city selector on apteka.ru.',
+        id: 'City URL on apteka.ru',
+      },
       'dns-cities': {
         title: 'Cities of DNS',
         hint: 'The cities a visitor of dns-shop.ru can choose: the prices of DNS depend on the city.',

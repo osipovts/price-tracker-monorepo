@@ -81,7 +81,8 @@
                                   "wildberries",
                                   "citilink",
                                   "sportmaster",
-                                  "aliexpress"
+                                  "aliexpress",
+                                  "apteka"
                                 ]
                               },
                               "products": {
@@ -144,7 +145,8 @@
                                   "wildberries",
                                   "citilink",
                                   "sportmaster",
-                                  "aliexpress"
+                                  "aliexpress",
+                                  "apteka"
                                 ]
                               },
                               "reads": {
@@ -248,7 +250,8 @@
                                   "wildberries",
                                   "citilink",
                                   "sportmaster",
-                                  "aliexpress"
+                                  "aliexpress",
+                                  "apteka"
                                 ]
                               },
                               "count": {
@@ -741,7 +744,8 @@
                                   "wildberries",
                                   "citilink",
                                   "sportmaster",
-                                  "aliexpress"
+                                  "aliexpress",
+                                  "apteka"
                                 ]
                               },
                               "url": {
@@ -2644,7 +2648,8 @@
                 "wildberries",
                 "citilink",
                 "sportmaster",
-                "aliexpress"
+                "aliexpress",
+                "apteka"
               ]
             }
           }
@@ -3148,7 +3153,8 @@
                                     "wildberries",
                                     "citilink",
                                     "sportmaster",
-                                    "aliexpress"
+                                    "aliexpress",
+                                    "apteka"
                                   ]
                                 },
                                 "successes": {
@@ -3426,7 +3432,8 @@
                               "wildberries",
                               "citilink",
                               "sportmaster",
-                              "aliexpress"
+                              "aliexpress",
+                              "apteka"
                             ]
                           },
                           "count": {
@@ -3568,7 +3575,8 @@
                 "wildberries",
                 "citilink",
                 "sportmaster",
-                "aliexpress"
+                "aliexpress",
+                "apteka"
               ]
             }
           },
@@ -3665,7 +3673,8 @@
                 "dns-cities",
                 "wildberries-cities",
                 "sportmaster-cities",
-                "aliexpress-cities"
+                "aliexpress-cities",
+                "apteka-cities"
               ]
             }
           },
@@ -3795,7 +3804,8 @@
                 "dns-cities",
                 "wildberries-cities",
                 "sportmaster-cities",
-                "aliexpress-cities"
+                "aliexpress-cities",
+                "apteka-cities"
               ]
             }
           }

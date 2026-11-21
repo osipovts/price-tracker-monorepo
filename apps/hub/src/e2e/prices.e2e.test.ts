@@ -29,6 +29,7 @@ const aliexpressCity = {
   name: 'Иркутск',
   region: 'Иркутская область',
 };
+const aptekaCity = { id: 'irkutsk', name: 'Иркутск', region: 'Иркутская область' };
 let hub: RunningHubInterface;
 let worker: FakePriceWorkerAdapter;
 let database: ReturnType<typeof connectDatabase>;
@@ -54,6 +55,9 @@ before(
     });
     await database.handbook.create({
       data: { key: 'aliexpress-cities', data: [aliexpressCity], fetchedAt: new Date() },
+    });
+    await database.handbook.create({
+      data: { key: 'apteka-cities', data: [aptekaCity], fetchedAt: new Date() },
     });
 
     worker = new FakePriceWorkerAdapter(infrastructure.redisUrl);
@@ -274,6 +278,30 @@ void test('searches AliExpress cities and queues the selected city with the prod
     (): Promise<(typeof worker.jobs)[number] | null> =>
       Promise.resolve(worker.jobs.find(({ jobId }): boolean => jobId === product.jobId) ?? null),
     'the AliExpress price job reached the worker',
+  );
+  assert.deepEqual(job.products, [{ trackedProductId: product.id, url, cityId: city.id }]);
+});
+
+void test('searches Apteka.ru cities and queues the selected city with the product', async (): Promise<void> => {
+  const url = 'https://apteka.ru/product/5e32674d65b5ab0001650ab2/';
+  const city = aptekaCity;
+  worker.setPrice(url, 14_100);
+
+  const search = await jane.request(
+    `/marketplaces/apteka/cities?query=${encodeURIComponent('Ирк')}`,
+  );
+  assert.equal(search.status, 200);
+  assert.deepEqual(search.body, { items: [city] });
+
+  const added = await jane.request('/products', { json: { url, cityId: city.id } });
+  assert.equal(added.status, 201);
+  const product = productSchema.parse(added.body);
+  assert.ok(product.jobId !== null);
+
+  const job = await eventually(
+    (): Promise<(typeof worker.jobs)[number] | null> =>
+      Promise.resolve(worker.jobs.find(({ jobId }): boolean => jobId === product.jobId) ?? null),
+    'the Apteka.ru price job reached the worker',
   );
   assert.deepEqual(job.products, [{ trackedProductId: product.id, url, cityId: city.id }]);
 });
