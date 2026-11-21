@@ -24,6 +24,7 @@ const cardSchema = z.union([productsSchema, z.object({ data: productsSchema })])
  * before the file: `c246x328` is a thumbnail.
  */
 const picturePath = /^(\/vol\d+\/part\d+\/(\d+)\/images\/)[^/]+(\/[^/]+)$/;
+const pictureHosts: readonly string[] = ['.wbbasket.ru', '.geobasket.ru'];
 const thumbnailFolder = 'c246x328';
 
 export class WildberriesProductParser {
@@ -87,7 +88,7 @@ export class WildberriesProductParser {
       const parts = url === null ? null : picturePath.exec(url.pathname);
       if (
         url?.protocol !== 'https:' ||
-        !url.hostname.endsWith('.wbbasket.ru') ||
+        !pictureHosts.some((host): boolean => url.hostname.endsWith(host)) ||
         parts?.[1] === undefined ||
         parts[2] !== reference.id ||
         parts[3] === undefined

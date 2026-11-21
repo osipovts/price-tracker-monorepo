@@ -43,6 +43,12 @@ const parsers: WildberriesReaderParsersInterface = {
   products: new WildberriesProductParser(new WildberriesReferenceParser()),
 };
 const cardPath = '/__internal/u-card/cards/v4/detail?appType=1&curr=rub&dest=-1257786';
+const pharmaCardPath = '/__internal/pharma-card/cards/v4/detail?appType=1&curr=rub&dest=1259570991';
+const eaptekaReference = new ProductReferenceEntity(
+  'wildberries',
+  '536115067',
+  'https://www.wildberries.ru/eapteka/catalog/536115067/detail.aspx',
+);
 
 const gallery = [
   'https://basket-12.wbbasket.ru/vol1696/part169684/169684888/images/tm/1.webp',
@@ -51,15 +57,22 @@ const gallery = [
   .map((src): string => `<img src="${src}">`)
   .join('');
 
-/** A product page that asks the card service for the products it shows, as the site does. */
-function pageAsking(...numbers: string[]): string {
+const eaptekaGallery =
+  '<img src="https://vvo-basket-cdn-04.geobasket.ru/vol5361/part536115/536115067/images/big/1.webp">';
+
+function renderPage(cardEndpoint: string, images: string, ...numbers: string[]): string {
   return `<title>Кроссовки</title><script>
-    for (const nm of ${JSON.stringify(numbers)}) void fetch('${cardPath}&nm=' + nm);
+    for (const nm of ${JSON.stringify(numbers)}) void fetch('${cardEndpoint}&nm=' + nm);
     // The gallery is drawn after the card has come, and the pictures of other products with it.
     setTimeout(() => {
-      document.body.innerHTML = ${JSON.stringify(gallery)};
+      document.body.innerHTML = ${JSON.stringify(images)};
     }, 200);
   </script>`;
+}
+
+/** A product page that asks the card service for the products it shows, as the site does. */
+function pageAsking(...numbers: string[]): string {
+  return renderPage(cardPath, gallery, ...numbers);
 }
 
 function cardOf(id: number, amountMinor: number): object {
@@ -79,7 +92,7 @@ beforeEach((): void => {
 
 /** The card service tells of every product the page asks about; the product of the test is the one that costs more. */
 function createReader(
-  html: string,
+  html: string | ((pathname: string) => string),
   country = 'RU',
   status = 200,
   pageStatuses: Readonly<Record<string, number>> = {},
@@ -91,7 +104,7 @@ function createReader(
 
         await context.route('**/*', async (route: Route): Promise<void> => {
           const url = new URL(route.request().url());
-          const page = /^\/catalog\/(\d+)\/detail\.aspx$/.exec(url.pathname)?.[1];
+          const page = /^(?:\/eapteka)?\/catalog\/(\d+)\/detail\.aspx$/.exec(url.pathname)?.[1];
           if (url.hostname === 'ipinfo.io') {
             await route.fulfill({ json: { ip: '217.71.230.103', country } });
           } else if (page !== undefined) {
@@ -99,14 +112,29 @@ function createReader(
             await route.fulfill({
               status: pageStatuses[page] ?? status,
               contentType: 'text/html; charset=utf-8',
-              body: html,
+              body: typeof html === 'function' ? html(url.pathname) : html,
             });
           } else if (url.pathname.endsWith('/cards/v4/detail')) {
             // The price of the product is lower in Irkutsk than in the region the page asks for by itself.
-            const amountMinor = url.searchParams.get('dest') === '-5827226' ? 297700 : 329900;
+            const irkutsk = url.searchParams.get('dest') === '-5827226';
+            const pharma = url.pathname.includes('/pharma-card/');
             const products = (url.searchParams.get('nm') ?? '')
               .split(';')
-              .map((nm): object => cardOf(Number(nm), nm === '169684889' ? amountMinor : 100));
+              .filter((nm): boolean => !pharma || nm === '536115067')
+              .map((nm): object =>
+                cardOf(
+                  Number(nm),
+                  nm === '536115067'
+                    ? irkutsk
+                      ? 35100
+                      : 38300
+                    : nm === '169684889'
+                      ? irkutsk
+                        ? 297700
+                        : 329900
+                      : 100,
+                ),
+              );
             await route.fulfill({ json: { products } });
           } else {
             await route.abort();
@@ -241,4 +269,43 @@ void test('a page the route is refused fails the whole batch through it', async 
     { status: 'http_error', httpStatus: 403 },
   ]);
   assert.deepEqual(opened, ['169684889']);
+});
+
+void test('reads an eapteka product via pharma-card in the requested city with its geobasket thumbnail', async (): Promise<void> => {
+  const reader = createReader(renderPage(pharmaCardPath, eaptekaGallery, '536115067'));
+
+  const result = await reader.read(
+    eaptekaReference.inCity('-5827226'),
+    proxy,
+    new AbortController().signal,
+  );
+
+  assert.equal(result.status, 'success');
+  assert.ok('snapshot' in result);
+  assert.equal(result.snapshot.title, 'Товар 536115067');
+  assert.deepEqual(result.snapshot.prices, [{ amountMinor: 35100, currency: 'RUB' }]);
+  assert.equal(
+    result.snapshot.imageUrl,
+    'https://vvo-basket-cdn-04.geobasket.ru/vol5361/part536115/536115067/images/c246x328/1.webp',
+  );
+});
+
+void test('opens a regular product page for the rest of a mixed batch when pharma-card omits it', async (): Promise<void> => {
+  const reader = createReader((pathname): string =>
+    pathname.startsWith('/eapteka/')
+      ? renderPage(pharmaCardPath, eaptekaGallery, '536115067')
+      : pageAsking('169684889'),
+  );
+
+  const results = await reader.readMany(
+    [eaptekaReference, reference],
+    proxy,
+    new AbortController().signal,
+  );
+
+  assert.deepEqual(
+    results.map((result): string => ('snapshot' in result ? result.snapshot.title : result.status)),
+    ['Товар 536115067', 'Товар 169684889'],
+  );
+  assert.deepEqual(opened, ['536115067', '169684889']);
 });

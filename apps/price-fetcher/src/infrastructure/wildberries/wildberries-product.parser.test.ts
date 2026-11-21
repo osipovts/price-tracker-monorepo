@@ -136,3 +136,34 @@ void test('reads another product the card service told the page of, without the 
   assert.equal(snapshot.imageUrl, null);
   assert.equal(parser.parse(other, { ...base, card }), null);
 });
+
+void test('reads an eapteka product and takes its thumbnail from geobasket', (): void => {
+  const eapteka = new ProductReferenceEntity(
+    'wildberries',
+    '536115067',
+    'https://www.wildberries.ru/eapteka/catalog/536115067/detail.aspx',
+  );
+  const snapshot = parser.parse(eapteka, {
+    url: eapteka.url,
+    imageUrls: [
+      'https://vvo-basket-cdn-04.geobasket.ru/vol5361/part536115/536115067/images/big/1.webp?picsUpdate=0',
+    ],
+    card: cardOf([
+      {
+        id: 536115067,
+        name: 'Гель реминерализующий',
+        sizes: [{ name: '', price: { product: 38300 }, stocks: [{ qty: 42 }] }],
+        totalQuantity: 42,
+      },
+    ]),
+  });
+
+  assert.ok(snapshot);
+  assert.equal(snapshot.title, 'Гель реминерализующий');
+  assert.deepEqual(snapshot.prices, [{ amountMinor: 38300, currency: 'RUB' }]);
+  assert.equal(snapshot.availability, 'in_stock');
+  assert.equal(
+    snapshot.imageUrl,
+    'https://vvo-basket-cdn-04.geobasket.ru/vol5361/part536115/536115067/images/c246x328/1.webp?picsUpdate=0',
+  );
+});
