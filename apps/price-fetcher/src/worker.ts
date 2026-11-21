@@ -3,6 +3,7 @@ import { CamoufoxOptionsFactory } from 'camoufox-options';
 import { ConsoleLoggerAdapter, parseLogLevel } from 'logger';
 import {
   AliexpressReferenceParser,
+  AptekaReferenceParser,
   CitilinkReferenceParser,
   DnsReferenceParser,
   OzonReferenceParser,
@@ -20,6 +21,9 @@ import { FetchPricesUseCase } from './application/product/fetch-prices.use-case.
 import { AliexpressPageParser } from './infrastructure/aliexpress/aliexpress-page.parser.js';
 import { AliexpressPlaywrightProductReaderAdapter } from './infrastructure/aliexpress/aliexpress-playwright-product-reader.adapter.js';
 import { AliexpressProductParser } from './infrastructure/aliexpress/aliexpress-product.parser.js';
+import { AptekaPageParser } from './infrastructure/apteka/apteka-page.parser.js';
+import { AptekaPlaywrightProductReaderAdapter } from './infrastructure/apteka/apteka-playwright-product-reader.adapter.js';
+import { AptekaProductParser } from './infrastructure/apteka/apteka-product.parser.js';
 import { CitilinkPageParser } from './infrastructure/citilink/citilink-page.parser.js';
 import { CitilinkPlaywrightProductReaderAdapter } from './infrastructure/citilink/citilink-playwright-product-reader.adapter.js';
 import { CitilinkProductParser } from './infrastructure/citilink/citilink-product.parser.js';
@@ -118,6 +122,7 @@ const wildberriesReferences = new WildberriesReferenceParser();
 const citilinkReferences = new CitilinkReferenceParser();
 const sportmasterReferences = new SportmasterReferenceParser();
 const aliexpressReferences = new AliexpressReferenceParser();
+const aptekaReferences = new AptekaReferenceParser();
 const citilinkStates = new CitilinkStateParser();
 // The exit of a proxy is checked once in a while for all the jobs, not by every job again.
 const exits = new ProxyExitChecker(30 * 60_000);
@@ -137,6 +142,7 @@ const controller = new PriceFetchController(
       citilinkReferences,
       sportmasterReferences,
       aliexpressReferences,
+      aptekaReferences,
     ]),
     (timeoutMs): MarketplaceProductReaderAdapter => {
       const wildberries = new WildberriesPlaywrightProductReaderAdapter(
@@ -212,6 +218,18 @@ const controller = new PriceFetchController(
             },
             timeoutMs,
             logger.child('aliexpress'),
+            exits,
+          ),
+          apteka: new AptekaPlaywrightProductReaderAdapter(
+            browser,
+            options,
+            {
+              geoIp: parsers.geoIp,
+              pages: new AptekaPageParser(),
+              products: new AptekaProductParser(aptekaReferences),
+            },
+            timeoutMs,
+            logger.child('apteka'),
             exits,
           ),
         },

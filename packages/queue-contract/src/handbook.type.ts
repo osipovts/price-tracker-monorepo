@@ -6,6 +6,7 @@ export const handbookSchema = z.enum([
   'wildberries-cities',
   'sportmaster-cities',
   'aliexpress-cities',
+  'apteka-cities',
 ]);
 
 export type HandbookType = z.infer<typeof handbookSchema>;

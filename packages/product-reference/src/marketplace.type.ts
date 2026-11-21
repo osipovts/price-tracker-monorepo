@@ -5,6 +5,7 @@ export const marketplaces = [
   'citilink',
   'sportmaster',
   'aliexpress',
+  'apteka',
 ] as const;
 
 export type MarketplaceType = (typeof marketplaces)[number];
@@ -17,6 +18,7 @@ export const marketplaceExitCountries: Readonly<Record<MarketplaceType, string>>
   citilink: 'RU',
   sportmaster: 'RU',
   aliexpress: 'RU',
+  apteka: 'RU',
 };
 
 export interface MarketplaceCityInterface {
@@ -41,4 +43,5 @@ export const marketplaceDefaultCities: Readonly<
   citilink: { id: 'msk_cl', name: 'Москва' },
   sportmaster: { id: '1720920299', name: 'Москва' },
   aliexpress: { id: '917477679070000000', name: 'Москва' },
+  apteka: { id: 'moskva', name: 'Москва' },
 };

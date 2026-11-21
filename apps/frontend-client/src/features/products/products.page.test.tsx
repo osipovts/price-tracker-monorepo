@@ -300,6 +300,11 @@ test.each([
   ['dns', dnsLink, 'irkutsk-id'],
   ['sportmaster', 'https://www.sportmaster.ru/product/33427090299/', '30970299'],
   ['aliexpress', 'https://aliexpress.ru/item/1005012815784218.html', '917473757371000000'],
+  [
+    'apteka',
+    'https://apteka.ru/product/jodomarin-200-50-sht-tabletki-5e32674d65b5ab0001650ab2/',
+    'irkutsk',
+  ],
 ])(
   'searches cities for %s and sends the selected city ID',
   async (marketplace, link, cityId): Promise<void> => {

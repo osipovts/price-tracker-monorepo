@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import { FetchCitiesUseCase } from './application/fetch-cities.use-case.js';
 import { AliexpressBrowserCitySourceAdapter } from './infrastructure/aliexpress-browser-city-source.adapter.js';
+import { AptekaBrowserCitySourceAdapter } from './infrastructure/apteka-browser-city-source.adapter.js';
 import { DnsBrowserCitySourceAdapter } from './infrastructure/dns-browser-city-source.adapter.js';
 import { SportmasterBrowserCitySourceAdapter } from './infrastructure/sportmaster-browser-city-source.adapter.js';
 import { WildberriesBrowserCitySourceAdapter } from './infrastructure/wildberries-browser-city-source.adapter.js';
@@ -83,6 +84,11 @@ const controller = new HandbookFetchController(
       new AliexpressBrowserCitySourceAdapter(browser, options, env.timeoutMs),
       ['', ...russianLetters, 'Ё'],
       logger.child('aliexpress-cities'),
+    ),
+    'apteka-cities': new FetchCitiesUseCase(
+      new AptekaBrowserCitySourceAdapter(browser, options, env.timeoutMs),
+      [...russianLetters, 'Ё'],
+      logger.child('apteka-cities'),
     ),
     'dns-cities': new FetchCitiesUseCase(
       new DnsBrowserCitySourceAdapter(browser, options, env.timeoutMs, logger.child('dns-site')),
