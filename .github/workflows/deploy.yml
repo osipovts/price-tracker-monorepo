@@ -1,0 +1,77 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - '**/*.md'
+      - '.agents/**'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY_IMAGE: ghcr.io/${{ github.repository_owner }}/price-tracker
+
+jobs:
+  # Builds and pushes the production images from master.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [hub, proxy-fetcher, handbook-fetcher, price-fetcher]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: ${{ matrix.app }}-prod
+          build-args: APP_NAME=${{ matrix.app }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY_IMAGE }}-${{ matrix.app }}:${{ github.sha }}
+            ${{ env.REGISTRY_IMAGE }}-${{ matrix.app }}:latest
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,scope=${{ matrix.app }},mode=max
+
+  # Runs on the runner of brutus after all images are pushed.
+  deploy:
+    needs: [build]
+    runs-on: [self-hosted, brutus]
+    timeout-minutes: 15
+    env:
+      DOCKER_HOST: unix:///run/user/1000/docker.sock
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      # The compose files of the commit whose images are deployed, not of a later one.
+      - name: Update the compose files
+        run: cd ~/price-tracker && git fetch origin master && git merge --ff-only ${{ github.sha }}
+
+      - name: Pull the images
+        run: cd ~/price-tracker && docker compose -p price-tracker -f docker-compose.yml -f docker-compose.staging.yml -f docker-compose.registry.yml pull
+
+      - name: Start the stack (the migrations run first)
+        run: cd ~/price-tracker && docker compose -p price-tracker -f docker-compose.yml -f docker-compose.staging.yml -f docker-compose.registry.yml up -d --no-build
+
+      - name: Remove the old images
+        run: docker image prune -f
