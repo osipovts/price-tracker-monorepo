@@ -34,11 +34,22 @@ test('tells the marketplace of a link whose prices depend on the city', (): void
   expect(cityMarketplaceOf('https://www.apteka.ru/product/5e32674d65b5ab0001650ab2/')).toBe(
     'apteka',
   );
+  expect(
+    cityMarketplaceOf('https://www.cifrus.ru/description/1/apple_iphone_17_256gb_white_a3520'),
+  ).toBe('cifrus');
+  expect(
+    cityMarketplaceOf('https://cifrus.ru/description/1/apple_iphone_17_256gb_white_a3520'),
+  ).toBe('cifrus');
+  expect(
+    cityMarketplaceOf('https://spb.cifrus.ru/description/1/apple_iphone_17_256gb_white_a3520'),
+  ).toBe('cifrus');
 });
 
 test('has no city for a link of another site, for a link that is not finished, or for a lookalike host', (): void => {
   expect(cityMarketplaceOf('https://example.com/product/1/')).toBeNull();
   expect(cityMarketplaceOf('https://www.dns-shop.ru.evil.test/product/1/')).toBeNull();
+  expect(cityMarketplaceOf('https://cifrus.ru.evil.test/description/1/item')).toBeNull();
+  expect(cityMarketplaceOf('https://a.b.cifrus.ru/description/1/item')).toBeNull();
   expect(cityMarketplaceOf('https://www.dns-sh')).toBeNull();
   expect(cityMarketplaceOf('')).toBeNull();
 });

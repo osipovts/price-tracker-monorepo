@@ -10,6 +10,7 @@ const marketplaceColors: Record<string, string> = {
   sportmaster: 'indigo',
   aliexpress: 'pink',
   apteka: 'teal',
+  cifrus: 'violet',
 };
 
 /** The short names of the marketplaces whose own is long; the others are shown by their own. */

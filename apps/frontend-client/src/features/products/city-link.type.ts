@@ -4,14 +4,15 @@ export type CityMarketplaceType =
   operations['CitiesController_list']['parameters']['path']['marketplace'];
 
 /** The hosts of the marketplaces whose prices depend on the city: the user is asked for one. */
-const cityMarketplaceHosts: ReadonlyArray<[CityMarketplaceType, readonly string[]]> = [
-  ['ozon', ['ozon.ru', 'www.ozon.ru']],
-  ['dns', ['dns-shop.ru', 'www.dns-shop.ru']],
-  ['wildberries', ['wildberries.ru', 'www.wildberries.ru', 'wb.ru', 'www.wb.ru']],
-  ['citilink', ['citilink.ru', 'www.citilink.ru']],
-  ['sportmaster', ['sportmaster.ru', 'www.sportmaster.ru']],
-  ['aliexpress', ['aliexpress.ru', 'www.aliexpress.ru']],
-  ['apteka', ['apteka.ru', 'www.apteka.ru']],
+const cityMarketplaceHostPatterns: ReadonlyArray<[CityMarketplaceType, RegExp]> = [
+  ['ozon', /^(?:www\.)?ozon\.ru$/i],
+  ['dns', /^(?:www\.)?dns-shop\.ru$/i],
+  ['wildberries', /^(?:www\.)?(?:wildberries|wb)\.ru$/i],
+  ['citilink', /^(?:www\.)?citilink\.ru$/i],
+  ['sportmaster', /^(?:www\.)?sportmaster\.ru$/i],
+  ['aliexpress', /^(?:www\.)?aliexpress\.ru$/i],
+  ['apteka', /^(?:www\.)?apteka\.ru$/i],
+  ['cifrus', /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)?cifrus\.ru$/i],
 ];
 
 /** The marketplace of the link when its prices depend on the city; null for the others and for what is not a link. */
@@ -19,7 +20,10 @@ export function cityMarketplaceOf(link: string): CityMarketplaceType | null {
   try {
     const { hostname } = new URL(link);
 
-    return cityMarketplaceHosts.find(([, hosts]): boolean => hosts.includes(hostname))?.[0] ?? null;
+    return (
+      cityMarketplaceHostPatterns.find(([, pattern]): boolean => pattern.test(hostname))?.[0] ??
+      null
+    );
   } catch {
     return null;
   }

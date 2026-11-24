@@ -94,6 +94,17 @@ beforeEach((): void => {
           }),
         );
       }
+      if (pathname === '/handbooks/cifrus-cities' && request.method === 'GET') {
+        return Promise.resolve(
+          Response.json({
+            items: [{ id: '41910', name: 'Иркутск', region: null }],
+            page: 1,
+            pageSize: 20,
+            total: 1,
+            fetchedAt: hub.fetchedAt,
+          }),
+        );
+      }
       if (pathname === '/handbooks/sportmaster-cities' && request.method === 'GET') {
         return Promise.resolve(
           Response.json({
@@ -120,7 +131,8 @@ beforeEach((): void => {
         pathname === '/handbooks/dns-cities/refresh' ||
         pathname === '/handbooks/sportmaster-cities/refresh' ||
         pathname === '/handbooks/aliexpress-cities/refresh' ||
-        pathname === '/handbooks/apteka-cities/refresh'
+        pathname === '/handbooks/apteka-cities/refresh' ||
+        pathname === '/handbooks/cifrus-cities/refresh'
       ) {
         return Promise.resolve(Response.json({ jobId }, { status: 202 }));
       }
@@ -240,4 +252,14 @@ test('shows the Apteka.ru handbook and refreshes it from its own tab', async ():
   expect(await screen.findByText('irkutsk')).toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Refresh' }));
   expect(hub.requests).toContain('POST /handbooks/apteka-cities/refresh');
+});
+
+test('shows the Cifrus handbook and refreshes it from its own tab', async (): Promise<void> => {
+  renderPage();
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('tab', { name: 'Cifrus cities' }));
+
+  expect(await screen.findByText('41910')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Refresh' }));
+  expect(hub.requests).toContain('POST /handbooks/cifrus-cities/refresh');
 });

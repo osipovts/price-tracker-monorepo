@@ -5,6 +5,7 @@ import type { HandbookType } from 'queue-contract';
 export const marketplaceCityHandbooks: Readonly<Partial<Record<MarketplaceType, HandbookType>>> = {
   aliexpress: 'aliexpress-cities',
   apteka: 'apteka-cities',
+  cifrus: 'cifrus-cities',
   dns: 'dns-cities',
   sportmaster: 'sportmaster-cities',
   wildberries: 'wildberries-cities',

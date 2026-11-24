@@ -33,6 +33,7 @@ const cityHandbooks: readonly HandbookType[] = [
   'sportmaster-cities',
   'aliexpress-cities',
   'apteka-cities',
+  'cifrus-cities',
 ];
 
 function isCityHandbook(value: string | null): value is HandbookType {

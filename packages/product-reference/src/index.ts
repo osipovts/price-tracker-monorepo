@@ -1,5 +1,6 @@
 export * from './aliexpress-reference.parser.js';
 export * from './apteka-reference.parser.js';
+export * from './cifrus-reference.parser.js';
 export * from './citilink-city.type.js';
 export * from './citilink-reference.parser.js';
 export * from './dns-reference.parser.js';

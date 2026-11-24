@@ -723,7 +723,7 @@ export interface operations {
                             staleAfterMs: number;
                             marketplaces: {
                                 /** @enum {string} */
-                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka";
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka" | "cifrus";
                                 products: number;
                                 readsLastDay: number;
                                 /** Format: date-time */
@@ -736,7 +736,7 @@ export interface operations {
                                 /** Format: date-time */
                                 hour: string;
                                 /** @enum {string} */
-                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka";
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka" | "cifrus";
                                 reads: number;
                             }[];
                         };
@@ -755,7 +755,7 @@ export interface operations {
                             }[];
                             usable: {
                                 /** @enum {string} */
-                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka";
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka" | "cifrus";
                                 count: number;
                             }[];
                         };
@@ -893,7 +893,7 @@ export interface operations {
                                 /** Format: uuid */
                                 id: string;
                                 /** @enum {string} */
-                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka";
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka" | "cifrus";
                                 url: string;
                                 cityName: string | null;
                                 title: string | null;
@@ -1586,7 +1586,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka";
+                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka" | "cifrus";
             };
             cookie?: never;
         };
@@ -1744,7 +1744,7 @@ export interface operations {
                             disabled: boolean;
                             reputations: {
                                 /** @enum {string} */
-                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka";
+                                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka" | "cifrus";
                                 successes: number;
                                 failures: number;
                                 failureStreak: number;
@@ -1849,7 +1849,7 @@ export interface operations {
                         }[];
                         usable: {
                             /** @enum {string} */
-                            marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka";
+                            marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka" | "cifrus";
                             count: number;
                         }[];
                     };
@@ -1898,7 +1898,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka";
+                marketplace: "ozon" | "dns" | "wildberries" | "citilink" | "sportmaster" | "aliexpress" | "apteka" | "cifrus";
             };
             cookie?: never;
         };
@@ -1936,7 +1936,7 @@ export interface operations {
             };
             header?: never;
             path: {
-                handbook: "dns-cities" | "wildberries-cities" | "sportmaster-cities" | "aliexpress-cities" | "apteka-cities";
+                handbook: "dns-cities" | "wildberries-cities" | "sportmaster-cities" | "aliexpress-cities" | "apteka-cities" | "cifrus-cities";
             };
             cookie?: never;
         };
@@ -1968,7 +1968,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                handbook: "dns-cities" | "wildberries-cities" | "sportmaster-cities" | "aliexpress-cities" | "apteka-cities";
+                handbook: "dns-cities" | "wildberries-cities" | "sportmaster-cities" | "aliexpress-cities" | "apteka-cities" | "cifrus-cities";
             };
             cookie?: never;
         };

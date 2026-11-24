@@ -4,6 +4,7 @@ import { ConsoleLoggerAdapter, parseLogLevel } from 'logger';
 import {
   AliexpressReferenceParser,
   AptekaReferenceParser,
+  CifrusReferenceParser,
   CitilinkReferenceParser,
   DnsReferenceParser,
   OzonReferenceParser,
@@ -24,6 +25,9 @@ import { AliexpressProductParser } from './infrastructure/aliexpress/aliexpress-
 import { AptekaPageParser } from './infrastructure/apteka/apteka-page.parser.js';
 import { AptekaPlaywrightProductReaderAdapter } from './infrastructure/apteka/apteka-playwright-product-reader.adapter.js';
 import { AptekaProductParser } from './infrastructure/apteka/apteka-product.parser.js';
+import { CifrusPageParser } from './infrastructure/cifrus/cifrus-page.parser.js';
+import { CifrusPlaywrightProductReaderAdapter } from './infrastructure/cifrus/cifrus-playwright-product-reader.adapter.js';
+import { CifrusProductParser } from './infrastructure/cifrus/cifrus-product.parser.js';
 import { CitilinkPageParser } from './infrastructure/citilink/citilink-page.parser.js';
 import { CitilinkPlaywrightProductReaderAdapter } from './infrastructure/citilink/citilink-playwright-product-reader.adapter.js';
 import { CitilinkProductParser } from './infrastructure/citilink/citilink-product.parser.js';
@@ -144,6 +148,7 @@ const citilinkReferences = new CitilinkReferenceParser();
 const sportmasterReferences = new SportmasterReferenceParser();
 const aliexpressReferences = new AliexpressReferenceParser();
 const aptekaReferences = new AptekaReferenceParser();
+const cifrusReferences = new CifrusReferenceParser();
 const citilinkStates = new CitilinkStateParser();
 // The exit of a proxy is checked once in a while for all the jobs, not by every job again.
 const exits = new ProxyExitChecker(30 * 60_000);
@@ -164,6 +169,7 @@ const controller = new PriceFetchController(
       sportmasterReferences,
       aliexpressReferences,
       aptekaReferences,
+      cifrusReferences,
     ]),
     (timeoutMs): MarketplaceProductReaderAdapter => {
       const wildberries = new WildberriesPlaywrightProductReaderAdapter(
@@ -251,6 +257,18 @@ const controller = new PriceFetchController(
             },
             timeoutMs,
             logger.child('apteka'),
+            exits,
+          ),
+          cifrus: new CifrusPlaywrightProductReaderAdapter(
+            browser,
+            options,
+            {
+              geoIp: parsers.geoIp,
+              pages: new CifrusPageParser(),
+              products: new CifrusProductParser(cifrusReferences),
+            },
+            timeoutMs,
+            logger.child('cifrus'),
             exits,
           ),
         },

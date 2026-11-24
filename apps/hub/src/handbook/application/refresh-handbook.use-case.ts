@@ -8,6 +8,7 @@ import type { ListBestProxyServersUseCase } from '../../proxy/application/index.
 const handbookMarketplaces: Readonly<Record<HandbookType, MarketplaceType>> = {
   'aliexpress-cities': 'aliexpress',
   'apteka-cities': 'apteka',
+  'cifrus-cities': 'cifrus',
   'dns-cities': 'dns',
   'sportmaster-cities': 'sportmaster',
   'wildberries-cities': 'wildberries',

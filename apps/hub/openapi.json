@@ -82,7 +82,8 @@
                                   "citilink",
                                   "sportmaster",
                                   "aliexpress",
-                                  "apteka"
+                                  "apteka",
+                                  "cifrus"
                                 ]
                               },
                               "products": {
@@ -146,7 +147,8 @@
                                   "citilink",
                                   "sportmaster",
                                   "aliexpress",
-                                  "apteka"
+                                  "apteka",
+                                  "cifrus"
                                 ]
                               },
                               "reads": {
@@ -251,7 +253,8 @@
                                   "citilink",
                                   "sportmaster",
                                   "aliexpress",
-                                  "apteka"
+                                  "apteka",
+                                  "cifrus"
                                 ]
                               },
                               "count": {
@@ -745,7 +748,8 @@
                                   "citilink",
                                   "sportmaster",
                                   "aliexpress",
-                                  "apteka"
+                                  "apteka",
+                                  "cifrus"
                                 ]
                               },
                               "url": {
@@ -2649,7 +2653,8 @@
                 "citilink",
                 "sportmaster",
                 "aliexpress",
-                "apteka"
+                "apteka",
+                "cifrus"
               ]
             }
           }
@@ -3154,7 +3159,8 @@
                                     "citilink",
                                     "sportmaster",
                                     "aliexpress",
-                                    "apteka"
+                                    "apteka",
+                                    "cifrus"
                                   ]
                                 },
                                 "successes": {
@@ -3433,7 +3439,8 @@
                               "citilink",
                               "sportmaster",
                               "aliexpress",
-                              "apteka"
+                              "apteka",
+                              "cifrus"
                             ]
                           },
                           "count": {
@@ -3576,7 +3583,8 @@
                 "citilink",
                 "sportmaster",
                 "aliexpress",
-                "apteka"
+                "apteka",
+                "cifrus"
               ]
             }
           },
@@ -3674,7 +3682,8 @@
                 "wildberries-cities",
                 "sportmaster-cities",
                 "aliexpress-cities",
-                "apteka-cities"
+                "apteka-cities",
+                "cifrus-cities"
               ]
             }
           },
@@ -3805,7 +3814,8 @@
                 "wildberries-cities",
                 "sportmaster-cities",
                 "aliexpress-cities",
-                "apteka-cities"
+                "apteka-cities",
+                "cifrus-cities"
               ]
             }
           }
