@@ -4,6 +4,7 @@ import type { JobLifecycleType } from 'queue-contract';
 
 import { closeWithin } from './close-within.type.js';
 import { formatFailureReason } from './job-lifecycle.reporter.js';
+import { runWithin } from './run-within.type.js';
 
 export interface QueueWorkerSettingsInterface {
   redisUrl: string;
@@ -14,6 +15,10 @@ export interface QueueWorkerSettingsInterface {
   concurrency: number;
   /** How long a stop lets the jobs in progress run before it asks them to stop. */
   cancelAfterMs?: number;
+  /** Maximum time a single job may run before it is aborted and failed. */
+  jobTimeoutMs?: number;
+  /** Called when a job exceeds `jobTimeoutMs`. */
+  onJobTimeout?: (jobId: string) => void;
 }
 
 /** Shorter than the 70 s the containers are given to stop in. */
@@ -69,12 +74,22 @@ export class QueueWorkerRunner<ResultType extends { type: string; jobId: string 
         const willRetry = job.attemptsMade + 1 < (job.opts.attempts ?? 1);
         this.logger.debug(`Took job ${job.id ?? '?'} (attempt ${String(job.attemptsMade + 1)})`);
 
-        return handle(
-          job.data,
-          signal ?? new AbortController().signal,
-          willRetry,
-          (data): Promise<void> => job.updateData(data),
-        );
+        const parentSignal = signal ?? new AbortController().signal;
+        const run = (jobSignal: AbortSignal): Promise<unknown> =>
+          handle(
+            job.data,
+            jobSignal,
+            willRetry,
+            (data): Promise<void> => job.updateData(data),
+          );
+
+        if (this.settings.jobTimeoutMs === undefined) {
+          return run(parentSignal);
+        }
+
+        return runWithin(run, parentSignal, this.settings.jobTimeoutMs, (): void => {
+          this.settings.onJobTimeout?.(job.id ?? '?');
+        });
       },
       { connection: this.connection, concurrency: this.settings.concurrency },
     );

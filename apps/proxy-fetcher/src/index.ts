@@ -22,12 +22,14 @@ const env = z
     probeConcurrency: z.coerce.number().int().min(1).max(500).default(50),
     resultBatchSize: z.coerce.number().int().min(1).max(500).default(100),
     jobConcurrency: z.coerce.number().int().min(1).max(10).default(1),
+    jobTimeoutMs: z.coerce.number().int().min(30_000).max(3_600_000).default(1_800_000),
   })
   .parse({
     redisUrl: process.env['REDIS_URL'],
     probeConcurrency: process.env['PROBE_CONCURRENCY'],
     resultBatchSize: process.env['RESULT_BATCH_SIZE'],
     jobConcurrency: process.env['JOB_CONCURRENCY'],
+    jobTimeoutMs: process.env['JOB_TIMEOUT_MS'],
   });
 const logger = new ConsoleLoggerAdapter(
   parseLogLevel(process.env['LOG_LEVEL'], 'verbose'),
@@ -40,6 +42,7 @@ const runner = new QueueWorkerRunner<ProxyFetchResultType>(
     jobsQueue: queueNames.proxyFetchJobs,
     resultsQueue: queueNames.proxyFetchResults,
     concurrency: env.jobConcurrency,
+    jobTimeoutMs: env.jobTimeoutMs,
   },
   logger,
 );
