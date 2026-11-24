@@ -76,12 +76,7 @@ export class QueueWorkerRunner<ResultType extends { type: string; jobId: string 
 
         const parentSignal = signal ?? new AbortController().signal;
         const run = (jobSignal: AbortSignal): Promise<unknown> =>
-          handle(
-            job.data,
-            jobSignal,
-            willRetry,
-            (data): Promise<void> => job.updateData(data),
-          );
+          handle(job.data, jobSignal, willRetry, (data): Promise<void> => job.updateData(data));
 
         if (this.settings.jobTimeoutMs === undefined) {
           return run(parentSignal);
