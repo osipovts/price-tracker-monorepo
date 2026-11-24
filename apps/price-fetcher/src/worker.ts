@@ -61,6 +61,7 @@ const env = z
     headed: z.stringbool().default(true),
     browserPath: z.string().min(1).optional(),
     jobConcurrency: z.coerce.number().int().min(1).max(5).default(1),
+    jobTimeoutMs: z.coerce.number().int().min(30_000).max(3_600_000).default(600_000),
     routeProbeTimeoutMs: z.coerce.number().int().min(1000).max(30_000).default(6000),
     wildberriesBatchLimit: z.coerce.number().int().min(1).max(50).default(20),
   })
@@ -69,6 +70,7 @@ const env = z
     headed: process.env['HEADED'],
     browserPath: process.env['BROWSER_PATH'],
     jobConcurrency: process.env['JOB_CONCURRENCY'],
+    jobTimeoutMs: process.env['JOB_TIMEOUT_MS'],
     routeProbeTimeoutMs: process.env['ROUTE_PROBE_TIMEOUT_MS'],
     wildberriesBatchLimit: process.env['WILDBERRIES_BATCH_LIMIT'],
   });
@@ -100,19 +102,38 @@ browser.on('disconnected', (): void => {
   process.exit(1);
 });
 
+const exitOnJobTimeout = (jobId: string, timeoutMs: number): void => {
+  // A hung job usually means Camoufox is wedged; exit so the supervisor restarts with a fresh browser.
+  logger.error(`Job ${jobId} timed out after ${String(timeoutMs)} ms; exiting`);
+  process.exit(1);
+};
+
 const runner = new QueueWorkerRunner<PriceFetchResultType>(
   {
     redisUrl: env.redisUrl,
     jobsQueue: queueNames.priceFetchJobs,
     resultsQueue: queueNames.priceFetchResults,
     concurrency: env.jobConcurrency,
+    jobTimeoutMs: env.jobTimeoutMs,
+    onJobTimeout: (jobId): void => {
+      exitOnJobTimeout(jobId, env.jobTimeoutMs);
+    },
   },
   logger,
 );
 const publish = (message: PriceFetchResultType): Promise<void> => runner.publish(message);
 
+const expandJobTimeoutMs = 120_000;
 const expandRunner = new QueueWorkerRunner<never>(
-  { redisUrl: env.redisUrl, jobsQueue: queueNames.linkExpandJobs, concurrency: env.jobConcurrency },
+  {
+    redisUrl: env.redisUrl,
+    jobsQueue: queueNames.linkExpandJobs,
+    concurrency: env.jobConcurrency,
+    jobTimeoutMs: expandJobTimeoutMs,
+    onJobTimeout: (jobId): void => {
+      exitOnJobTimeout(jobId, expandJobTimeoutMs);
+    },
+  },
   logger,
 );
 
