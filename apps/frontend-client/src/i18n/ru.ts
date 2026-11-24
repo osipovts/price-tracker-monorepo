@@ -93,7 +93,8 @@ export const ru: DictionaryType = {
     addRowHint: 'Вставьте ссылку на товар с маркетплейса - дальше за ценой следим мы',
     addFirst: 'Добавить первый товар',
     linkLabel: 'Ссылка на товар',
-    supported: 'Поддерживаются: WB, Ozon, DNS, Citilink, Sportmaster, AliExpress, Apteka.ru',
+    supported:
+      'Поддерживаются: WB, Ozon, DNS, Citilink, Sportmaster, AliExpress, Apteka.ru, Цифрус',
     city: 'Город',
     cityHint: 'Цены этого маркетплейса зависят от города. Если не выбрать, будет Москва.',
     cityPlaceholder: 'Начните вводить название города',

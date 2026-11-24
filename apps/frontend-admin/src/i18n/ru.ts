@@ -217,6 +217,11 @@ export const ru: DictionaryType = {
         hint: 'Города, которые можно выбрать на apteka.ru.',
         id: 'URL города на apteka.ru',
       },
+      'cifrus-cities': {
+        title: 'Города Цифруса',
+        hint: 'Города, которые можно выбрать на cifrus.ru.',
+        id: 'Идентификатор на cifrus.ru',
+      },
       'dns-cities': {
         title: 'Города DNS',
         hint: 'Города, которые можно выбрать на dns-shop.ru: цены DNS зависят от города.',

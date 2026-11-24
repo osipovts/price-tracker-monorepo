@@ -240,6 +240,7 @@ void test('an administrator of the list gets the operator routes once the email 
       { marketplace: 'sportmaster', count: 0 },
       { marketplace: 'aliexpress', count: 0 },
       { marketplace: 'apteka', count: 0 },
+      { marketplace: 'cifrus', count: 0 },
     ],
   });
   // The handbooks of cities are queued through a direct connection when the hub starts with no proxies.
@@ -247,10 +248,10 @@ void test('an administrator of the list gets the operator routes once the email 
   assert.deepEqual(dashboard.jobs.lastDay, [
     { kind: 'proxy_fetch', ...none },
     { kind: 'price_fetch', ...none },
-    { kind: 'handbook_fetch', ...none, queued: 5 },
+    { kind: 'handbook_fetch', ...none, queued: 6 },
   ]);
-  assert.deepEqual(dashboard.jobs.unfinished, { queued: 5, running: 0, retrying: 0, lost: 0 });
-  assert.equal(dashboard.products.marketplaces.length, 7);
+  assert.deepEqual(dashboard.jobs.unfinished, { queued: 6, running: 0, retrying: 0, lost: 0 });
+  assert.equal(dashboard.products.marketplaces.length, 8);
 
   const user = hub.browser();
   await signUpAndLogIn(user, 'plain@example.com');

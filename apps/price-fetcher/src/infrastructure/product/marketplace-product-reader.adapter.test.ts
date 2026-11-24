@@ -31,6 +31,7 @@ void test('delegates reading to the reader of the reference marketplace, one pro
     sportmaster: failing('network_error'),
     aliexpress: failing('network_error'),
     apteka: failing('network_error'),
+    cifrus: failing('network_error'),
   });
 
   const results = await reader.readMany(
@@ -56,6 +57,7 @@ void test('gives the products of a marketplace that reads several at once to its
       sportmaster: failing('network_error'),
       aliexpress: failing('network_error'),
       apteka: failing('network_error'),
+      cifrus: failing('network_error'),
     },
     {
       wildberries: {

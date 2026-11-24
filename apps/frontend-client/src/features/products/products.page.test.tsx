@@ -305,6 +305,7 @@ test.each([
     'https://apteka.ru/product/jodomarin-200-50-sht-tabletki-5e32674d65b5ab0001650ab2/',
     'irkutsk',
   ],
+  ['cifrus', 'https://www.cifrus.ru/description/1/apple_iphone_17_256gb_white_a3520', '41910'],
 ])(
   'searches cities for %s and sends the selected city ID',
   async (marketplace, link, cityId): Promise<void> => {

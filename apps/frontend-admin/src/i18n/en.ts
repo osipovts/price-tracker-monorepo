@@ -214,6 +214,11 @@ export const en = {
         hint: 'Cities available in the city selector on apteka.ru.',
         id: 'City URL on apteka.ru',
       },
+      'cifrus-cities': {
+        title: 'Cifrus cities',
+        hint: 'Cities available in the city selector on cifrus.ru.',
+        id: 'ID on cifrus.ru',
+      },
       'dns-cities': {
         title: 'Cities of DNS',
         hint: 'The cities a visitor of dns-shop.ru can choose: the prices of DNS depend on the city.',

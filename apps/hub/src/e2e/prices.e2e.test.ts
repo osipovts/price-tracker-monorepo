@@ -30,6 +30,7 @@ const aliexpressCity = {
   region: 'Иркутская область',
 };
 const aptekaCity = { id: 'irkutsk', name: 'Иркутск', region: 'Иркутская область' };
+const cifrusCity = { id: '41910', name: 'Иркутск', region: null };
 let hub: RunningHubInterface;
 let worker: FakePriceWorkerAdapter;
 let database: ReturnType<typeof connectDatabase>;
@@ -58,6 +59,9 @@ before(
     });
     await database.handbook.create({
       data: { key: 'apteka-cities', data: [aptekaCity], fetchedAt: new Date() },
+    });
+    await database.handbook.create({
+      data: { key: 'cifrus-cities', data: [cifrusCity], fetchedAt: new Date() },
     });
 
     worker = new FakePriceWorkerAdapter(infrastructure.redisUrl);
@@ -302,6 +306,30 @@ void test('searches Apteka.ru cities and queues the selected city with the produ
     (): Promise<(typeof worker.jobs)[number] | null> =>
       Promise.resolve(worker.jobs.find(({ jobId }): boolean => jobId === product.jobId) ?? null),
     'the Apteka.ru price job reached the worker',
+  );
+  assert.deepEqual(job.products, [{ trackedProductId: product.id, url, cityId: city.id }]);
+});
+
+void test('searches Cifrus cities and queues the selected city with the product', async (): Promise<void> => {
+  const url = 'https://www.cifrus.ru/description/1/apple_iphone_17_256gb_white_a3520';
+  const city = cifrusCity;
+  worker.setPrice(url, 8_315_000);
+
+  const search = await jane.request(
+    `/marketplaces/cifrus/cities?query=${encodeURIComponent('Ирк')}`,
+  );
+  assert.equal(search.status, 200);
+  assert.deepEqual(search.body, { items: [city] });
+
+  const added = await jane.request('/products', { json: { url, cityId: city.id } });
+  assert.equal(added.status, 201);
+  const product = productSchema.parse(added.body);
+  assert.ok(product.jobId !== null);
+
+  const job = await eventually(
+    (): Promise<(typeof worker.jobs)[number] | null> =>
+      Promise.resolve(worker.jobs.find(({ jobId }): boolean => jobId === product.jobId) ?? null),
+    'the Cifrus price job reached the worker',
   );
   assert.deepEqual(job.products, [{ trackedProductId: product.id, url, cityId: city.id }]);
 });

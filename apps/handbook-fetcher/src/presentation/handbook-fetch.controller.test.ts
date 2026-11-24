@@ -26,6 +26,7 @@ function createController(
     {
       'aliexpress-cities': { execute },
       'apteka-cities': { execute },
+      'cifrus-cities': { execute },
       'dns-cities': { execute },
       'wildberries-cities': { execute },
       'sportmaster-cities': { execute },
